@@ -1,0 +1,1360 @@
+<title>יומן הרכב</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bellefair&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Hebrew:wght@300;400;500;600&display=swap">
+<style>
+/* Layout: an instrument-cluster dashboard — a gauge hero, status rails, and ledgers below; tab bar at the bottom on phones */
+:root{
+  --bg:#0c0f13; --surface:#141920; --raised:#1b2129; --line:#29313b; --line-soft:#1f262f;
+  --fg:#ebe7df; --muted:#8d96a2; --faint:#5d6672;
+  --accent:#cfb284; --accent-ink:#1a1408; --accent-soft:rgba(207,178,132,.13);
+  --ok:#6fbf95; --warn:#e2b04f; --crit:#e2715f;
+  --ok-soft:rgba(111,191,149,.14); --warn-soft:rgba(226,176,79,.15); --crit-soft:rgba(226,113,95,.15);
+  --plate:#f2c230; --plate-ink:#141414; --plate-blue:#1f4fa8;
+  --shadow:0 18px 50px -24px rgba(0,0,0,.7);
+  --f-display:"Bellefair","Frank Ruhl Libre",Georgia,serif;
+  --f-body:"IBM Plex Sans Hebrew","Heebo","Segoe UI",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --r:14px;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
+  --bg:#eef0f2; --surface:#ffffff; --raised:#f6f5f2; --line:#d9dce1; --line-soft:#e7e9ec;
+  --fg:#16191e; --muted:#5d6570; --faint:#9aa1aa;
+  --accent:#8a6a2f; --accent-ink:#fffaf0; --accent-soft:rgba(138,106,47,.1);
+  --ok:#2f8a5d; --warn:#a8740f; --crit:#b84634;
+  --ok-soft:rgba(47,138,93,.1); --warn-soft:rgba(168,116,15,.12); --crit-soft:rgba(184,70,52,.1);
+  --shadow:0 18px 40px -26px rgba(20,25,35,.35); color-scheme:light;}}
+:root[data-theme="light"]{
+  --bg:#eef0f2; --surface:#ffffff; --raised:#f6f5f2; --line:#d9dce1; --line-soft:#e7e9ec;
+  --fg:#16191e; --muted:#5d6570; --faint:#9aa1aa;
+  --accent:#8a6a2f; --accent-ink:#fffaf0; --accent-soft:rgba(138,106,47,.1);
+  --ok:#2f8a5d; --warn:#a8740f; --crit:#b84634;
+  --ok-soft:rgba(47,138,93,.1); --warn-soft:rgba(168,116,15,.12); --crit-soft:rgba(184,70,52,.1);
+  --shadow:0 18px 40px -26px rgba(20,25,35,.35); color-scheme:light;}
+
+*{box-sizing:border-box}
+html{direction:rtl;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+button,a,input,select,label,textarea{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+button{transition:transform .12s ease,background-color .15s,border-color .15s,color .15s}
+button:active:not([disabled]){transform:scale(.96)}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow:hidden;overscroll-behavior:none}
+.shell{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--bg);padding-top:env(safe-area-inset-top,0px)}
+.scroller{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 110px}
+.app{max-width:1180px;margin:0 auto}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num,.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+h1,h2,h3{font-weight:400;margin:0;text-wrap:balance}
+.eyebrow{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:500}
+
+/* header */
+.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:22px 14px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:14px;min-width:0}
+.brand .mark{width:52px;height:52px;border-radius:14px;flex:none;box-shadow:0 0 0 1px var(--line),0 8px 22px -12px rgba(0,0,0,.6);background:#090810}
+.brand-txt{display:flex;flex-direction:column;line-height:1.15;min-width:0}
+.brand h1{font-family:var(--f-display);font-size:30px;letter-spacing:.01em}
+.brand .sub{color:var(--muted);font-size:13px}
+.top-actions{display:flex;gap:8px;align-items:center}
+.iconbtn{display:inline-grid;place-items:center;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
+.iconbtn:hover{border-color:var(--accent)}
+svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* nav */
+.nav{position:relative;order:-1;flex:none;align-self:center;display:flex;gap:4px;padding:4px;border:1px solid var(--line);border-radius:999px;background:var(--surface);max-width:calc(100% - 32px);margin:14px auto 4px;z-index:30}
+.nav-ind{position:absolute;top:4px;bottom:4px;left:0;width:0;border-radius:999px;background:var(--accent);z-index:0;pointer-events:none;
+  transition:transform .42s cubic-bezier(.34,1.25,.5,1),width .42s cubic-bezier(.34,1.25,.5,1)}
+.nav-ind.instant{transition:none}
+.nav button{position:relative;z-index:1;display:flex;align-items:center;gap:7px;border:0;background:none;padding:8px 16px;border-radius:999px;color:var(--muted);white-space:nowrap;font-size:14px;transition:color .25s,transform .12s}
+.nav button[aria-current="page"]{color:var(--accent-ink)}
+.nav button:not([aria-current="page"]):hover{color:var(--fg)}
+@media (max-width:760px){
+  .nav{order:2;align-self:stretch;max-width:none;margin:0;border-radius:0;border-width:1px 0 0;justify-content:space-around;gap:2px;
+    padding:6px max(6px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(6px,env(safe-area-inset-left,0px));background:var(--surface)}
+  .nav-ind{top:6px;bottom:auto;height:52px;border-radius:15px;background:var(--accent-soft)}
+  .nav button{flex-direction:column;gap:3px;padding:7px 2px;font-size:11px;border-radius:15px;flex:1;min-width:0;min-height:52px;justify-content:center}
+  .nav button svg.i{width:22px;height:22px;transition:transform .35s cubic-bezier(.34,1.5,.5,1)}
+  .nav button[aria-current="page"]{color:var(--accent);font-weight:600}
+  .nav button[aria-current="page"] svg.i{transform:translateY(-1px) scale(1.1)}
+  .scroller{padding-bottom:96px}
+  .card{padding:16px}
+  .mini{min-width:38px;min-height:38px}
+  .btn.sm{min-height:36px}
+  .top{padding-block:12px 10px}
+  .sec-title{margin-top:8px}
+  .sec-title h2{font-size:25px}
+  .brand h1{font-size:25px}
+  .brand .mark{width:44px;height:44px;border-radius:12px}
+}
+
+/* fab */
+.fab{position:fixed;z-index:31;left:calc(max(16px,env(safe-area-inset-left,0px)) + 4px);bottom:calc(24px + env(safe-area-inset-bottom,0px));
+  display:flex;align-items:center;gap:8px;height:52px;padding:0 20px 0 18px;border:0;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-weight:600;box-shadow:var(--shadow);font-size:15px}
+.fab svg.i{width:21px;height:21px;stroke-width:1.9}
+@media (max-width:760px){.fab{bottom:calc(76px + env(safe-area-inset-bottom,0px));height:52px;padding:0 18px 0 16px}}
+
+/* surfaces */
+.card{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r);padding:20px;min-width:0}
+.card h2{font-family:var(--f-display);font-size:22px}
+.card-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.card-head .link{background:none;border:0;color:var(--accent);font-size:13px;padding:0}
+.grid{display:grid;gap:16px}
+.stack{display:flex;flex-direction:column;gap:16px}
+.muted{color:var(--muted)} .small{font-size:13px}
+.empty{padding:28px 10px;text-align:center;color:var(--muted);font-size:14px}
+.empty b{display:block;color:var(--fg);font-weight:500;margin-bottom:4px}
+
+/* banner */
+.banner{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:14px 18px;border-radius:var(--r);background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 35%,transparent);margin-bottom:18px;font-size:14px}
+.banner.warn{background:var(--warn-soft);border-color:color-mix(in srgb,var(--warn) 40%,transparent)}
+
+/* hero */
+.hero{display:grid;grid-template-columns:1.05fr 1fr;gap:16px}
+@media (max-width:900px){.hero{grid-template-columns:1fr}}
+.carcard{position:relative;overflow:hidden;display:flex;flex-direction:column;gap:18px;justify-content:space-between;
+  background:radial-gradient(120% 90% at 100% 0%,var(--accent-soft),transparent 60%),var(--surface)}
+.carname{font-family:var(--f-display);font-size:38px;line-height:1.05}
+.carmeta{color:var(--muted);font-size:14px;margin-top:4px}
+.plate{display:inline-flex;align-items:stretch;direction:ltr;border-radius:6px;overflow:hidden;border:2px solid #111;background:var(--plate);color:var(--plate-ink);font-family:var(--f-mono);font-weight:500;font-size:19px;letter-spacing:.06em;height:36px;box-shadow:0 2px 0 rgba(0,0,0,.25)}
+.plate .il{background:var(--plate-blue);color:#fff;font-size:9px;display:grid;place-items:center;padding:0 5px;line-height:1.05;letter-spacing:0;text-align:center}
+.plate .no{display:grid;place-items:center;padding:0 12px}
+.odo{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;justify-content:space-between}
+.odo-digits{display:flex;direction:ltr;gap:3px}
+.odo-digits span{display:grid;place-items:center;width:30px;height:42px;border-radius:5px;background:var(--bg);border:1px solid var(--line);font-family:var(--f-mono);font-size:24px;color:var(--fg)}
+.odo-digits span.lead{color:var(--faint)}
+.odo-digits em{font-style:normal;align-self:flex-end;margin-inline-start:6px;color:var(--muted);font-size:13px;font-family:var(--f-body)}
+.btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--raised);color:var(--fg);padding:9px 15px;border-radius:10px;font-size:14px;font-weight:500;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.ghost{background:none}
+.btn.sm{padding:6px 11px;font-size:13px;border-radius:8px}
+.btn[disabled]{opacity:.5;cursor:default}
+.btn.danger{color:var(--crit)}
+
+.gaugecard{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center}
+@media (max-width:520px){.gaugecard{grid-template-columns:1fr;justify-items:center;text-align:center}}
+.gauge{width:240px;max-width:100%}
+.gauge text{font-family:var(--f-mono)}
+.gauge-info h3{font-family:var(--f-display);font-size:24px;margin:6px 0 4px}
+.gauge-info .when{color:var(--muted);font-size:14px}
+.gauge-info .acts{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+@media (max-width:520px){.gauge-info .acts{justify-content:center}}
+
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:16px}
+@media (max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{padding:16px 18px}
+.kpi .v{font-family:var(--f-mono);font-size:26px;margin-top:6px;line-height:1.1}
+.kpi .v small{font-size:13px;color:var(--muted);font-family:var(--f-body);margin-inline-start:4px}
+.kpi .d{font-size:12.5px;color:var(--muted);margin-top:4px}
+.kpi svg.spark{width:100%;height:34px;margin-top:8px;display:block}
+
+.two{display:grid;grid-template-columns:1.25fr 1fr;gap:16px;margin-top:16px}
+@media (max-width:900px){.two{grid-template-columns:1fr}}
+
+/* reminder rows */
+.rlist{display:flex;flex-direction:column}
+.rrow{display:grid;grid-template-columns:36px 1fr auto;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--line-soft)}
+.rrow:first-child{border-top:0}
+.ricon{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:var(--raised);color:var(--muted)}
+.rrow[data-s="over"] .ricon{background:var(--crit-soft);color:var(--crit)}
+.rrow[data-s="soon"] .ricon{background:var(--warn-soft);color:var(--warn)}
+.rrow[data-s="ok"] .ricon{background:var(--ok-soft);color:var(--ok)}
+.rtitle{font-weight:500;font-size:14.5px;overflow-wrap:anywhere}
+.rsub{font-size:12.5px;color:var(--muted);display:flex;flex-wrap:wrap;align-items:center;gap:3px 8px}
+.rsub .nw{white-space:nowrap}
+.bar{height:4px;border-radius:4px;background:var(--line-soft);margin-top:7px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:4px;background:var(--ok)}
+.rrow[data-s="soon"] .bar i{background:var(--warn)} .rrow[data-s="over"] .bar i{background:var(--crit)}
+.racts{display:flex;gap:6px;align-items:center}
+@media (max-width:600px){.rrow.full{grid-template-columns:36px minmax(0,1fr)}.rrow.full .racts{grid-column:2;margin-top:2px}}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.pill.over{background:var(--crit-soft);color:var(--crit)} .pill.soon{background:var(--warn-soft);color:var(--warn)} .pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.neutral{background:var(--raised);color:var(--muted)}
+
+/* quick checks */
+.checks{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media (max-width:600px){.checks{grid-template-columns:repeat(2,1fr)}}
+.chk{display:flex;flex-direction:column;gap:6px;padding:14px;border-radius:12px;border:1px solid var(--line-soft);background:var(--raised);text-align:start;min-width:0}
+.chk .t{font-size:13.5px;font-weight:500;display:flex;gap:7px;align-items:center}
+.chk .s{font-size:12px;color:var(--muted)}
+.chk[data-s="over"]{border-color:color-mix(in srgb,var(--crit) 45%,transparent)}
+.chk[data-s="soon"]{border-color:color-mix(in srgb,var(--warn) 45%,transparent)}
+.chk .btn{justify-content:center;margin-top:4px}
+
+/* timeline / ledger */
+.ledger{width:100%;border-collapse:collapse;font-size:14px}
+.ledger th{font-weight:500;font-size:12px;color:var(--muted);text-align:start;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.ledger td{padding:11px 10px;border-bottom:1px solid var(--line-soft);vertical-align:middle;white-space:nowrap}
+.ledger td.wrap{white-space:normal;min-width:140px}
+.ledger tr:last-child td{border-bottom:0}
+.ledger .n{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.tablewrap{overflow-x:auto;margin:0 -6px}
+@media (max-width:600px){
+  .tablewrap{overflow:visible;margin:0}
+  .ledger thead{display:none}
+  .ledger,.ledger tbody{display:block}
+  .ledger tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 10px;padding:14px 0;border-bottom:1px solid var(--line-soft)}
+  .ledger tr:last-child{border-bottom:0}
+  .ledger td{border:0!important;padding:0;white-space:normal;min-width:0}
+  .ledger td[data-label]::before{content:attr(data-label);display:block;font-size:11px;color:var(--muted);font-family:var(--f-body);margin-bottom:1px}
+  .ledger td.wrap{grid-column:1/-1;order:-1;font-weight:500;font-size:15px;min-width:0}
+  .ledger td:last-child{grid-column:1/-1}
+  .ledger td:last-child .rowacts{justify-content:flex-start;gap:8px}
+}
+.rowacts{display:flex;gap:4px;justify-content:flex-end}
+.mini{border:0;background:none;color:var(--muted);padding:5px;border-radius:7px;display:inline-grid;place-items:center}
+.mini:hover{color:var(--fg);background:var(--raised)}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);background:none;color:var(--accent)}
+.feed{display:flex;flex-direction:column}
+.fitem{display:grid;grid-template-columns:34px 1fr auto;gap:12px;align-items:center;padding:11px 0;border-top:1px solid var(--line-soft)}
+.fitem:first-child{border-top:0}
+.fitem .ic{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--raised);color:var(--accent)}
+.fitem .amt{font-family:var(--f-mono);font-size:14px}
+
+/* charts */
+.chart{width:100%;height:auto;display:block;direction:ltr}
+.chart text{font-family:var(--f-mono);font-size:10.5px;fill:var(--muted)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-inline-end:6px;vertical-align:-1px}
+
+/* categories */
+.cats{display:flex;flex-direction:column;gap:12px}
+.cat .row{display:flex;justify-content:space-between;font-size:14px;gap:10px}
+.cat .bar{height:6px}
+.cat .bar i{background:var(--accent)}
+
+/* receipts */
+.receipts{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px}
+.rcpt{border:1px solid var(--line-soft);border-radius:12px;overflow:hidden;background:var(--raised);padding:0;text-align:start;display:flex;flex-direction:column}
+.rcpt .img{aspect-ratio:3/4;max-width:100%;background:var(--bg) center/cover no-repeat;display:grid;place-items:center;color:var(--muted)}
+.rcpt .cap{padding:8px 10px;font-size:12px}
+.rcpt .cap b{display:block;font-weight:500;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* agents */
+.agents{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media (max-width:900px){.agents{grid-template-columns:1fr}}
+.agent{display:flex;flex-direction:column;gap:10px}
+.agent .badge{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.agent h3{font-family:var(--f-display);font-size:21px}
+.agent p{margin:0;color:var(--muted);font-size:14px}
+.agent .btn{align-self:flex-start;margin-top:auto}
+.chat{display:flex;flex-direction:column;gap:12px;margin-top:16px}
+.msgs{display:flex;flex-direction:column;gap:10px;max-height:min(460px,55vh);overflow-y:auto;overscroll-behavior:contain;padding:4px}
+.msg{max-width:85%;padding:11px 14px;border-radius:14px;font-size:14.5px;line-height:1.6;overflow-wrap:anywhere}
+.msg.u{align-self:flex-end;background:var(--accent);color:var(--accent-ink);border-end-end-radius:4px}
+.msg.a{align-self:flex-start;background:var(--raised);border:1px solid var(--line-soft);border-end-start-radius:4px}
+.msg.note{align-self:center;font-size:12px;color:var(--muted);background:none;padding:2px}
+.composer{display:flex;gap:8px}
+.composer input{flex:1;min-width:0}
+.suggest{display:flex;gap:8px;flex-wrap:wrap}
+.suggest .btn{white-space:normal;text-align:start;line-height:1.35}
+.chat,.msgs{min-width:0}
+.insight{font-size:14.5px;line-height:1.7}
+.insight p{margin:0 0 10px} .insight ul{margin:0 0 10px;padding-inline-start:18px}
+
+/* forms */
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field label{font-size:12.5px;color:var(--muted);font-weight:500}
+input[type=text],input[type=number],input[type=date],select,textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-size:16px;min-height:46px;-webkit-appearance:none;appearance:none}
+input[type=date]{text-align:right}
+select{background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:16px 50%,11px 50%;background-size:5px 5px;background-repeat:no-repeat;padding-left:32px}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);outline:none}
+textarea{resize:vertical;min-height:70px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fgrid .full{grid-column:1/-1}
+@media (max-width:480px){.fgrid{grid-template-columns:1fr}}
+.toggle{display:flex;align-items:center;gap:8px;font-size:14px}
+.toggle input{width:18px;height:18px;accent-color:var(--accent)}
+.drop{border:1.5px dashed var(--line);border-radius:12px;padding:16px;text-align:center;color:var(--muted);font-size:13.5px;position:relative}
+.drop input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.drop.has{border-color:var(--accent);color:var(--fg)}
+.preview{max-height:180px;border-radius:10px;display:block;margin:0 auto 8px}
+.formacts{display:flex;gap:8px;justify-content:flex-start;margin-top:18px;flex-wrap:wrap}
+
+/* overlay */
+.ov{position:fixed;inset:0;z-index:50;background:rgba(5,7,10,.72);display:grid;place-items:center;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.sheet{width:min(560px,100%);max-height:100%;overflow-y:auto;overscroll-behavior:contain;animation:sheetIn .26s cubic-bezier(.2,.8,.2,1);background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow)}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:10px}
+.sheet-head h2{font-family:var(--f-display);font-size:24px}
+@keyframes sheetIn{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+@media (max-width:600px){.ov{place-items:end center;padding:0}.sheet{border-radius:22px 22px 0 0;max-height:92%;padding:18px max(16px,env(safe-area-inset-right,0px)) calc(22px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));animation-name:sheetUp}.sheet::before{content:"";display:block;width:40px;height:4px;border-radius:4px;background:var(--line);margin:0 auto 12px}}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:none}}
+.qgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media (max-width:420px){.qgrid{grid-template-columns:repeat(2,1fr)}}
+.qbtn{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 8px;border-radius:14px;border:1px solid var(--line-soft);background:var(--raised);font-size:13.5px}
+.qbtn svg.i{width:24px;height:24px;color:var(--accent)}
+.qbtn:hover{border-color:var(--accent)}
+.toast{position:fixed;z-index:60;left:50%;transform:translateX(-50%);bottom:calc(140px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 18px;border-radius:999px;font-size:14px;box-shadow:var(--shadow);max-width:calc(100% - 32px)}
+.spin{width:16px;height:16px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:sp .8s linear infinite;display:inline-block}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation-duration:3s}*{transition:none!important}}
+/* view transitions: only when the tab changes, never on data refresh */
+#view.in-fwd{--dx:-26px} #view.in-back{--dx:26px} #view.in-first{--dx:0px}
+#view.in-fwd>*,#view.in-back>*,#view.in-first>*{animation:vin .4s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--k,0) * 45ms)}
+@keyframes vin{from{opacity:0;transform:translate(var(--dx),12px)}to{opacity:1;transform:none}}
+.gauge-arc{stroke-dasharray:1 1}
+#view.in-fwd .gauge-arc,#view.in-back .gauge-arc,#view.in-first .gauge-arc{animation:arcDraw 1.1s cubic-bezier(.3,.7,.2,1) .2s both}
+@keyframes arcDraw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+#view.in-fwd .bar i,#view.in-back .bar i,#view.in-first .bar i{transform-origin:right center;animation:barGrow .8s cubic-bezier(.2,.8,.2,1) .25s both}
+@keyframes barGrow{from{transform:scaleX(0)}}
+@media (prefers-reduced-motion:reduce){#view>*,#view .gauge-arc,#view .bar i{animation:none!important}.nav-ind{transition:none}}
+
+/* compact phone home */
+#view>.m{margin-bottom:14px}
+.m-hero{display:flex;flex-direction:column;gap:14px;background:radial-gradient(120% 80% at 0% 0%,var(--accent-soft),transparent 62%),var(--surface)}
+.m-car{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.m-carname{font-family:var(--f-display);font-size:28px;line-height:1.05}
+.m-car .plate{height:32px;font-size:16px;flex:none}
+@media (max-width:600px){body[data-view="home"] .fab{transform:translateY(140%);opacity:0;pointer-events:none}}
+.fab{transition:transform .35s cubic-bezier(.2,.8,.2,1),opacity .25s}
+.m-odo{display:flex;align-items:center;justify-content:space-between;gap:10px;border:0;background:none;padding:0;width:100%;color:inherit;text-align:inherit}
+.m-odo .odo-digits span{width:29px;height:40px;font-size:22px}
+.m-odo-edit{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line);color:var(--muted);flex:none}
+.m-next{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.m-tile{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:12px;border-radius:14px;background:var(--raised);border:1px solid var(--line-soft);text-align:start;min-width:0;color:inherit;font:inherit}
+.m-tile[data-s="over"]{border-color:color-mix(in srgb,var(--crit) 45%,transparent)}
+.m-tile[data-s="soon"]{border-color:color-mix(in srgb,var(--warn) 45%,transparent)}
+.ring{width:54px;height:54px;flex:none}
+.m-tile-txt{display:flex;flex-direction:column;gap:5px;min-width:0;align-items:flex-start}
+.m-tile-txt b{font-weight:500;font-size:14px;line-height:1.3;overflow-wrap:anywhere}
+.m-actions{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:10px}
+.m-act{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:78px;border-radius:16px;border:1px solid var(--line-soft);background:var(--surface);font-size:14px;font-weight:500;color:var(--fg)}
+.m-act svg.i{width:25px;height:25px;color:var(--accent)}
+.m-act.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-size:16px;font-weight:600}
+.m-act.primary svg.i{color:var(--accent-ink);width:28px;height:28px}
+.m-kpis{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;margin-inline:-16px;padding-inline:16px;scrollbar-width:none;scroll-padding-inline:16px}
+.m-kpis::-webkit-scrollbar{display:none}
+.m-kpis .kpi{flex:0 0 42%;scroll-snap-align:start;padding:14px}
+.m-kpis .kpi .v{font-size:23px}
+.banner.m{margin-top:0}
+
+/* quick fuel */
+.qf{display:flex;flex-direction:column;gap:14px}
+.qf input.big{font-family:var(--f-mono);font-size:30px;min-height:64px;text-align:center;letter-spacing:.06em;direction:ltr}
+.qf-cam{position:relative;display:flex;align-items:center;gap:14px;padding:14px;border-radius:16px;border:1.5px dashed var(--line);background:var(--raised);cursor:pointer;min-height:76px}
+.qf-cam input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.qf-cam.has{border-style:solid;border-color:var(--accent)}
+.qf-cam-ic{width:48px;height:48px;border-radius:12px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);flex:none;overflow:hidden}
+.qf-cam-ic img{width:100%;height:100%;object-fit:cover}
+.qf-cam-ic svg.i{width:24px;height:24px}
+.qf-cam-t{display:flex;flex-direction:column;gap:2px;min-width:0}
+.qf-cam-t b{font-weight:500}
+.qf-status{display:flex;gap:10px;align-items:center;padding:11px 14px;border-radius:12px;background:var(--accent-soft);font-size:14px}
+.qf-status.ok{background:var(--ok-soft);color:var(--ok)} .qf-status.warn{background:var(--warn-soft);color:var(--warn)}
+.qf-more summary{cursor:pointer;font-size:14px;font-weight:500;padding:6px 0;list-style-position:inside}
+.btn.block{width:100%;justify-content:center;min-height:54px;font-size:16px;border-radius:14px}
+.sec-title{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:26px 0 12px;flex-wrap:wrap}
+.sec-title h2{font-family:var(--f-display);font-size:28px}
+
+/* splash intro: one deliberate dark look in both themes */
+.splash{position:fixed;inset:0;z-index:100;display:grid;place-items:center;overflow:hidden;cursor:pointer;
+  background:radial-gradient(70% 55% at 50% 42%,#1c1910 0%,#0a0b0f 58%,#050608 100%);color:#e9dcc2;
+  animation:spOut .7s cubic-bezier(.7,0,.25,1) 2.8s forwards}
+.splash.out{animation:spOut .45s cubic-bezier(.7,0,.25,1) forwards}
+.sp-in{display:flex;flex-direction:column;align-items:center;gap:20px;padding:24px;max-width:100%}
+.sp-markwrap{position:relative;display:grid;place-items:center}
+.sp-halo{position:absolute;left:50%;top:50%;translate:-50% -50%;width:min(72vw,300px);aspect-ratio:1;border-radius:50%;border:1px solid rgba(207,178,132,.4);opacity:0;animation:spHalo 1.9s ease-out .35s forwards;pointer-events:none}
+.sp-halo.h2{animation-delay:.75s}
+.sp-mark{position:relative;width:min(46vw,190px);aspect-ratio:1;max-width:100%;border-radius:28%;overflow:hidden;
+  box-shadow:0 0 0 1px rgba(207,178,132,.35),0 30px 80px -24px rgba(207,178,132,.45);
+  opacity:0;animation:spMark 1.1s cubic-bezier(.2,.8,.2,1) .15s forwards}
+.sp-mark img{width:100%;height:100%;display:block}
+.sp-shine{position:absolute;inset:-20%;background:linear-gradient(105deg,transparent 40%,rgba(255,240,205,.55) 50%,transparent 60%);transform:translateX(-120%);animation:spShine 1s ease-in-out 1.15s forwards;mix-blend-mode:screen}
+.sp-title{font-family:var(--f-display);font-size:clamp(34px,9vw,52px);letter-spacing:.04em;color:#e6cf9f;display:flex;line-height:1}
+.sp-title span{display:inline-block;opacity:0;transform:translateY(16px);filter:blur(6px);animation:spLetter .6s cubic-bezier(.2,.8,.2,1) forwards;animation-delay:calc(1s + var(--i) * 70ms)}
+.sp-title .sp-gap{width:.32em}
+.sp-road{width:min(50vw,200px);height:2px;background:rgba(207,178,132,.15);border-radius:2px;position:relative}
+.sp-road i{position:absolute;top:0;bottom:0;right:0;width:0;background:linear-gradient(270deg,#cfb284,#f6e6bd);border-radius:2px;box-shadow:0 0 12px rgba(246,230,189,.7);animation:spRoad .9s cubic-bezier(.6,0,.2,1) 1.6s forwards}
+.sp-sub{font-family:var(--f-body);font-size:13px;letter-spacing:.2em;color:rgba(233,220,194,.62);opacity:0;animation:spFade .6s ease 1.95s forwards;text-align:center}
+@keyframes spMark{0%{opacity:0;transform:scale(.55) rotate(-6deg);filter:blur(10px) brightness(2)}60%{opacity:1;filter:blur(0) brightness(1.3)}100%{opacity:1;transform:none;filter:none}}
+@keyframes spShine{to{transform:translateX(120%)}}
+@keyframes spHalo{0%{opacity:0;scale:.6}35%{opacity:1}100%{opacity:0;scale:1.55}}
+@keyframes spLetter{to{opacity:1;transform:none;filter:none}}
+@keyframes spRoad{to{width:100%}}
+@keyframes spFade{to{opacity:1}}
+@keyframes spOut{to{opacity:0;visibility:hidden;transform:scale(1.06)}}
+.app.enter{animation:appIn .7s cubic-bezier(.2,.8,.2,1) both}
+@keyframes appIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  .splash{animation:spOut .4s ease 1s forwards}
+  .splash *{animation:none!important;opacity:1!important;transform:none!important;filter:none!important}
+  .sp-road i{width:100%}.sp-shine,.sp-halo{display:none}
+  .app.enter{animation:none}
+}
+</style>
+<div class="splash" id="splash" aria-hidden="true">
+  <div class="sp-in">
+    <div class="sp-markwrap"><i class="sp-halo"></i><i class="sp-halo h2"></i><div class="sp-mark"><img src="/_blob/e659200739c3afba0768da39720081ed" alt=""><i class="sp-shine"></i></div></div>
+    <div class="sp-title"><span style="--i:0">י</span><span style="--i:1">ו</span><span style="--i:2">מ</span><span style="--i:3">ן</span><span class="sp-gap" style="--i:4"></span><span style="--i:5">ה</span><span style="--i:6">ר</span><span style="--i:7">כ</span><span style="--i:8">ב</span></div>
+    <div class="sp-road"><i></i></div>
+    <div class="sp-sub" id="spSub">המוסך הפרטי שלך</div>
+  </div>
+</div>
+
+<div class="shell" id="shell">
+<div class="scroller" id="scroller">
+<div class="app" id="app">
+  <header class="top">
+    <div class="brand"><img class="mark" src="/_blob/e659200739c3afba0768da39720081ed" alt="" width="52" height="52"><div class="brand-txt"><h1>יומן הרכב</h1><span class="sub" id="subline">המוסך הפרטי שלך</span></div></div>
+    <div class="top-actions">
+      <button class="iconbtn" data-act="quick" aria-label="רישום חדש" title="רישום חדש"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="iconbtn" data-act="car" aria-label="פרטי הרכב" title="פרטי הרכב"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4"/></svg></button>
+    </div>
+  </header>
+  <div id="banner"></div>
+  <main id="view"><div class="empty"><b>טוען את הנתונים…</b>מתחבר למאגר של היומן</div></main>
+</div>
+</div>
+<nav class="nav" id="nav" aria-label="ניווט"></nav>
+</div>
+<button class="fab" data-act="fuelQuick" aria-label="תדלוק חדש"><svg class="i" viewBox="0 0 24 24"><path d="M4 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16M3 21h13M6 9h7M15 8l3 3v7a1.5 1.5 0 0 0 3 0V9l-3-3"/></svg><span>תדלוק</span></button>
+<div class="ov" id="ov" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="mtitle"><div class="sheet-head"><h2 id="mtitle"></h2><button class="iconbtn" data-act="close" aria-label="סגירה"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div id="mbody"></div></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+"use strict";
+try{document.documentElement.dir="rtl";document.documentElement.lang="he";}catch(e){}
+/* ---------- icons ---------- */
+const P={
+ home:"M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z",
+ fuel:"M4 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16M3 21h13M6 9h7M15 8l3 3v7a1.5 1.5 0 0 0 3 0V9l-3-3",
+ wrench:"M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z",
+ receipt:"M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3",
+ bell:"M6 16v-5a6 6 0 1 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0",
+ spark:"M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z",
+ plus:"M12 5v14M5 12h14",
+ drop:"M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z",
+ oil:"M3 13h11l5-4 2 1-6 8H3zM7 13v-3h4v3M9 10V8h-2M20 15c0 1-.6 2-1 2",
+ tire:"M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 3v5M12 16v5M3 12h5M16 12h5",
+ wiper:"M4 18c4-8 12-8 16 0M12 18l5-9",
+ cal:"M4 6h16v14H4zM4 10h16M8 3v4M16 3v4",
+ cam:"M4 8h3l2-3h6l2 3h3v11H4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
+ trash:"M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13",
+ edit:"M4 20h4L19 9l-4-4L4 16zM14 6l4 4",
+ check:"M5 12l5 5L20 7",
+ chart:"M4 20V11M10 20V5M16 20v-8M21 20H3",
+ shield:"M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z",
+ send:"M20 4L4 11l6 2 2 6z",
+ gauge:"M4 16a8 8 0 1 1 16 0M12 16l4-5",
+ doc:"M6 3h9l4 4v14H6zM14 3v5h5",
+ list:"M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01",
+ park:"M6 21V3h6a5 5 0 0 1 0 10H6",
+ sparkles:"M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z",
+ battery:"M3 8h16v8H3zM21 11v2M7 12h4M9 10v4",
+ brake:"M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z",
+ filter:"M4 5h16l-6 7v6l-4 2v-8z",
+ chat:"M4 5h16v11H9l-5 4z",
+};
+const I=(n,cls)=>`<svg class="i ${cls||''}" viewBox="0 0 24 24" aria-hidden="true"><path d="${P[n]||P.list}"/></svg>`;
+
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const dstr=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const today=()=>dstr(new Date());
+const pd=s=>new Date(s+'T12:00:00');
+const daysBetween=(a,b)=>Math.round((pd(b)-pd(a))/864e5);
+const addDays=(s,n)=>{const d=pd(s);d.setDate(d.getDate()+Math.round(n));return dstr(d)};
+const nf0=new Intl.NumberFormat('he-IL',{maximumFractionDigits:0});
+const nf1=new Intl.NumberFormat('he-IL',{maximumFractionDigits:1,minimumFractionDigits:1});
+const nf2=new Intl.NumberFormat('he-IL',{maximumFractionDigits:2,minimumFractionDigits:2});
+const ils=v=>'₪'+nf0.format(Math.round(+v||0));
+const ils2=v=>'₪'+nf2.format(+v||0);
+const km=v=>nf0.format(Math.round(+v||0));
+const fmtD=s=>s?pd(s).toLocaleDateString('he-IL',{day:'numeric',month:'short',year:'2-digit'}):'—';
+const monthKey=s=>s.slice(0,7);
+const monthName=k=>pd(k+'-15').toLocaleDateString('he-IL',{month:'short'});
+const n=v=>{const x=parseFloat(v);return isFinite(x)?x:null};
+
+const CATS={fuel:'דלק',service:'טיפולים ותיקונים',insurance:'ביטוח',test:'טסט ורישוי',tires:'צמיגים',parking:'חניה ואגרות',wash:'שטיפה וטיפוח',parts:'חלפים ואביזרים',other:'אחר'};
+const CAT_ICON={fuel:'fuel',service:'wrench',insurance:'shield',test:'doc',tires:'tire',parking:'park',wash:'drop',parts:'filter',other:'receipt'};
+const KIND={service:'טיפול תקופתי',check:'בדיקה שוטפת',doc:'מסמכים ותשלומים'};
+function iconFor(title,kind){
+  const t=title||'';
+  if(/שמן/.test(t)) return 'oil';
+  if(/מים|קירור|נוזל קירור/.test(t)) return 'drop';
+  if(/אוויר|צמיג|גלגל|פרונט|איזון/.test(t)) return 'tire';
+  if(/שמשה|מגב|ווישר/.test(t)) return 'wiper';
+  if(/בלמ|רפיד/.test(t)) return 'brake';
+  if(/מצבר/.test(t)) return 'battery';
+  if(/מסנן|פילטר/.test(t)) return 'filter';
+  if(/ביטוח/.test(t)) return 'shield';
+  if(/טסט|רישיון|רישוי/.test(t)) return 'doc';
+  return kind==='check'?'check':kind==='doc'?'cal':'wrench';
+}
+
+/* ---------- state ---------- */
+const COLS=['garage','fuel','service','expense','reminder'];
+const S={car:null,fuel:[],service:[],expense:[],reminder:[],ready:new Set(),offline:false};
+let db=null,assets=null,sample=null,mcp=null,imgOK=false;
+let view='home';
+try{const h=location.hash.slice(1);if(['home','fuel','service','expense','reminder','agents'].includes(h))view=h}catch(e){}
+
+/* ---------- derived ---------- */
+function odo(){
+  let m=n(S.car?.odometer)||0;
+  for(const r of [...S.fuel,...S.service]) if(n(r.odo)>m) m=n(r.odo);
+  return m;
+}
+function kmPerDay(){
+  const pts=[...S.fuel,...S.service].filter(r=>n(r.odo)&&r.date).sort((a,b)=>a.date<b.date?-1:1);
+  const cut=addDays(today(),-240); const rec=pts.filter(p=>p.date>=cut);
+  const use=rec.length>=2?rec:pts;
+  if(use.length<2) return 40;
+  const a=use[0],b=use[use.length-1],d=daysBetween(a.date,b.date);
+  return d>0?Math.max(5,(b.odo-a.odo)/d):40;
+}
+function fuelEff(){
+  const f=[...S.fuel].filter(r=>n(r.odo)).sort((a,b)=>a.odo-b.odo);
+  const out=[];let last=null,acc=0;
+  for(const r of f){
+    if(!last){ if(r.full) {last=r;acc=0;} continue; }
+    acc+=n(r.liters)||0;
+    if(r.full){ const d=r.odo-last.odo; if(d>0&&acc>0) out.push({id:r.id,date:r.date,odo:r.odo,kmpl:d/acc,km:d}); last=r; acc=0; }
+  }
+  return out;
+}
+function effStats(){
+  const e=fuelEff(); if(!e.length) return null;
+  const tk=e.reduce((s,x)=>s+x.km,0), tl=e.reduce((s,x)=>s+x.km/x.kmpl,0);
+  return {avg:tk/tl,last:e[e.length-1].kmpl,prev:e.length>1?e[e.length-2].kmpl:null,series:e};
+}
+function allSpend(){
+  const rows=[];
+  for(const f of S.fuel) rows.push({date:f.date,cat:'fuel',amount:n(f.total)||0,title:f.station||'תדלוק',src:'fuel',rec:f});
+  for(const s of S.service) rows.push({date:s.date,cat:'service',amount:n(s.cost)||0,title:s.title||'טיפול',src:'service',rec:s});
+  for(const x of S.expense) rows.push({date:x.date,cat:x.category||'other',amount:n(x.amount)||0,title:x.title||CATS[x.category]||'הוצאה',src:'expense',rec:x});
+  return rows.filter(r=>r.date).sort((a,b)=>a.date<b.date?1:-1);
+}
+function lastMonths(k){
+  const out=[];const d=new Date();d.setDate(15);
+  for(let i=k-1;i>=0;i--){const x=new Date(d);x.setMonth(d.getMonth()-i);out.push(x.getFullYear()+'-'+pad(x.getMonth()+1));}
+  return out;
+}
+function remState(r){
+  const o=odo(),t=today();let kmLeft=null,daysLeft=null,pk=0,pdd=0;
+  if(n(r.intervalKm)){kmLeft=(n(r.lastKm)||0)+n(r.intervalKm)-o;pk=1-kmLeft/n(r.intervalKm);}
+  if(n(r.intervalDays)){const due=addDays(r.lastDate||t,n(r.intervalDays));daysLeft=daysBetween(t,due);pdd=1-daysLeft/n(r.intervalDays);}
+  const kpd=kmPerDay(); const cands=[];
+  if(daysLeft!==null) cands.push(addDays(t,daysLeft));
+  if(kmLeft!==null) cands.push(addDays(t,Math.max(-3650,kmLeft/kpd)));
+  const dueDate=cands.sort()[0]||null;
+  const kmBinding=kmLeft!==null&&(daysLeft===null||kmLeft/kpd<daysLeft);
+  const over=(kmLeft!==null&&kmLeft<=0)||(daysLeft!==null&&daysLeft<0);
+  const soonDays=r.kind==='check'?2:21;
+  const soon=!over&&(Math.max(pk,pdd)>=.85||(daysLeft!==null&&daysLeft<=soonDays)||(kmLeft!==null&&kmLeft<=1000));
+  const pct=Math.min(1,Math.max(0,Math.max(pk,pdd)));
+  let label;
+  if(kmBinding){label=kmLeft<=0?`באיחור ${km(-kmLeft)} ק״מ`:`עוד ${km(kmLeft)} ק״מ`;}
+  else if(daysLeft!==null){label=daysLeft<0?`באיחור ${-daysLeft} ימים`:daysLeft===0?'היום':daysLeft===1?'מחר':`עוד ${daysLeft} ימים`;}
+  else label='ללא מועד';
+  return {kmLeft,daysLeft,pct,dueDate,status:over?'over':soon?'soon':'ok',label,kmBinding};
+}
+const RANK={over:0,soon:1,ok:2};
+function sortedReminders(filter){
+  return S.reminder.filter(r=>!filter||filter(r)).map(r=>({r,st:remState(r)}))
+    .sort((a,b)=>RANK[a.st.status]-RANK[b.st.status]||b.st.pct-a.st.pct);
+}
+
+/* ---------- db ---------- */
+async function boot(){
+  renderNav();
+  const timer=setTimeout(()=>{if(S.ready.size<COLS.length){S.offline=true;render();}},10000);
+  try{ db=await window.claude?.use?.('db'); }catch(e){ db=null; }
+  if(!db){clearTimeout(timer);S.noDb=true;render();return;}
+  for(const c of COLS){
+    db.collection(c).onSnapshot(snap=>{
+      const rows=snap.docs.map(d=>Object.assign({id:d.id},d.data()));
+      if(c==='garage') S.car=rows.find(r=>r.id==='car')||null; else S[c]=rows;
+      if(!snap.metadata.fromCache){S.ready.add(c); if(S.ready.size===COLS.length){clearTimeout(timer);S.offline=false;}}
+      else S.ready.add(c);
+      render();
+    },err=>{S.ready.add(c);S.offline=true;console.warn(err);render();});
+  }
+  window.claude.use('assets').then(a=>{assets=a;}).catch(()=>{});
+  window.claude.use('mcp').then(m=>{mcp=m;}).catch(()=>{});
+  window.claude.use('sample').then(async s=>{sample=s; if(s){try{const l=await s.limits();imgOK=!!l?.images;}catch(e){}} render();}).catch(()=>{});
+}
+const col=c=>db.collection(c);
+async function addRec(c,data){ if(!db) throw new Error('nodb'); return col(c).add(Object.assign({createdAt:Date.now()},data)); }
+async function updRec(c,id,data){ return col(c).doc(id).update(data); }
+async function setRec(c,id,data){ return col(c).doc(id).set(data); }
+async function delRec(c,id){ return col(c).doc(id).delete(); }
+async function bumpOdo(v){
+  v=n(v); if(!v||!S.car) return;
+  if(v>(n(S.car.odometer)||0)) await updRec('garage','car',{odometer:v,odoUpdatedAt:today()});
+}
+
+/* ---------- ui infra ---------- */
+let toastT;
+function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2600);}
+function openModal(title,html,mount){document.body.style.overflow='hidden';$('#mtitle').textContent=title;$('#mbody').innerHTML=html;$('#ov').hidden=false;if(mount)mount($('#mbody'));const f=$('#mbody').querySelector('input,select,textarea,button');if(f&&window.innerWidth>700)f.focus();}
+function closeModal(){document.body.style.overflow='';$('#ov').hidden=true;$('#mbody').innerHTML='';}
+$('#ov').addEventListener('click',e=>{if(e.target.id==='ov')closeModal();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#ov').hidden)closeModal();});
+
+const NAV=[['home','בית','home'],['fuel','דלק','fuel'],['service','טיפולים','wrench'],['expense','הוצאות','receipt'],['reminder','תזכורות','bell'],['agents','סוכנים','spark']];
+const scroller=()=>$('#scroller');
+const scrollMem={};
+function renderNav(instant){
+  const nav=$('#nav');
+  if(!nav.querySelector('button')){
+    nav.innerHTML='<i class="nav-ind instant" id="navInd"></i>'+NAV.map(([k,l,i])=>`<button data-nav="${k}">${I(i)}<span>${l}</span></button>`).join('');
+    instant=true;
+  }
+  try{document.body.dataset.view=view;}catch(e){}
+  nav.querySelectorAll('button').forEach(b=>{if(b.dataset.nav===view)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
+  placeInd(instant);
+}
+function placeInd(instant){
+  const ind=$('#navInd'),b=$('#nav')&&$('#nav').querySelector('[aria-current="page"]');if(!ind||!b)return;
+  if(instant)ind.classList.add('instant');
+  ind.style.width=b.offsetWidth+'px';ind.style.transform=`translateX(${b.offsetLeft}px)`;
+  if(instant){void ind.offsetWidth;requestAnimationFrame(()=>requestAnimationFrame(()=>ind.classList.remove('instant')));}
+}
+window.addEventListener('resize',()=>placeInd(true));
+function animateView(kind){
+  const v=$('#view');v.classList.remove('in-fwd','in-back','in-first');void v.offsetWidth;
+  [...v.children].forEach((c,i)=>c.style.setProperty('--k',Math.min(i,8)));
+  v.classList.add('in-'+kind);
+  clearTimeout(animateView.t);animateView.t=setTimeout(()=>v.classList.remove('in-'+kind),1600);
+}
+function go(v){
+  if(v===view){try{scroller().scrollTo({top:0,behavior:'smooth'})}catch(e){scroller().scrollTop=0}return;}
+  const oi=NAV.findIndex(x=>x[0]===view),ni=NAV.findIndex(x=>x[0]===v);
+  scrollMem[view]=scroller().scrollTop;
+  view=v;try{history.replaceState(null,'','#'+v)}catch(e){try{location.hash=v}catch(_){}}
+  renderNav();
+  if(rq){cancelAnimationFrame(rq);rq=0;}
+  renderNow();
+  scroller().scrollTop=scrollMem[v]||0;
+  animateView(ni>oi?'fwd':'back');
+}
+
+/* ---------- charts ---------- */
+function niceMax(v){if(v<=0)return 1;const p=Math.pow(10,Math.floor(Math.log10(v)));const m=v/p;return (m<=1?1:m<=2?2:m<=2.5?2.5:m<=5?5:10)*p;}
+function lineChart(pts,{h=200,fmt=v=>nf1.format(v),unit=''}={}){
+  if(pts.length<2) return `<div class="empty">הגרף יופיע אחרי עוד תדלוק מלא עם קילומטראז׳</div>`;
+  const W=380,H=h,L=44,R=14,T=16,B=24;
+  const ys=pts.map(p=>p.y);let lo=Math.min(...ys),hi=Math.max(...ys);
+  const span=(hi-lo)||hi*.1||1;lo=Math.max(0,lo-span*.25);hi=hi+span*.25;
+  const X=i=>L+(W-L-R)*(pts.length===1?.5:i/(pts.length-1));
+  const Y=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo));
+  const grid=[lo,(lo+hi)/2,hi].map(v=>`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line-soft)"/><text x="${L-8}" y="${Y(v)+3.5}" text-anchor="end">${fmt(v)}</text>`).join('');
+  const d=pts.map((p,i)=>`${i?'L':'M'}${X(i).toFixed(1)},${Y(p.y).toFixed(1)}`).join('');
+  const area=`${d}L${X(pts.length-1)},${H-B}L${X(0)},${H-B}Z`;
+  const step=Math.ceil(pts.length/5);
+  const xl=pts.map((p,i)=>(i%step===0||i===pts.length-1)?`<text x="${X(i)}" y="${H-8}" text-anchor="${i===0?'start':i===pts.length-1?'end':'middle'}">${esc(p.label)}</text>`:'').join('');
+  const last=pts[pts.length-1];
+  const id='g'+Math.random().toString(36).slice(2,7);
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="גרף ${unit}"><defs><linearGradient id="${id}" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".28"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>${grid}<path d="${area}" fill="url(#${id})"/><path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>${pts.map((p,i)=>`<circle cx="${X(i)}" cy="${Y(p.y)}" r="${i===pts.length-1?4.5:2.5}" fill="${i===pts.length-1?'var(--accent)':'var(--surface)'}" stroke="var(--accent)" stroke-width="1.5"/>`).join('')}<text x="${X(pts.length-1)}" y="${Y(last.y)-10}" text-anchor="end" style="fill:var(--fg)">${fmt(last.y)}</text>${xl}</svg>`;
+}
+function spark(vals){
+  if(vals.length<2) return '';
+  const W=200,H=34;let lo=Math.min(...vals),hi=Math.max(...vals);if(hi===lo){hi+=1;lo-=1;}
+  const X=i=>2+(W-4)*i/(vals.length-1),Y=v=>3+(H-6)*(1-(v-lo)/(hi-lo));
+  const d=vals.map((v,i)=>`${i?'L':'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join('');
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><path d="${d}L${W-2},${H}L2,${H}Z" fill="var(--accent-soft)"/><path d="${d}" fill="none" stroke="var(--accent)" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>`;
+}
+const SERIES=[['fuel','דלק','var(--accent)'],['service','טיפולים','var(--ok)'],['other','שאר ההוצאות','var(--muted)']];
+function barsChart(months){
+  const sp=allSpend();const data=months.map(m=>{const o={m,fuel:0,service:0,other:0};for(const r of sp)if(monthKey(r.date)===m){const k=r.cat==='fuel'?'fuel':r.cat==='service'?'service':'other';o[k]+=r.amount;}o.t=o.fuel+o.service+o.other;return o;});
+  const W=380,H=230,L=50,R=6,T=18,B=24;const mx=niceMax(Math.max(...data.map(d=>d.t),1));
+  const bw=(W-L-R)/data.length;const Y=v=>T+(H-T-B)*(1-v/mx);
+  const grid=[0,mx/2,mx].map(v=>`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line-soft)"/><text x="${L-8}" y="${Y(v)+3.5}" text-anchor="end">${ils(v)}</text>`).join('');
+  const bars=data.map((d,i)=>{let y0=Y(0),out='';const x=L+i*bw+bw*.22,w=bw*.56;
+    for(const [k,,c] of SERIES){if(!d[k])continue;const h=y0-Y(d[k]);out+=`<rect x="${x}" y="${y0-h}" width="${w}" height="${Math.max(h,0)}" fill="${c}" rx="2"><title>${esc(monthName(d.m))}: ${ils(d[k])}</title></rect>`;y0-=h;}
+    return out+`<text x="${x+w/2}" y="${H-8}" text-anchor="middle">${esc(monthName(d.m))}</text>`+(d.t?`<text x="${x+w/2}" y="${y0-5}" text-anchor="middle" style="fill:var(--fg)">${ils(d.t)}</text>`:'');}).join('');
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="הוצאות לפי חודש">${grid}${bars}</svg><div class="legend">${SERIES.map(([,l,c])=>`<span><i style="background:${c}"></i>${l}</span>`).join('')}</div>`;
+}
+function gauge(st,r){
+  const cx=130,cy=118,R=98,SW=240;
+  const pt=t=>{const a=(210-SW*t)*Math.PI/180;return [cx+R*Math.cos(a),cy-R*Math.sin(a)];};
+  const arc=(t0,t1)=>{const [x0,y0]=pt(t0),[x1,y1]=pt(t1);return `M${x0.toFixed(2)},${y0.toFixed(2)}A${R},${R} 0 ${SW*(t1-t0)>180?1:0} 1 ${x1.toFixed(2)},${y1.toFixed(2)}`;};
+  const rem=Math.max(0,1-st.pct);
+  const col=st.status==='over'?'var(--crit)':st.status==='soon'?'var(--warn)':'var(--accent)';
+  let ticks='';for(let i=0;i<=20;i++){const t=i/20,a=(210-SW*t)*Math.PI/180,r1=R-14,r2=i%5===0?R-24:R-19;ticks+=`<line x1="${cx+r1*Math.cos(a)}" y1="${cy-r1*Math.sin(a)}" x2="${cx+r2*Math.cos(a)}" y2="${cy-r2*Math.sin(a)}" stroke="var(--faint)" stroke-width="${i%5===0?1.6:1}"/>`;}
+  const big=st.kmBinding?km(Math.abs(st.kmLeft)):st.daysLeft!==null?String(Math.abs(st.daysLeft)):'—';
+  const unit=st.kmBinding?'ק״מ':'ימים';
+  const sub=st.status==='over'?'באיחור':'נותרו';
+  const [ex,ey]=pt(1),[sx,sy]=pt(0);
+  return `<svg class="gauge" viewBox="0 0 260 200" role="img" aria-label="${esc(r.title)}: ${esc(st.label)}">
+   <path d="${arc(0,1)}" fill="none" stroke="var(--line)" stroke-width="10" stroke-linecap="round"/>
+   ${rem>0.005?`<path class="gauge-arc" pathLength="1" d="${arc(0,rem)}" fill="none" stroke="${col}" stroke-width="10" stroke-linecap="round"/>`:''}
+   ${ticks}
+   <text x="${cx}" y="${cy-14}" text-anchor="middle" font-size="12" style="fill:var(--muted);font-family:var(--f-body)">${sub}</text>
+   <text x="${cx}" y="${cy+20}" text-anchor="middle" font-size="38" style="fill:var(--fg)">${big}</text>
+   <text x="${cx}" y="${cy+42}" text-anchor="middle" font-size="12" style="fill:var(--muted);font-family:var(--f-body)">${unit}</text>
+   <text x="${sx+4}" y="${sy+22}" text-anchor="middle" font-size="11" style="fill:var(--faint)">E</text>
+   <text x="${ex-4}" y="${ey+22}" text-anchor="middle" font-size="11" style="fill:var(--faint)">F</text>
+  </svg>`;
+}
+
+/* ---------- pieces ---------- */
+function plate(p){const s=esc(p||'00-000-00');return `<span class="plate" aria-label="מספר רישוי ${s}"><span class="il">IL<br>ישראל</span><span class="no">${s}</span></span>`;}
+function odoDigits(v){const s=String(Math.round(v||0)).padStart(6,'0');let lead=true;return `<div class="odo-digits" aria-label="${km(v)} קילומטר">${[...s].map(c=>{if(c!=='0')lead=false;return `<span class="${lead?'lead':''}">${c}</span>`;}).join('')}<em>ק״מ</em></div>`;}
+function rcptChip(rc){return rc?.id?`<button class="chip" data-act="rcpt" data-id="${esc(rc.id)}" data-type="${esc(rc.type||'')}">${I('receipt')}קבלה</button>`:'';}
+function remRow(x,compact){
+  const {r,st}=x;
+  const due=st.dueDate?`צפוי ${fmtD(st.dueDate)}`:'';
+  const intervals=[n(r.intervalKm)?`כל ${km(r.intervalKm)} ק״מ`:'',n(r.intervalDays)?`כל ${daysLabel(r.intervalDays)}`:''].filter(Boolean).join(' או ');
+  return `<div class="rrow${compact?'':' full'}" data-s="${st.status}">
+    <div class="ricon">${I(iconFor(r.title,r.kind))}</div>
+    <div style="min-width:0"><div class="rtitle">${esc(r.title)}</div>
+      <div class="rsub"><span class="pill ${st.status}">${esc(st.label)}</span>${!compact&&intervals?`<span class="nw">${esc(intervals)}</span>`:''}${due?`<span class="nw">${esc(due)}</span>`:''}</div>
+      <div class="bar"><i style="width:${Math.round(st.pct*100)}%"></i></div></div>
+    <div class="racts">
+      <button class="btn sm" data-act="done" data-id="${r.id}">${I('check')}בוצע</button>
+      ${compact?'':`<button class="mini" data-act="cal" data-id="${r.id}" title="הוספה ליומן Google" aria-label="הוספה ליומן">${I('cal')}</button><button class="mini" data-act="editRem" data-id="${r.id}" aria-label="עריכה">${I('edit')}</button>`}
+    </div></div>`;
+}
+function daysLabel(d){d=+d;if(d%365===0)return d===365?'שנה':`${d/365} שנים`;if(d%30===0)return d===30?'חודש':`${d/30} חודשים`;if(d%7===0)return d===7?'שבוע':`${d/7} שבועות`;return `${d} ימים`;}
+
+/* ---------- views ---------- */
+let rq=0;
+function render(){if(rq)return;rq=requestAnimationFrame(()=>{rq=0;renderNow();});}
+function renderNow(){
+  const v=$('#view');
+  renderBanner();
+  if(S.noDb){v.innerHTML=`<div class="card empty"><b>היומן לא מצליח להתחבר למאגר הנתונים</b>פתח את הדף מחשבון Claude מחובר כדי לשמור ולקרוא את הנתונים של הרכב.</div>`;return;}
+  if(S.ready.size<COLS.length&&!S.offline){return;}
+  const car=S.car;
+  $('#subline').textContent=car?[car.make,car.model,car.year].filter(Boolean).join(' · '):'המוסך הפרטי שלך';
+  {const sp=$('#spSub');if(sp&&car&&car.make)sp.textContent=[car.make,car.model,car.year].filter(Boolean).join(' · ');}
+  if(view==='agents'&&chatBusy) return;
+  if(view==='home'&&insightBusy) return;
+  const fn={home:vHome,fuel:vFuel,service:vService,expense:vExpense,reminder:vReminder,agents:vAgents}[view]||vHome;
+  const keepChat=view==='agents'?captureChat():null;
+  v.innerHTML=fn();
+  if(keepChat) restoreChat(keepChat);
+}
+function renderBanner(){
+  const b=$('#banner');
+  if(S.offline&&!S.noDb){b.innerHTML=`<div class="banner warn">המאגר לא עונה כרגע, ייתכן שהנתונים שמוצגים לא מעודכנים. השינויים יישמרו כשהחיבור יחזור.</div>`;return;}
+  if(S.car?.example){b.innerHTML=`<div class="banner"><span><b>אלה נתוני דוגמה</b> כדי שתראה איך היומן עובד. כשתגדיר את הרכב שלך, הדוגמאות יימחקו.</span><button class="btn primary sm" data-act="setup">${I('edit')}הגדרת הרכב שלי</button></div>`;return;}
+  if(!S.car&&S.ready.size===COLS.length){b.innerHTML=`<div class="banner"><span><b>ברוך הבא.</b> נתחיל בפרטי הרכב ובקילומטראז׳ הנוכחי.</span><button class="btn primary sm" data-act="setup">${I('plus')}הוספת הרכב</button></div>`;return;}
+  b.innerHTML='';
+}
+
+const mqPhone=window.matchMedia?matchMedia('(max-width:600px)'):{matches:false};
+try{mqPhone.addEventListener('change',()=>render());}catch(e){}
+function miniRing(st){
+  const R=26,c=32,rem=Math.max(0,1-st.pct);
+  const col=st.status==='over'?'var(--crit)':st.status==='soon'?'var(--warn)':'var(--accent)';
+  const a=t=>{const g=(90-360*t)*Math.PI/180;return [(c+R*Math.cos(g)).toFixed(2),(c-R*Math.sin(g)).toFixed(2)];};
+  let arc='';
+  if(st.status==='over') arc=`<circle cx="${c}" cy="${c}" r="${R}" fill="none" stroke="${col}" stroke-width="5" stroke-dasharray="3 4" opacity=".85"/>`;
+  else if(rem>0.995) arc=`<circle class="gauge-arc" pathLength="1" cx="${c}" cy="${c}" r="${R}" fill="none" stroke="${col}" stroke-width="5" transform="rotate(-90 32 32)"/>`;
+  else if(rem>0.005){const [x0,y0]=a(0),[x1,y1]=a(rem);arc=`<path class="gauge-arc" pathLength="1" d="M${x0},${y0}A${R},${R} 0 ${rem>.5?1:0} 1 ${x1},${y1}" fill="none" stroke="${col}" stroke-width="5" stroke-linecap="round"/>`;}
+  const big=st.kmBinding?km(Math.abs(st.kmLeft)):st.daysLeft!==null?String(Math.abs(st.daysLeft)):'—';
+  const unit=st.kmBinding?'ק״מ':'ימים';
+  return `<svg class="ring" viewBox="0 0 64 64" aria-hidden="true"><circle cx="${c}" cy="${c}" r="${R}" fill="none" stroke="var(--line)" stroke-width="5"/>${arc}<text x="32" y="33" text-anchor="middle" font-size="${big.length>4?11:15}" style="fill:var(--fg);font-family:var(--f-mono)">${big}</text><text x="32" y="44" text-anchor="middle" font-size="8" style="fill:var(--muted);font-family:var(--f-body)">${unit}</text></svg>`;
+}
+function feedItem(r){return `<div class="fitem"><div class="ic">${I(CAT_ICON[r.cat]||'receipt')}</div><div style="min-width:0"><div class="rtitle">${esc(r.title)}</div><div class="rsub"><span>${fmtD(r.date)}</span><span>${esc(CATS[r.cat]||'')}</span>${r.src==='fuel'&&r.rec.liters?`<span>${nf1.format(r.rec.liters)} ל׳</span>`:''}${r.src==='fuel'&&!n(r.rec.odo)?`<span class="pill soon">חסר ק״מ</span>`:''}</div></div><div class="amt">${ils(r.amount)}</div></div>`;}
+function noKmFuel(){return S.fuel.filter(f=>!n(f.odo)&&f.date>=addDays(today(),-90)).sort((a,b)=>(b.date||'').localeCompare(a.date||''));}
+function noKmBanner(cls){const nk=noKmFuel();if(!nk.length)return '';return `<section class="banner warn ${cls||''}"><span>${nk.length===1?`לתדלוק מ־${fmtD(nk[0].date)} חסר קילומטראז׳.`:`ל־${nk.length} תדלוקים חסר קילומטראז׳.`} בלי זה הצריכה לא מחושבת.</span><button class="btn sm primary" data-act="fuelForm" data-id="${nk[0].id}">${I('edit')}הוספת ק״מ</button></section>`;}
+function vHomeMobile(){
+  const car=S.car||{};const o=odo();
+  const svc=sortedReminders(r=>r.kind!=='check');const top=svc[0];
+  const ck=sortedReminders(r=>r.kind==='check')[0];
+  const eff=effStats();const sp=allSpend();const thisM=monthKey(today());
+  const mSpend=sp.filter(r=>monthKey(r.date)===thisM).reduce((s,r)=>s+r.amount,0);
+  const docs=sortedReminders(r=>/טסט/.test(r.title))[0];
+  const attn=svc.filter(x=>x.st.status!=='ok').slice(0,3);
+  return `
+  <section class="card m m-hero">
+    <div class="m-car"><div style="min-width:0"><div class="eyebrow">${esc(car.nickname||'הרכב שלי')}</div><div class="m-carname">${esc([car.make,car.model].filter(Boolean).join(' ')||'רכב חדש')}</div></div>${plate(car.plate)}</div>
+    <button class="m-odo" data-act="odo" aria-label="עדכון מד אוץ">${odoDigits(o)}<span class="m-odo-edit">${I('edit')}</span></button>
+    <div class="m-next">
+      ${top?`<button class="m-tile" data-nav="reminder" data-s="${top.st.status}">${miniRing(top.st)}<span class="m-tile-txt"><span class="eyebrow">טיפול הבא</span><b>${esc(top.r.title)}</b><span class="pill ${top.st.status}">${esc(top.st.label)}</span></span></button>`:''}
+      ${ck?`<div class="m-tile" data-s="${ck.st.status}">${miniRing(ck.st)}<span class="m-tile-txt"><span class="eyebrow">בדיקה הבאה</span><b>${esc(ck.r.title)}</b><button class="btn sm" data-act="done" data-id="${ck.r.id}">${I('check')}בדקתי</button></span></div>`:''}
+    </div>
+  </section>
+  <section class="m m-actions">
+    <button class="m-act primary" data-act="fuelQuick">${I('fuel')}<span>תדלוק</span></button>
+    <button class="m-act" data-act="checks">${I('oil')}<span>בדיקה</span></button>
+    <button class="m-act" data-act="quick">${I('plus')}<span>רישום</span></button>
+  </section>
+  ${noKmBanner('m')}
+  <section class="m m-kpis" aria-label="נתונים">
+    <div class="card kpi"><div class="eyebrow">ק״מ לליטר</div><div class="v">${eff?nf1.format(eff.avg):'—'}</div><div class="d">${eff?'ממוצע':'אחרי 2 מילויים מלאים'}</div></div>
+    <div class="card kpi"><div class="eyebrow">החודש</div><div class="v">${ils(mSpend)}</div><div class="d">הוצאות</div></div>
+    <div class="card kpi"><div class="eyebrow">טסט</div><div class="v">${docs&&docs.st.daysLeft!==null?(docs.st.daysLeft<0?'עבר':docs.st.daysLeft):'—'}${docs&&docs.st.daysLeft>=0?'<small>ימים</small>':''}</div><div class="d">${docs?'עד '+fmtD(docs.st.dueDate):''}</div></div>
+    <div class="card kpi"><div class="eyebrow">נסיעה</div><div class="v">${km(kmPerDay())}<small>ק״מ</small></div><div class="d">ביום בממוצע</div></div>
+  </section>
+  <section class="card m"><div class="card-head"><h2>דורש תשומת לב</h2><button class="link" data-nav="reminder">הכול</button></div>
+    <div class="rlist">${attn.map(x=>remRow(x,true)).join('')||'<div class="empty"><b>הכול תקין</b>אין טיפולים שמגיעים בקרוב</div>'}</div></section>
+  <section class="card m"><div class="card-head"><h2>אחרונים</h2><button class="link" data-nav="expense">הכול</button></div>
+    <div class="feed">${sp.slice(0,3).map(feedItem).join('')||'<div class="empty">עוד לא נרשם כלום</div>'}</div></section>
+  <section class="card m"><div class="card-head"><h2>תובנות הסוכן</h2><button class="btn sm" data-act="insight">${I('spark')}ניתוח</button></div>
+    <div class="insight" id="insight">${lastInsight||'<span class="muted small">סיכום קצר של הצריכה וההוצאות, ומה כדאי לעשות החודש.</span>'}</div></section>`;
+}
+function vHome(){
+  if(mqPhone.matches) return vHomeMobile();
+  const car=S.car||{};const o=odo();
+  const urgent=sortedReminders(r=>r.kind!=='check');
+  const top=urgent[0];
+  const eff=effStats();
+  const thisM=monthKey(today());const sp=allSpend();
+  const mSpend=sp.filter(r=>monthKey(r.date)===thisM).reduce((s,r)=>s+r.amount,0);
+  const yCut=addDays(today(),-365);const ySp=sp.filter(r=>r.date>=yCut);
+  const yTotal=ySp.reduce((s,r)=>s+r.amount,0);
+  const odoPts=[...S.fuel,...S.service].filter(r=>r.date>=yCut&&n(r.odo)).map(r=>r.odo);
+  const kmYear=odoPts.length>1?Math.max(...odoPts)-Math.min(...odoPts):0;
+  const cpk=kmYear>200?yTotal/kmYear:null;
+  const docs=sortedReminders(r=>/טסט/.test(r.title))[0];
+  const checks=sortedReminders(r=>r.kind==='check');
+  const feed=sp.slice(0,6);
+  const effDelta=eff&&eff.prev?eff.last-eff.prev:null;
+  return `
+  <section class="hero">
+    <div class="card carcard">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
+        <div><div class="eyebrow">${esc(car.nickname||'הרכב שלי')}</div><div class="carname">${esc([car.make,car.model].filter(Boolean).join(' ')||'רכב חדש')}</div>
+        <div class="carmeta">${esc([car.year,car.fuelType?('דלק '+car.fuelType):'',car.tankL?`מכל ${car.tankL} ל׳`:''].filter(Boolean).join(' · '))}</div></div>
+        ${plate(car.plate)}
+      </div>
+      <div class="odo">${odoDigits(o)}<button class="btn sm" data-act="odo">${I('gauge')}עדכון מד אוץ</button></div>
+      <div class="small muted">נסיעה ממוצעת: כ־${km(kmPerDay())} ק״מ ביום${car.odoUpdatedAt?` · עודכן ${fmtD(car.odoUpdatedAt)}`:''}</div>
+    </div>
+    <div class="card gaugecard">
+      ${top?gauge(top.st,top.r):`<div class="empty">אין טיפולים מתוזמנים</div>`}
+      <div class="gauge-info">
+        <div class="eyebrow">הטיפול הקרוב</div>
+        ${top?`<h3>${esc(top.r.title)}</h3><div class="when">${esc(top.st.label)}${top.st.dueDate?` · משוער ל־${fmtD(top.st.dueDate)}`:''}</div>
+        <div class="acts"><button class="btn primary sm" data-act="done" data-id="${top.r.id}">${I('check')}סימון כבוצע</button><button class="btn sm" data-act="cal" data-id="${top.r.id}">${I('cal')}ליומן Google</button></div>`
+        :`<h3>הכול מסודר</h3><div class="when">הוסף תזכורת או בקש מהסוכן לבנות תוכנית טיפולים</div><div class="acts"><button class="btn sm" data-nav="agents">${I('spark')}תוכנית טיפולים</button></div>`}
+      </div>
+    </div>
+  </section>
+  <section class="kpis">
+    <div class="card kpi"><div class="eyebrow">ק״מ לליטר</div><div class="v">${eff?nf1.format(eff.avg):'—'}<small>ממוצע</small></div>
+      <div class="d">${eff?`אחרון ${nf1.format(eff.last)}${effDelta!==null?` (${effDelta>=0?'+':''}${nf1.format(effDelta)})`:''}`:'נדרשים שני מילויים מלאים'}</div>${eff?spark(eff.series.slice(-10).map(x=>x.kmpl)):''}</div>
+    <div class="card kpi"><div class="eyebrow">הוצאות החודש</div><div class="v">${ils(mSpend)}</div><div class="d">${pd(thisM+'-15').toLocaleDateString('he-IL',{month:'long',year:'numeric'})}</div>${spark(lastMonths(6).map(m=>sp.filter(r=>monthKey(r.date)===m).reduce((s,r)=>s+r.amount,0)))}</div>
+    <div class="card kpi"><div class="eyebrow">עלות לק״מ</div><div class="v">${cpk?'₪'+nf2.format(cpk):'—'}</div><div class="d">${cpk?`${ils(yTotal)} על ${km(kmYear)} ק״מ בשנה האחרונה`:'יחושב אחרי כמה רישומים'}</div></div>
+    <div class="card kpi"><div class="eyebrow">טסט שנתי</div><div class="v">${docs&&docs.st.daysLeft!==null?(docs.st.daysLeft<0?'עבר':docs.st.daysLeft):'—'}${docs&&docs.st.daysLeft>=0?'<small>ימים</small>':''}</div><div class="d">${docs?`עד ${fmtD(docs.st.dueDate)}`:'הוסף תזכורת טסט'}</div></div>
+  </section>
+  <section class="two">
+    <div class="card"><div class="card-head"><h2>דורש תשומת לב</h2><button class="link" data-nav="reminder">כל התזכורות</button></div>
+      <div class="rlist">${urgent.slice(0,5).map(x=>remRow(x,true)).join('')||'<div class="empty">אין תזכורות עדיין</div>'}</div></div>
+    <div class="stack">
+      <div class="card"><div class="card-head"><h2>בדיקות שוטפות</h2><span class="small muted">שמן, מים ואוויר</span></div>
+        <div class="checks">${checks.slice(0,4).map(({r,st})=>`<div class="chk" data-s="${st.status}"><div class="t">${I(iconFor(r.title,'check'))}${esc(r.title)}</div><div class="s">${r.lastDate?`נבדק ${fmtD(r.lastDate)}`:'טרם נבדק'} · <span class="pill ${st.status}">${esc(st.label)}</span></div><button class="btn sm" data-act="done" data-id="${r.id}">${I('check')}בדקתי</button></div>`).join('')||'<div class="empty" style="grid-column:1/-1">אין בדיקות מוגדרות</div>'}</div></div>
+      <div class="card"><div class="card-head"><h2>פעילות אחרונה</h2><button class="link" data-nav="expense">כל ההוצאות</button></div>
+        <div class="feed">${feed.map(feedItem).join('')||'<div class="empty"><b>עוד לא נרשם כלום</b>לחץ על ״רישום חדש״ כדי לתעד תדלוק או טיפול</div>'}</div></div>
+    </div>
+  </section>
+  <section class="card" style="margin-top:16px">
+    <div class="card-head"><h2>תובנות הסוכן</h2><div style="display:flex;gap:8px"><button class="btn sm" data-act="insight">${I('spark')}נתח את הנתונים</button></div></div>
+    <div class="insight" id="insight">${lastInsight||`<span class="muted small">הסוכן האנליטי עובר על הצריכה, ההוצאות והטיפולים ומצביע על חריגות, מגמות ודברים שכדאי לעשות החודש.</span>`}</div>
+  </section>`;
+}
+
+function vFuel(){
+  const eff=effStats();const effMap=new Map((eff?.series||[]).map(x=>[x.id,x.kmpl]));
+  const rows=[...S.fuel].sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.odo||0)-(a.odo||0));
+  const ppl=rows.filter(r=>n(r.liters)&&n(r.total)).slice(0,14).reverse().map(r=>({label:fmtD(r.date).replace(/\s?\d{2}$/,''),y:r.total/r.liters}));
+  const totL=rows.reduce((s,r)=>s+(n(r.liters)||0),0),totC=rows.reduce((s,r)=>s+(n(r.total)||0),0);
+  return `
+  <div class="sec-title"><h2>דלק וצריכה</h2><button class="btn primary" data-act="fuelQuick">${I('plus')}תדלוק חדש</button></div>
+  ${noKmBanner()}
+  <section class="kpis" style="margin-top:0">
+    <div class="card kpi"><div class="eyebrow">ממוצע ק״מ לליטר</div><div class="v">${eff?nf1.format(eff.avg):'—'}</div><div class="d">${eff?`${nf1.format(100/eff.avg)} ל׳ ל־100 ק״מ`:''}</div></div>
+    <div class="card kpi"><div class="eyebrow">ליטרים שתודלקו</div><div class="v">${km(totL)}<small>ל׳</small></div><div class="d">${rows.length} תדלוקים</div></div>
+    <div class="card kpi"><div class="eyebrow">סך עלות דלק</div><div class="v">${ils(totC)}</div><div class="d">${totL?`ממוצע ${ils2(totC/totL)} לליטר`:''}</div></div>
+    <div class="card kpi"><div class="eyebrow">טווח משוער במכל</div><div class="v">${eff&&n(S.car?.tankL)?km(eff.avg*S.car.tankL):'—'}<small>ק״מ</small></div><div class="d">${n(S.car?.tankL)?`מכל של ${S.car.tankL} ליטר`:'הגדר נפח מכל'}</div></div>
+  </section>
+  <section class="two">
+    <div class="card"><div class="card-head"><h2>ק״מ לליטר לאורך זמן</h2><span class="small muted">בין מילויים מלאים</span></div>${lineChart((eff?.series||[]).slice(-14).map(x=>({label:fmtD(x.date).replace(/\s?\d{2}$/,''),y:x.kmpl})),{unit:'ק״מ לליטר'})}</div>
+    <div class="card"><div class="card-head"><h2>מחיר לליטר</h2><span class="small muted">בתדלוקים שלך</span></div>${lineChart(ppl,{fmt:v=>'₪'+nf2.format(v),unit:'מחיר לליטר'})}</div>
+  </section>
+  <section class="card" style="margin-top:16px"><div class="card-head"><h2>יומן תדלוקים</h2></div>
+  ${rows.length?`<div class="tablewrap"><table class="ledger"><thead><tr><th>תאריך</th><th>תחנה</th><th>ליטרים</th><th>סכום</th><th>לליטר</th><th>ק״מ לליטר</th><th>מד אוץ</th><th></th></tr></thead><tbody>
+  ${rows.map(r=>`<tr><td data-label="תאריך">${fmtD(r.date)}</td><td class="wrap">${esc(r.station||'—')}${r.full?'':' <span class="pill neutral">חלקי</span>'}</td><td class="n" data-label="ליטרים">${n(r.liters)?nf1.format(r.liters):'—'}</td><td class="n" data-label="סכום">${ils2(r.total)}</td><td class="n" data-label="לליטר">${n(r.liters)&&n(r.total)?ils2(r.total/r.liters):'—'}</td><td class="n" data-label="ק״מ לליטר">${effMap.has(r.id)?nf1.format(effMap.get(r.id)):'—'}</td><td class="n" data-label="מד אוץ">${n(r.odo)?km(r.odo):'—'}</td><td><div class="rowacts">${rcptChip(r.receipt)}<button class="mini" data-act="fuelForm" data-id="${r.id}" aria-label="עריכה">${I('edit')}</button><button class="mini" data-act="del" data-col="fuel" data-id="${r.id}" aria-label="מחיקה">${I('trash')}</button></div></td></tr>`).join('')}
+  </tbody></table></div>`:`<div class="empty"><b>אין תדלוקים עדיין</b>רשום תדלוק ראשון, או צלם קבלה והסוכן ימלא את הפרטים</div>`}</section>`;
+}
+
+function vService(){
+  const rows=[...S.service].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const sched=sortedReminders(r=>r.kind==='service');
+  const tot=rows.reduce((s,r)=>s+(n(r.cost)||0),0);
+  return `
+  <div class="sec-title"><h2>טיפולים</h2><button class="btn primary" data-act="serviceForm">${I('plus')}רישום טיפול</button></div>
+  <section class="two" style="margin-top:0">
+    <div class="card"><div class="card-head"><h2>היסטוריית טיפולים</h2><span class="small muted">${rows.length} טיפולים · ${ils(tot)}</span></div>
+      <div class="feed">${rows.map(r=>`<div class="fitem"><div class="ic">${I('wrench')}</div><div style="min-width:0"><div class="rtitle">${esc(r.title)}</div><div class="rsub">${fmtD(r.date)} · ${km(r.odo)} ק״מ${r.garage?' · '+esc(r.garage):''}</div>${r.note?`<div class="rsub" style="margin-top:3px">${esc(r.note)}</div>`:''}</div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><span class="amt">${ils(r.cost)}</span><div class="rowacts">${rcptChip(r.receipt)}<button class="mini" data-act="serviceForm" data-id="${r.id}" aria-label="עריכה">${I('edit')}</button><button class="mini" data-act="del" data-col="service" data-id="${r.id}" aria-label="מחיקה">${I('trash')}</button></div></div></div>`).join('')||'<div class="empty"><b>אין טיפולים רשומים</b>תעד טיפול במוסך כדי לעקוב אחרי ההיסטוריה של הרכב</div>'}</div></div>
+    <div class="card"><div class="card-head"><h2>לוח טיפולים</h2><button class="link" data-act="remForm" data-kind="service">הוספה</button></div>
+      <div class="rlist">${sched.map(x=>remRow(x,true)).join('')||'<div class="empty">אין טיפולים מתוזמנים</div>'}</div></div>
+  </section>`;
+}
+
+function vExpense(){
+  const sp=allSpend();const yCut=addDays(today(),-365);
+  const byCat={};for(const r of sp.filter(r=>r.date>=yCut)) byCat[r.cat]=(byCat[r.cat]||0)+r.amount;
+  const catRows=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);const mx=Math.max(1,...catRows.map(c=>c[1]));
+  const yTot=catRows.reduce((s,c)=>s+c[1],0);
+  const rcpts=sp.filter(r=>r.rec.receipt?.id).slice(0,24);
+  return `
+  <div class="sec-title"><h2>הוצאות וקבלות</h2><button class="btn primary" data-act="expenseForm">${I('plus')}הוצאה חדשה</button></div>
+  <section class="two" style="margin-top:0">
+    <div class="card"><div class="card-head"><h2>לפי חודש</h2><span class="small muted">6 חודשים אחרונים</span></div>${barsChart(lastMonths(6))}</div>
+    <div class="card"><div class="card-head"><h2>לפי קטגוריה</h2><span class="small muted">שנה אחרונה · ${ils(yTot)}</span></div>
+      <div class="cats">${catRows.map(([c,v])=>`<div class="cat"><div class="row"><span>${esc(CATS[c]||c)}</span><span class="num">${ils(v)} <span class="muted small">${Math.round(v/yTot*100)}%</span></span></div><div class="bar"><i style="width:${v/mx*100}%"></i></div></div>`).join('')||'<div class="empty">אין הוצאות בשנה האחרונה</div>'}</div></div>
+  </section>
+  <section class="card" style="margin-top:16px"><div class="card-head"><h2>ארכיון קבלות</h2><span class="small muted">${rcpts.length} קבלות שמורות</span></div>
+    ${rcpts.length?`<div class="receipts">${rcpts.map(r=>{const img=(r.rec.receipt.type||'').startsWith('image/');return `<button class="rcpt" data-act="rcpt" data-id="${esc(r.rec.receipt.id)}" data-type="${esc(r.rec.receipt.type||'')}"><div class="img" ${img?`style="background-image:url('${rcptSrc(r.rec.receipt.id)}')"`:''}>${img?'':I('doc')}</div><div class="cap"><b>${esc(r.title)}</b><span class="muted">${fmtD(r.date)} · ${ils(r.amount)}</span></div></button>`;}).join('')}</div>`:`<div class="empty"><b>עוד אין קבלות</b>צרף תמונה או PDF כשאתה רושם תדלוק, טיפול או הוצאה</div>`}
+  </section>
+  <section class="card" style="margin-top:16px"><div class="card-head"><h2>כל ההוצאות</h2></div>
+  ${sp.length?`<div class="tablewrap"><table class="ledger"><thead><tr><th>תאריך</th><th>תיאור</th><th>קטגוריה</th><th>סכום</th><th></th></tr></thead><tbody>
+  ${sp.slice(0,80).map(r=>`<tr><td data-label="תאריך">${fmtD(r.date)}</td><td class="wrap">${esc(r.title)}</td><td data-label="קטגוריה">${esc(CATS[r.cat]||'')}</td><td class="n" data-label="סכום">${ils2(r.amount)}</td><td><div class="rowacts">${rcptChip(r.rec.receipt)}<button class="mini" data-act="${r.src}Form" data-id="${r.rec.id}" aria-label="עריכה">${I('edit')}</button><button class="mini" data-act="del" data-col="${r.src}" data-id="${r.rec.id}" aria-label="מחיקה">${I('trash')}</button></div></td></tr>`).join('')}
+  </tbody></table></div>`:'<div class="empty">אין הוצאות רשומות</div>'}</section>`;
+}
+
+function vReminder(){
+  const groups=['service','check','doc'];
+  return `<div class="sec-title"><h2>תזכורות</h2><button class="btn primary" data-act="remForm">${I('plus')}תזכורת חדשה</button></div>
+  <p class="muted small" style="margin:-4px 0 16px;max-width:65ch">כל תזכורת נמדדת לפי קילומטרים, לפי זמן, או לפי מה שמגיע קודם. המועד המשוער מחושב לפי קצב הנסיעה שלך. אפשר לשלוח כל תזכורת ליומן Google כדי לקבל התראה בטלפון.</p>
+  <div class="stack">${groups.map(g=>{const list=sortedReminders(r=>(r.kind||'service')===g);return `<section class="card"><div class="card-head"><h2>${KIND[g]}</h2><button class="link" data-act="remForm" data-kind="${g}">הוספה</button></div><div class="rlist">${list.map(x=>remRow(x,false)).join('')||'<div class="empty">אין תזכורות בקבוצה הזו</div>'}</div></section>`;}).join('')}</div>`;
+}
+
+let lastInsight='',insightBusy=false;
+function vAgents(){
+  const off=!sample;
+  return `<div class="sec-title"><h2>סוכנים</h2><span class="small muted">עוזרים חכמים שעובדים על הנתונים של הרכב שלך</span></div>
+  ${off?`<div class="banner warn">הסוכנים זמינים כשהדף פתוח ב־Claude עם חשבון מחובר.</div>`:''}
+  <section class="agents">
+    <div class="card agent"><div class="badge">${I('cam')}</div><h3>סוכן הקבלות</h3><p>צלם קבלה מהתחנה או מהמוסך. הסוכן יזהה אם זה תדלוק, טיפול או הוצאה, ימלא סכום, ליטרים, תאריך ותחנה, ויצרף את הקבלה לרישום.</p><button class="btn primary" data-act="scan" ${off||!imgOK?'disabled':''}>${I('cam')}סריקת קבלה</button>${!off&&!imgOK?'<span class="small muted">סריקת תמונות לא זמינה בתצוגה הזו</span>':''}</div>
+    <div class="card agent"><div class="badge">${I('list')}</div><h3>מתכנן הטיפולים</h3><p>לפי היצרן, הדגם, השנה והקילומטראז׳, הסוכן בונה לוח טיפולים מומלץ עם מרווחים בק״מ ובזמן. אתה בוחר מה להוסיף לתזכורות.</p><button class="btn primary" data-act="plan" ${off?'disabled':''}>${I('spark')}בניית תוכנית</button></div>
+    <div class="card agent"><div class="badge">${I('chart')}</div><h3>האנליסט</h3><p>סוקר את הצריכה, המחירים וההוצאות, מאתר חריגות כמו ירידה פתאומית בק״מ לליטר, ומסכם מה כדאי לעשות החודש.</p><button class="btn primary" data-act="insight" ${off?'disabled':''}>${I('chart')}ניתוח עכשיו</button></div>
+  </section>
+  <section class="card" style="margin-top:16px">
+    <div class="card-head"><h2>יועץ הרכב</h2><span class="small muted">שואל, מחשב ומעדכן תזכורות בשבילך</span></div>
+    <div class="chat" id="chat">
+      <div class="msgs" id="msgs">${chatLog.length?'':`<div class="msg a">שלום! אני מכיר את כל היומן של ${esc(S.car?.nickname||'הרכב')}: תדלוקים, טיפולים, הוצאות ותזכורות. על מה נדבר?</div>`}</div>
+      <div class="suggest" id="sugg">${['כמה הוצאתי על הרכב בשלושת החודשים האחרונים?','הצריכה שלי תקינה לדגם הזה?','מה הטיפולים שמחכים לי עד סוף השנה?','סמן שבדקתי היום לחץ אוויר'].map(q=>`<button class="btn sm ghost" data-act="ask" data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>
+      <form class="composer" id="composer"><input type="text" id="chatIn" placeholder="שאל את יועץ הרכב…" autocomplete="off" ${off?'disabled':''}><button class="btn primary" type="submit" ${off?'disabled':''} aria-label="שליחה">${I('send')}</button></form>
+    </div>
+  </section>`;
+}
+
+/* ---------- forms ---------- */
+function fileField(label,id){return `<div class="field full"><label>${label}</label><div class="drop" id="${id}Box"><input type="file" id="${id}" accept="image/*,application/pdf"><span id="${id}Txt">${I('receipt')} צרף תמונה או PDF של הקבלה</span></div></div>`;}
+function wireFile(root,id,preset){
+  const inp=root.querySelector('#'+id),box=root.querySelector('#'+id+'Box'),txt=root.querySelector('#'+id+'Txt');
+  const show=f=>{box.classList.add('has');txt.innerHTML=(f.type.startsWith('image/')?`<img class="preview" alt="" src="${URL.createObjectURL(f)}">`:'')+esc(f.name||'קבלה');};
+  inp.addEventListener('change',()=>{if(inp.files[0])show(inp.files[0]);});
+  if(preset){inp._preset=preset;show(preset);}
+  return ()=>inp.files[0]||inp._preset||null;
+}
+async function uploadReceipt(file){
+  if(!file) return null;
+  if(!assets) {toast('לא ניתן לשמור קבלות בתצוגה הזו');return null;}
+  const r=await assets.upload(file);
+  return {id:r.id,type:r.contentType||file.type||'',name:file.name||''};
+}
+function busy(btn,on,label){if(!btn)return;btn.disabled=on;if(on){btn._l=btn.innerHTML;btn.innerHTML=`<span class="spin"></span>${label||'שומר…'}`;}else if(btn._l)btn.innerHTML=btn._l;}
+function fv(root,id){const e=root.querySelector('#'+id);return e?(e.type==='checkbox'?e.checked:e.value.trim()):'';}
+
+function fuelForm(id,pre,file){
+  const r=id?S.fuel.find(x=>x.id===id):Object.assign({date:today(),odo:'',full:true},pre||{});
+  openModal(id?'עריכת תדלוק':'תדלוק חדש',`<form id="f"><div class="fgrid">
+   <div class="field"><label for="fDate">תאריך</label><input type="date" id="fDate" value="${esc(r.date)}" required></div>
+   <div class="field"><label for="fOdo">מד אוץ (ק״מ)</label><input type="number" id="fOdo" inputmode="numeric" value="${esc(r.odo??'')}" placeholder="אחרון: ${km(odo())}"></div>
+   <div class="field"><label for="fL">ליטרים</label><input type="number" step="0.01" id="fL" inputmode="decimal" value="${esc(r.liters??'')}"></div>
+   <div class="field"><label for="fT">סכום ששולם (₪)</label><input type="number" step="0.01" id="fT" inputmode="decimal" value="${esc(r.total??'')}" required></div>
+   <div class="field"><label for="fP">מחיר לליטר (₪)</label><input type="number" step="0.001" id="fP" inputmode="decimal" value="${esc(r.pricePerL??'')}"></div>
+   <div class="field"><label for="fS">תחנה</label><input type="text" id="fS" value="${esc(r.station||'')}" placeholder="פז, דלק, סונול…"></div>
+   <label class="toggle full"><input type="checkbox" id="fFull" ${r.full!==false?'checked':''}> מילוי מלא של המכל (נדרש לחישוב הצריכה)</label>
+   ${fileField('קבלה','fFile')}
+   <div class="field full"><label for="fN">הערה</label><input type="text" id="fN" value="${esc(r.note||'')}"></div>
+  </div><div class="formacts"><button class="btn primary" type="submit">${I('check')}שמירה</button><button class="btn ghost" type="button" data-act="close">ביטול</button></div></form>`,root=>{
+    const getFile=wireFile(root,'fFile',file);
+    const L=root.querySelector('#fL'),T=root.querySelector('#fT'),Pp=root.querySelector('#fP');
+    const calc=src=>{const l=n(L.value),t=n(T.value),p=n(Pp.value);
+      if(src!=='p'&&l&&t) Pp.value=(t/l).toFixed(3);
+      else if(src==='p'&&p&&t&&!l) L.value=(t/p).toFixed(2);
+      else if(src==='p'&&p&&l) T.value=(p*l).toFixed(2);};
+    L.oninput=()=>calc('l');T.oninput=()=>calc('t');Pp.oninput=()=>calc('p');
+    root.querySelector('#f').onsubmit=async e=>{e.preventDefault();const btn=e.submitter||root.querySelector('[type=submit]');busy(btn,true);
+      try{const data={date:fv(root,'fDate'),odo:n(fv(root,'fOdo')),liters:n(fv(root,'fL')),total:n(fv(root,'fT')),pricePerL:n(fv(root,'fP')),station:fv(root,'fS'),full:fv(root,'fFull'),note:fv(root,'fN')};
+        if(!data.liters&&data.total&&data.pricePerL) data.liters=+(data.total/data.pricePerL).toFixed(2);
+        const f=getFile(); if(f){const rc=await uploadReceipt(f); if(rc) data.receipt=rc;}
+        if(id) await updRec('fuel',id,data); else await addRec('fuel',data);
+        await bumpOdo(data.odo); closeModal(); toast('התדלוק נשמר');
+      }catch(err){console.error(err);busy(btn,false);toast('השמירה נכשלה. בדוק את החיבור ונסה שוב');}};
+  });
+}
+function serviceForm(id,pre,file){
+  const r=id?S.service.find(x=>x.id===id):Object.assign({date:today(),odo:odo()||''},pre||{});
+  const remOpts=S.reminder.filter(x=>x.kind!=='check');
+  openModal(id?'עריכת טיפול':'רישום טיפול',`<form id="f"><div class="fgrid">
+   <div class="field full"><label for="sT">מה בוצע</label><input type="text" id="sT" value="${esc(r.title||'')}" placeholder="טיפול 45,000, החלפת רפידות…" required></div>
+   <div class="field"><label for="sD">תאריך</label><input type="date" id="sD" value="${esc(r.date)}" required></div>
+   <div class="field"><label for="sO">מד אוץ (ק״מ)</label><input type="number" id="sO" value="${esc(r.odo??'')}" required></div>
+   <div class="field"><label for="sC">עלות (₪)</label><input type="number" step="0.01" id="sC" value="${esc(r.cost??'')}"></div>
+   <div class="field"><label for="sG">מוסך</label><input type="text" id="sG" value="${esc(r.garage||'')}"></div>
+   ${remOpts.length&&!id?`<div class="field full"><label>סמן תזכורות שבוצעו בטיפול הזה</label><div style="display:flex;flex-wrap:wrap;gap:8px 16px">${remOpts.map(x=>`<label class="toggle"><input type="checkbox" class="remDone" value="${x.id}" ${pre?.remId===x.id?'checked':''}> ${esc(x.title)}</label>`).join('')}</div></div>`:''}
+   ${fileField('חשבונית','sFile')}
+   <div class="field full"><label for="sN">פירוט והערות</label><textarea id="sN">${esc(r.note||'')}</textarea></div>
+  </div><div class="formacts"><button class="btn primary" type="submit">${I('check')}שמירה</button><button class="btn ghost" type="button" data-act="close">ביטול</button></div></form>`,root=>{
+    const getFile=wireFile(root,'sFile',file);
+    root.querySelector('#f').onsubmit=async e=>{e.preventDefault();const btn=e.submitter||root.querySelector('[type=submit]');busy(btn,true);
+      try{const data={title:fv(root,'sT'),date:fv(root,'sD'),odo:n(fv(root,'sO')),cost:n(fv(root,'sC'))||0,garage:fv(root,'sG'),note:fv(root,'sN')};
+        const f=getFile(); if(f){const rc=await uploadReceipt(f); if(rc) data.receipt=rc;}
+        if(id) await updRec('service',id,data); else await addRec('service',data);
+        await bumpOdo(data.odo);
+        for(const cb of root.querySelectorAll('.remDone:checked')) await markDone(cb.value,data.odo,data.date,true);
+        closeModal(); toast('הטיפול נשמר');
+      }catch(err){console.error(err);busy(btn,false);toast('השמירה נכשלה. נסה שוב');}};
+  });
+}
+function expenseForm(id,pre,file){
+  const r=id?S.expense.find(x=>x.id===id):Object.assign({date:today(),category:'other'},pre||{});
+  openModal(id?'עריכת הוצאה':'הוצאה חדשה',`<form id="f"><div class="fgrid">
+   <div class="field full"><label for="eT">תיאור</label><input type="text" id="eT" value="${esc(r.title||'')}" placeholder="ביטוח מקיף, חניון, שטיפה…" required></div>
+   <div class="field"><label for="eC">קטגוריה</label><select id="eC">${Object.entries(CATS).filter(([k])=>k!=='fuel'&&k!=='service').map(([k,v])=>`<option value="${k}" ${r.category===k?'selected':''}>${v}</option>`).join('')}</select></div>
+   <div class="field"><label for="eA">סכום (₪)</label><input type="number" step="0.01" id="eA" value="${esc(r.amount??'')}" required></div>
+   <div class="field"><label for="eD">תאריך</label><input type="date" id="eD" value="${esc(r.date)}" required></div>
+   <div class="field"><label for="eV">ספק</label><input type="text" id="eV" value="${esc(r.vendor||'')}"></div>
+   ${fileField('קבלה או חשבונית','eFile')}
+   <div class="field full"><label for="eN">הערה</label><input type="text" id="eN" value="${esc(r.note||'')}"></div>
+  </div><div class="formacts"><button class="btn primary" type="submit">${I('check')}שמירה</button><button class="btn ghost" type="button" data-act="close">ביטול</button></div></form>`,root=>{
+    const getFile=wireFile(root,'eFile',file);
+    root.querySelector('#f').onsubmit=async e=>{e.preventDefault();const btn=e.submitter||root.querySelector('[type=submit]');busy(btn,true);
+      try{const data={title:fv(root,'eT'),category:fv(root,'eC'),amount:n(fv(root,'eA'))||0,date:fv(root,'eD'),vendor:fv(root,'eV'),note:fv(root,'eN')};
+        const f=getFile(); if(f){const rc=await uploadReceipt(f); if(rc) data.receipt=rc;}
+        if(id) await updRec('expense',id,data); else await addRec('expense',data);
+        closeModal(); toast('ההוצאה נשמרה');
+      }catch(err){console.error(err);busy(btn,false);toast('השמירה נכשלה. נסה שוב');}};
+  });
+}
+function remForm(id,kind){
+  const r=id?S.reminder.find(x=>x.id===id):{kind:kind||'service',lastKm:odo(),lastDate:today()};
+  openModal(id?'עריכת תזכורת':'תזכורת חדשה',`<form id="f"><div class="fgrid">
+   <div class="field full"><label for="rT">שם</label><input type="text" id="rT" value="${esc(r.title||'')}" placeholder="החלפת שמן, בדיקת לחץ אוויר…" required></div>
+   <div class="field full"><label for="rK">סוג</label><select id="rK">${Object.entries(KIND).map(([k,v])=>`<option value="${k}" ${r.kind===k?'selected':''}>${v}</option>`).join('')}</select></div>
+   <div class="field"><label for="rIK">כל כמה ק״מ</label><input type="number" id="rIK" value="${esc(r.intervalKm??'')}" placeholder="למשל 10000"></div>
+   <div class="field"><label for="rID">כל כמה ימים</label><input type="number" id="rID" value="${esc(r.intervalDays??'')}" placeholder="למשל 365"></div>
+   <div class="field"><label for="rLK">בוצע לאחרונה בק״מ</label><input type="number" id="rLK" value="${esc(r.lastKm??'')}"></div>
+   <div class="field"><label for="rLD">בוצע לאחרונה בתאריך</label><input type="date" id="rLD" value="${esc(r.lastDate||'')}"></div>
+   <div class="field full"><label for="rN">הערה</label><input type="text" id="rN" value="${esc(r.note||'')}"></div>
+  </div><div class="formacts"><button class="btn primary" type="submit">${I('check')}שמירה</button>${id?`<button class="btn danger" type="button" data-act="del" data-col="reminder" data-id="${id}">${I('trash')}מחיקה</button>`:''}<button class="btn ghost" type="button" data-act="close">ביטול</button></div></form>`,root=>{
+    root.querySelector('#f').onsubmit=async e=>{e.preventDefault();const btn=e.submitter||root.querySelector('[type=submit]');
+      const data={title:fv(root,'rT'),kind:fv(root,'rK'),intervalKm:n(fv(root,'rIK')),intervalDays:n(fv(root,'rID')),lastKm:n(fv(root,'rLK')),lastDate:fv(root,'rLD')||today(),note:fv(root,'rN')};
+      if(!data.intervalKm&&!data.intervalDays){toast('צריך להגדיר מרווח בק״מ או בימים');return;}
+      busy(btn,true);
+      try{ if(id) await updRec('reminder',id,data); else await addRec('reminder',data); closeModal(); toast('התזכורת נשמרה'); }
+      catch(err){console.error(err);busy(btn,false);toast('השמירה נכשלה. נסה שוב');}};
+  });
+}
+function odoForm(){
+  openModal('עדכון מד אוץ',`<form id="f"><div class="field"><label for="oV">קילומטראז׳ נוכחי</label><input type="number" id="oV" inputmode="numeric" value="${odo()}" required></div>
+  <p class="small muted">התזכורות לפי ק״מ יתעדכנו מיד. תדלוקים וטיפולים מעדכנים את המד אוטומטית.</p>
+  <div class="formacts"><button class="btn primary" type="submit">${I('check')}עדכון</button><button class="btn ghost" type="button" data-act="close">ביטול</button></div></form>`,root=>{
+    root.querySelector('#f').onsubmit=async e=>{e.preventDefault();const v=n(fv(root,'oV'));if(!v||!S.car)return;
+      try{await updRec('garage','car',{odometer:v,odoUpdatedAt:today()});closeModal();toast('מד האוץ עודכן');}catch(err){toast('העדכון נכשל');}};
+  });
+}
+function carForm(){
+  const c=S.car&&!S.car.example?S.car:{};const ex=!!S.car?.example;
+  openModal(ex||!S.car?'הגדרת הרכב שלך':'פרטי הרכב',`<form id="f"><div class="fgrid">
+   <div class="field"><label for="cN">כינוי</label><input type="text" id="cN" value="${esc(c.nickname||'')}" placeholder="השחורה, הרכב של אבא…"></div>
+   <div class="field"><label for="cP">מספר רישוי</label><input type="text" id="cP" value="${esc(c.plate||'')}" placeholder="12-345-67" dir="ltr"></div>
+   <div class="field"><label for="cMk">יצרן</label><input type="text" id="cMk" value="${esc(c.make||'')}" required></div>
+   <div class="field"><label for="cMd">דגם</label><input type="text" id="cMd" value="${esc(c.model||'')}" required></div>
+   <div class="field"><label for="cY">שנת ייצור</label><input type="number" id="cY" value="${esc(c.year||'')}"></div>
+   <div class="field"><label for="cF">סוג דלק</label><select id="cF">${['95','98','סולר','היברידי','פלאג־אין','חשמלי'].map(x=>`<option ${c.fuelType===x?'selected':''}>${x}</option>`).join('')}</select></div>
+   <div class="field"><label for="cT">נפח מכל (ליטר)</label><input type="number" id="cT" value="${esc(c.tankL||'')}"></div>
+   <div class="field"><label for="cO">קילומטראז׳ נוכחי</label><input type="number" id="cO" value="${esc(c.odometer||'')}" required></div>
+   <div class="field"><label for="cPF">לחץ אוויר קדמי (PSI)</label><input type="number" id="cPF" value="${esc(c.psiFront||'')}"></div>
+   <div class="field"><label for="cPR">לחץ אוויר אחורי (PSI)</label><input type="number" id="cPR" value="${esc(c.psiRear||'')}"></div>
+   ${ex?`<label class="toggle full"><input type="checkbox" id="cReset" checked> לאפס את התזכורות ולהתחיל לספור מהיום ומהקילומטראז׳ הנוכחי</label><p class="small muted full" style="margin:0">תדלוקים, טיפולים והוצאות לדוגמה יימחקו. אחר כך אפשר לבקש ממתכנן הטיפולים לבנות לוח לפי הדגם שלך.</p>`:''}
+  </div><div class="formacts"><button class="btn primary" type="submit">${I('check')}שמירה</button><button class="btn ghost" type="button" data-act="close">ביטול</button>${window.cjSignOut?'<button class="btn ghost danger" type="button" id="signOut">התנתקות</button>':''}</div></form>`,root=>{
+    const so=root.querySelector('#signOut');if(so)so.onclick=()=>window.cjSignOut();
+    root.querySelector('#f').onsubmit=async e=>{e.preventDefault();const btn=e.submitter||root.querySelector('[type=submit]');busy(btn,true);
+      try{
+        const data={nickname:fv(root,'cN'),plate:fv(root,'cP'),make:fv(root,'cMk'),model:fv(root,'cMd'),year:n(fv(root,'cY')),fuelType:fv(root,'cF'),tankL:n(fv(root,'cT')),odometer:n(fv(root,'cO'))||0,psiFront:n(fv(root,'cPF')),psiRear:n(fv(root,'cPR')),odoUpdatedAt:today(),example:false};
+        if(ex){
+          for(const c of ['fuel','service','expense']) for(const r of S[c].filter(x=>x.example)) await delRec(c,r.id);
+          if(fv(root,'cReset')) for(const r of S.reminder) await updRec('reminder',r.id,{lastKm:data.odometer,lastDate:today(),history:[]});
+        }
+        await setRec('garage','car',Object.assign(ex?{}:(({id,...o})=>o)(S.car||{}),data)); closeModal(); toast('פרטי הרכב נשמרו');
+      }catch(err){console.error(err);busy(btn,false);toast('השמירה נכשלה. נסה שוב');}};
+  });
+}
+function quickSheet(){
+  const items=[['fuelQuick','תדלוק','fuel'],['serviceForm','טיפול','wrench'],['expenseForm','הוצאה','receipt'],['checks','בדיקה שוטפת','oil'],['scan','סריקת קבלה','cam'],['odo','מד אוץ','gauge']];
+  openModal('רישום חדש',`<div class="qgrid">${items.map(([a,l,i])=>`<button class="qbtn" data-act="${a}" ${a==='scan'&&(!sample||!imgOK)?'disabled':''}>${I(i)}${l}</button>`).join('')}</div>`);
+}
+function checksSheet(){
+  const list=sortedReminders(r=>r.kind==='check');
+  openModal('בדיקה שוטפת',`<p class="small muted" style="margin-top:0">סמן מה בדקת היום. ${S.car?.psiFront?`לחץ מומלץ: ${S.car.psiFront} PSI קדימה, ${S.car.psiRear||S.car.psiFront} PSI אחורה.`:''}</p>
+  <div class="stack" style="gap:10px">${list.map(({r,st})=>`<label class="toggle"><input type="checkbox" class="ck" value="${r.id}" ${st.status!=='ok'?'checked':''}> ${esc(r.title)} <span class="pill ${st.status}">${esc(st.label)}</span></label>`).join('')||'<div class="empty">אין בדיקות מוגדרות</div>'}</div>
+  <div class="formacts"><button class="btn primary" id="ckSave">${I('check')}סימון כבוצע</button><button class="btn ghost" data-act="close">ביטול</button></div>`,root=>{
+    root.querySelector('#ckSave').onclick=async e=>{busy(e.currentTarget,true);try{for(const c of root.querySelectorAll('.ck:checked')) await markDone(c.value,odo(),today(),true);closeModal();toast('הבדיקות נרשמו');}catch(err){toast('השמירה נכשלה');}};
+  });
+}
+async function markDone(id,atKm,atDate,silent){
+  const r=S.reminder.find(x=>x.id===id); if(!r) return false;
+  const hist=Array.isArray(r.history)?r.history.slice(-19):[];
+  hist.push({date:atDate||today(),km:atKm||odo()});
+  await updRec('reminder',id,{lastKm:atKm||odo(),lastDate:atDate||today(),history:hist});
+  if(!silent) toast(`״${r.title}״ סומן כבוצע`);
+  return true;
+}
+const rcptSrc=id=>window.__rcptUrl?window.__rcptUrl(id):'/_blob/'+encodeURIComponent(id);
+window.__rcptRefresh=()=>render();
+async function receiptView(id,type){
+  let url=rcptSrc(id);
+  if(window.__rcptUrlAsync){try{url=await window.__rcptUrlAsync(id);}catch(e){toast('לא הצלחתי לטעון את הקבלה');return;}}
+  openModal('קבלה',type.startsWith('image/')?`<img src="${url}" alt="קבלה" style="width:100%;border-radius:12px">`:`<div class="empty"><b>קובץ PDF</b><a href="${url}" target="_blank" rel="noopener" style="color:var(--accent)">פתיחת הקבלה בלשונית חדשה</a></div>`);
+}
+async function addToCalendar(id,btn){
+  const r=S.reminder.find(x=>x.id===id);if(!r)return;
+  if(!mcp){
+    const st0=remState(r);let d0=st0.dueDate||today();if(d0<today())d0=today();
+    const ymd=x=>x.replace(/-/g,'');const esc2=t=>String(t).replace(/[\;,]/g,m=>'\\'+m).replace(/\n/g,'\\n');
+    const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//car-journal//he','BEGIN:VEVENT','UID:'+r.id+'-'+ymd(d0)+'@car-journal','DTSTAMP:'+new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z','DTSTART;VALUE=DATE:'+ymd(d0),'DTEND;VALUE=DATE:'+ymd(addDays(d0,1)),'SUMMARY:'+esc2('🚗 '+r.title),'DESCRIPTION:'+esc2(st0.label+' · יומן הרכב'),'BEGIN:VALARM','TRIGGER:-P1D','ACTION:DISPLAY','DESCRIPTION:'+esc2(r.title),'END:VALARM','END:VEVENT','END:VCALENDAR'].join('\r\n');
+    try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));a.download='car-'+r.id+'.ics';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},4000);toast('פותח את היומן בטלפון…');}catch(e){toast('לא הצלחתי ליצור אירוע ביומן');}
+    return;
+  }
+  const st=remState(r);let due=st.dueDate||today();if(due<today())due=today();
+  busy(btn,true,'');
+  try{
+    await mcp.callTool('Google Calendar','create_event',{summary:`🚗 ${r.title}`,allDay:true,startTime:due+'T00:00:00',endTime:addDays(due,1)+'T00:00:00',
+      description:`תזכורת מיומן הרכב (${[S.car?.make,S.car?.model].filter(Boolean).join(' ')}).\n${st.label}. ${n(r.intervalKm)?`מרווח: ${km(r.intervalKm)} ק״מ. `:''}${n(r.intervalDays)?`מרווח: ${daysLabel(r.intervalDays)}.`:''}`,
+      overrideReminders:[{method:'popup',minutes:1440},{method:'popup',minutes:10080}]});
+    await updRec('reminder',id,{calDate:due}); toast(`נוסף ליומן Google ל־${fmtD(due)}`);
+  }catch(err){console.warn(err);toast(err?.code==='server_not_connected'||err?.code==='not_connected'?'חבר את יומן Google ב־Claude כדי להשתמש בזה':'ההוספה ליומן נכשלה');}
+  finally{busy(btn,false);}
+}
+function confirmDelete(colName,id){
+  openModal('מחיקה',`<p>למחוק את הרישום הזה? אי אפשר לשחזר אחר כך.</p><div class="formacts"><button class="btn primary" id="yes" style="background:var(--crit);border-color:var(--crit)">${I('trash')}מחיקה</button><button class="btn ghost" data-act="close">ביטול</button></div>`,root=>{
+    root.querySelector('#yes').onclick=async()=>{try{await delRec(colName,id);closeModal();toast('נמחק');}catch(e){toast('המחיקה נכשלה');}};
+  });
+}
+
+/* ---------- agents ---------- */
+function snapshotData(){
+  const eff=effStats();const sp=allSpend();
+  return {
+    today:today(),car:S.car?{make:S.car.make,model:S.car.model,year:S.car.year,fuelType:S.car.fuelType,tankL:S.car.tankL,nickname:S.car.nickname,psiFront:S.car.psiFront,psiRear:S.car.psiRear}:null,
+    odometer:odo(),kmPerDay:Math.round(kmPerDay()),
+    fuelEconomy:eff?{avgKmPerL:+eff.avg.toFixed(2),last:+eff.last.toFixed(2),series:eff.series.slice(-12).map(x=>({date:x.date,kmPerL:+x.kmpl.toFixed(2),km:x.km}))}:null,
+    spendByMonth:lastMonths(6).map(m=>({month:m,total:Math.round(sp.filter(r=>monthKey(r.date)===m).reduce((s,r)=>s+r.amount,0))})),
+    reminders:sortedReminders().map(({r,st})=>({id:r.id,title:r.title,kind:r.kind,intervalKm:r.intervalKm||null,intervalDays:r.intervalDays||null,lastKm:r.lastKm,lastDate:r.lastDate,status:st.status,remaining:st.label,expectedDate:st.dueDate}))
+  };
+}
+function mdLite(t){
+  const lines=esc(t).split('\n');let out='',inList=false;
+  for(let l of lines){l=l.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/^#{1,4}\s*(.+)/,'<b>$1</b>');
+    if(/^\s*[-•*]\s+/.test(l)){if(!inList){out+='<ul>';inList=true;}out+='<li>'+l.replace(/^\s*[-•*]\s+/,'')+'</li>';}
+    else{if(inList){out+='</ul>';inList=false;} if(l.trim()) out+='<p>'+l+'</p>';}}
+  return out+(inList?'</ul>':'');
+}
+async function runInsight(btn){
+  if(!sample){toast('הסוכנים זמינים כשהדף פתוח ב־Claude');return;}
+  const box=$('#insight')||(()=>{go('home');return $('#insight');})();
+  busy(btn,true,'מנתח…');insightBusy=true;box.innerHTML='<span class="muted">חושב…</span>';
+  const prompt=`אתה אנליסט רכב אישי. כתוב בעברית, בגוף שני, בקצרה (עד 170 מילים): 3–5 נקודות תבליט עם תובנות קונקרטיות מהנתונים בלבד: מגמת צריכת דלק (ק״מ לליטר) וחריגות, הוצאות חודשיות ומה בולט, ומה כדאי לעשות בשבועיים הקרובים לפי התזכורות. אל תמציא נתונים. אם חסר מידע, אמור מה כדאי לתעד. אם הצריכה ירדה בחדות, הצע סיבות אפשריות (לחץ אוויר, נסיעה עירונית, טיפול שהתעכב).\n\nנתונים (JSON):\n${JSON.stringify(snapshotData())}`;
+  try{
+    const res=await sample(prompt,{modelTier:'complex',cache:{gcTime:6*3600e3},onText:({text})=>{box.innerHTML=mdLite(text);}});
+    lastInsight=mdLite(res.text);box.innerHTML=lastInsight;
+  }catch(e){box.innerHTML=`<span class="muted">${e?.code==='not_granted'?'הסוכן לא קיבל הרשאה לפנות ל־Claude.':e?.code==='rate_limited'?'הגעת למגבלת השימוש. נסה שוב מאוחר יותר.':'הניתוח לא הצליח. נסה שוב.'}</span>`;}
+  finally{insightBusy=false;busy(btn,false);}
+}
+async function runPlan(btn){
+  if(!sample){toast('הסוכנים זמינים כשהדף פתוח ב־Claude');return;}
+  const c=S.car||{};
+  busy(btn,true,'בונה תוכנית…');
+  try{
+    const res=await sample.json(`אתה מכונאי רכב מומחה בישראל. בנה לוח טיפולים ובדיקות שוטפות לרכב: ${c.make||'לא ידוע'} ${c.model||''} שנת ${c.year||'לא ידוע'}, דלק ${c.fuelType||'95'}, קילומטראז׳ ${odo()}, נסיעה ממוצעת ${Math.round(kmPerDay())} ק״מ ביום, אקלים ישראלי חם.
+החזר אובייקט JSON בלבד בצורה {"items":[{"title":string,"kind":"service"|"check"|"doc","intervalKm":number|null,"intervalDays":number|null,"why":string}]}.
+כלול 10–14 פריטים: טיפולים לפי היצרן (שמן ומסנן, מסנן אוויר, מסנן מזגן, מצתים, נוזל בלמים, נוזל קירור, רצועה/שרשרת אם רלוונטי, צמיגים, איזון וכיוון פרונט, מצבר), בדיקות שוטפות (מפלס שמן, מים/נוזל קירור, לחץ אוויר בצמיגים, נוזל שמשות) ומסמכים (טסט שנתי, חידוש ביטוח). כותרות בעברית, "why" משפט קצר בעברית.`,{modelTier:'complex'});
+    const items=(res&&res.items)||[];
+    const existing=new Set(S.reminder.map(r=>r.title.trim()));
+    openModal('תוכנית טיפולים מומלצת',`<p class="small muted" style="margin-top:0">עבור ${esc([c.make,c.model,c.year].filter(Boolean).join(' ')||'הרכב')}. סמן מה להוסיף לתזכורות. ספירה מתחילה מהיום ומ־${km(odo())} ק״מ, ואפשר לערוך כל תזכורת אחר כך.</p>
+    <div class="stack" style="gap:10px">${items.map((it,i)=>`<label class="toggle" style="align-items:flex-start"><input type="checkbox" class="pi" value="${i}" ${existing.has((it.title||'').trim())?'':'checked'}><span><b style="font-weight:500">${esc(it.title)}</b> <span class="pill neutral">${esc(KIND[it.kind]||'')}</span><br><span class="small muted">${[it.intervalKm?`כל ${km(it.intervalKm)} ק״מ`:'',it.intervalDays?`כל ${daysLabel(it.intervalDays)}`:''].filter(Boolean).join(' או ')} · ${esc(it.why||'')}</span>${existing.has((it.title||'').trim())?' <span class="pill ok">קיים</span>':''}</span></label>`).join('')}</div>
+    <div class="formacts"><button class="btn primary" id="planAdd">${I('plus')}הוספה לתזכורות</button><button class="btn ghost" data-act="close">סגירה</button></div>`,root=>{
+      root.querySelector('#planAdd').onclick=async e=>{busy(e.currentTarget,true);let k=0;
+        try{for(const cb of root.querySelectorAll('.pi:checked')){const it=items[+cb.value];if(!it||!(it.intervalKm||it.intervalDays))continue;
+          await addRec('reminder',{title:it.title,kind:['service','check','doc'].includes(it.kind)?it.kind:'service',intervalKm:n(it.intervalKm),intervalDays:n(it.intervalDays),lastKm:odo(),lastDate:today(),note:it.why||''});k++;}
+          closeModal();toast(`נוספו ${k} תזכורות`);go('reminder');}catch(err){toast('ההוספה נכשלה');busy(e.currentTarget,false);}};
+    });
+  }catch(e){toast(e?.code==='not_granted'?'הסוכן לא קיבל הרשאה':'התכנון לא הצליח, נסה שוב');}
+  finally{busy(btn,false);}
+}
+/* ---------- quick fuel: odometer, receipt, save ---------- */
+function fuelQuick(){
+  const last=odo();
+  const since=S.car?.odoUpdatedAt?Math.max(0,daysBetween(S.car.odoUpdatedAt,today())):0;
+  const est=Math.round(last+kmPerDay()*since);
+  const ai=!!(sample&&imgOK);
+  openModal('תדלוק',`<form id="qf" class="qf" novalidate>
+    <div class="field"><label for="qfOdo">כמה ק״מ מראה המד עכשיו?</label>
+      <input type="number" id="qfOdo" class="big" inputmode="numeric" enterkeyhint="done" placeholder="${km(est)}" autocomplete="off">
+      <div class="small muted">הקילומטראז׳ האחרון: ${km(last)}</div></div>
+    <label class="qf-cam" id="qfCam"><input type="file" id="qfFile" accept="image/*">
+      <span class="qf-cam-ic" id="qfThumb">${I('cam')}</span>
+      <span class="qf-cam-t"><b id="qfCamT">קבלה מ־Yellow או מהתחנה</b><span class="small muted">${ai?'צילום מסך או תמונה, והסוכן ימלא את הפרטים':'צירוף תמונה של הקבלה'}</span></span></label>
+    <div class="qf-status" id="qfStatus" hidden></div>
+    <details class="qf-more" id="qfMore" ${ai?'':'open'}><summary>פרטי התדלוק <span class="muted small" id="qfSum"></span></summary>
+      <div class="fgrid" style="margin-top:12px">
+        <div class="field"><label for="qfT">סכום ששולם (₪)</label><input type="number" step="0.01" inputmode="decimal" id="qfT"></div>
+        <div class="field"><label for="qfL">ליטרים</label><input type="number" step="0.01" inputmode="decimal" id="qfL"></div>
+        <div class="field"><label for="qfS">תחנה</label><input type="text" id="qfS" placeholder="Yellow, פז, דלק…"></div>
+        <div class="field"><label for="qfD">תאריך</label><input type="date" id="qfD" value="${today()}"></div>
+        <label class="toggle full"><input type="checkbox" id="qfFull" checked> מילוי מלא של המכל</label>
+      </div></details>
+    <button class="btn primary block" type="submit" id="qfSave">${I('check')}שמירת התדלוק</button>
+  </form>`,root=>{
+    const $r=q=>root.querySelector(q);
+    const odoIn=$r('#qfOdo'),file=$r('#qfFile'),st=$r('#qfStatus');
+    let rcpt=null,ppl=null,okLow=false,reading=false;
+    try{odoIn.focus({preventScroll:true});}catch(e){}
+    const status=(cls,html)=>{st.hidden=!html;st.className='qf-status'+(cls?' '+cls:'');st.innerHTML=html||'';};
+    const sum=()=>{const t=n($r('#qfT').value),l=n($r('#qfL').value),s=$r('#qfS').value.trim();$r('#qfSum').textContent=[t?ils2(t):'',l?nf1.format(l)+' ל׳':'',s].filter(Boolean).join(' · ');};
+    root.querySelectorAll('#qfT,#qfL,#qfS').forEach(i=>i.addEventListener('input',sum));
+    file.addEventListener('change',async()=>{
+      const f=file.files[0];if(!f)return;rcpt=f;
+      $r('#qfCam').classList.add('has');$r('#qfThumb').innerHTML=`<img alt="" src="${URL.createObjectURL(f)}">`;$r('#qfCamT').textContent='הקבלה צורפה';
+      if(!(sample&&imgOK)){$r('#qfMore').open=true;return;}
+      reading=true;status('',`<span class="spin"></span>הסוכן קורא את הקבלה…`);
+      try{
+        const r=await sample.json(`זו תמונה של קבלה על תדלוק, לרוב צילום מסך של חשבונית דיגיטלית מאפליקציית Yellow או קבלה מתחנת דלק בישראל. החזר JSON בלבד בצורה {"isFuel":boolean,"date":"YYYY-MM-DD"|null,"total":number|null,"liters":number|null,"pricePerL":number|null,"station":string|null,"invoice":string|null}. total הוא הסכום ששולם בפועל בשקלים כולל מע״מ ואחרי הנחות. station הוא שם הרשת והסניף, למשל "Yellow אלוף שדה". אל תמציא ערכים שלא מופיעים. היום ${today()}.`,{images:[f],modelTier:'default'});
+        if(!r||r.isFuel===false){status('warn','זו לא נראית קבלת דלק. אפשר למלא את הפרטים ידנית.');$r('#qfMore').open=true;return;}
+        if(n(r.total))$r('#qfT').value=r.total;
+        if(n(r.liters))$r('#qfL').value=r.liters;else if(n(r.total)&&n(r.pricePerL))$r('#qfL').value=(r.total/r.pricePerL).toFixed(2);
+        if(r.station)$r('#qfS').value=r.station;
+        if(/^\d{4}-\d\d-\d\d$/.test(r.date||''))$r('#qfD').value=r.date;
+        ppl=n(r.pricePerL);if(r.invoice)root._inv=r.invoice;
+        sum();
+        status('ok',`${I('check')}הסוכן מילא: ${esc($r('#qfSum').textContent)}${r.date&&r.date!==today()?` · ${fmtD(r.date)}`:''}`);
+        if(!n(r.total))$r('#qfMore').open=true;
+      }catch(e){status('warn',e?.code==='not_granted'?'הסוכן לא קיבל הרשאה. אפשר למלא ידנית.':'לא הצלחתי לקרוא את הקבלה. אפשר למלא ידנית.');$r('#qfMore').open=true;}
+      finally{reading=false;}
+    });
+    $r('#qf').onsubmit=async e=>{
+      e.preventDefault();
+      if(reading){toast('רגע, הסוכן עוד קורא את הקבלה');return;}
+      const total=n($r('#qfT').value),o=n(odoIn.value);
+      if(!total){$r('#qfMore').open=true;$r('#qfT').focus();status('warn',rcpt?'חסר סכום. השלם אותו בפרטים.':'צרף קבלה או מלא סכום.');return;}
+      if(o&&o<last&&!okLow){okLow=true;status('warn',`המספר נמוך מהקילומטראז׳ האחרון (${km(last)}). לחץ שוב לשמירה בכל זאת.`);return;}
+      const btn=$r('#qfSave');busy(btn,true);
+      try{
+        let liters=n($r('#qfL').value);if(!liters&&ppl)liters=+(total/ppl).toFixed(2);
+        const data={date:$r('#qfD').value||today(),odo:o,liters,total,pricePerL:ppl||(liters?+(total/liters).toFixed(3):null),station:$r('#qfS').value.trim(),full:$r('#qfFull').checked,note:root._inv?'חשבונית '+root._inv:''};
+        if(rcpt){const rc=await uploadReceipt(rcpt);if(rc)data.receipt=rc;}
+        let msg='התדלוק נשמר';
+        if(o&&data.full&&liters){
+          const prev=S.fuel.filter(f=>f.full&&n(f.odo)&&f.odo<o).sort((a,b)=>b.odo-a.odo)[0];
+          if(prev){const mid=S.fuel.filter(f=>n(f.odo)&&f.odo>prev.odo&&f.odo<o).reduce((t,f)=>t+(n(f.liters)||0),0);const k=(o-prev.odo)/(mid+liters);if(isFinite(k)&&k>2&&k<40)msg=`נשמר · ${nf1.format(k)} ק״מ לליטר`;}
+        }
+        await addRec('fuel',data);await bumpOdo(o);closeModal();toast(msg);
+      }catch(err){console.error(err);busy(btn,false);status('warn','השמירה נכשלה. בדוק את החיבור ונסה שוב.');}
+    };
+  });
+}
+
+function scanSheet(){
+  if(!sample||!imgOK){toast('סריקת קבלות לא זמינה בתצוגה הזו');return;}
+  openModal('סריקת קבלה',`<p class="small muted" style="margin-top:0">צלם או בחר תמונה של הקבלה. הסוכן יזהה את הפרטים ויפתח טופס ממולא לאישור.</p>
+  <div class="drop" id="scBox"><input type="file" id="sc" accept="image/*" capture="environment"><span id="scTxt">${I('cam')} בחר תמונה של קבלה</span></div>
+  <div class="formacts"><button class="btn primary" id="scGo" disabled>${I('spark')}זיהוי הקבלה</button><button class="btn ghost" data-act="close">ביטול</button></div>`,root=>{
+    const inp=root.querySelector('#sc'),go2=root.querySelector('#scGo');let file=null;
+    inp.onchange=()=>{file=inp.files[0];if(!file)return;root.querySelector('#scBox').classList.add('has');root.querySelector('#scTxt').innerHTML=`<img class="preview" alt="" src="${URL.createObjectURL(file)}">${esc(file.name)}`;go2.disabled=false;};
+    go2.onclick=async()=>{busy(go2,true,'הסוכן קורא…');
+      try{
+        const r=await sample.json(`זו תמונה של קבלה או חשבונית הקשורה לרכב פרטי בישראל. חלץ את הפרטים והחזר JSON בלבד:
+{"type":"fuel"|"service"|"expense","date":"YYYY-MM-DD"|null,"total":number|null,"liters":number|null,"pricePerL":number|null,"station":string|null,"odo":number|null,"title":string|null,"category":"insurance"|"test"|"tires"|"parking"|"wash"|"parts"|"other"|null,"vendor":string|null,"note":string|null}
+fuel = תדלוק בתחנת דלק. service = עבודת מוסך/טיפול/תיקון (title = תיאור קצר בעברית של מה שבוצע, note = פירוט הפריטים). expense = כל השאר. סכומים בשקלים כולל מע״מ. היום ${today()}.`,{images:[file],modelTier:'default'});
+        closeModal();
+        const pre={date:/^\d{4}-\d\d-\d\d$/.test(r?.date||'')?r.date:today()};
+        if(r?.type==='fuel'){Object.assign(pre,{total:r.total,liters:r.liters,pricePerL:r.pricePerL,station:r.station||r.vendor||'',odo:r.odo||odo(),full:true});fuelForm(null,pre,file);}
+        else if(r?.type==='service'){Object.assign(pre,{title:r.title||'טיפול',cost:r.total,garage:r.vendor||'',note:r.note||'',odo:r.odo||odo()});serviceForm(null,pre,file);}
+        else{Object.assign(pre,{title:r?.title||r?.vendor||'',amount:r?.total,category:r?.category||'other',vendor:r?.vendor||'',note:r?.note||''});expenseForm(null,pre,file);}
+        toast('הסוכן מילא את הטופס, בדוק ואשר');
+      }catch(e){busy(go2,false);toast(e?.code==='image_rejected'?'התמונה לא נתמכת, נסה JPG או PNG':'לא הצלחתי לקרוא את הקבלה');}};
+  });
+}
+
+/* chat */
+const chatLog=[];let chatBusy=false;
+function captureChat(){const i=$('#chatIn');return {val:i?i.value:'',focus:document.activeElement===i};}
+function restoreChat(k){const m=$('#msgs');if(!m)return;for(const x of chatLog)appendMsg(x.role,x.html,true);const i=$('#chatIn');if(i){i.value=k.val;if(k.focus)i.focus();}m.scrollTop=m.scrollHeight;$('#sugg').hidden=chatLog.length>0;}
+function appendMsg(role,html,noLog){const m=$('#msgs');if(!m)return null;const d=document.createElement('div');d.className='msg '+(role==='user'?'u':role==='note'?'note':'a');d.innerHTML=html;m.appendChild(d);m.scrollTop=m.scrollHeight;return d;}
+const CHAT_SYS=`אתה "יועץ הרכב", סוכן בתוך אפליקציית יומן רכב אישית. ענה תמיד בעברית, קצר וענייני, עם מספרים מדויקים מהכלים. השתמש בכלים כדי לקרוא נתונים לפני שאתה עונה על שאלות לגבי הרכב. מותר לך לסמן תזכורת כבוצעה או להוסיף תזכורת כשהמשתמש מבקש במפורש. אל תמציא נתונים. מטבע: ₪. יחידות: ק״מ, ליטר, ק״מ לליטר.`;
+const chatTools=[
+ {name:'get_overview',description:'Car profile, odometer, km per day, fuel economy series, monthly spend, and every reminder with its status and expected date.',inputSchema:{type:'object',properties:{}},execute:()=>snapshotData()},
+ {name:'get_records',description:'List logged records of one type, newest first. fuel=fill-ups, service=garage work, expense=other costs.',inputSchema:{type:'object',properties:{type:{type:'string',enum:['fuel','service','expense']},limit:{type:'number'}},required:['type']},
+  execute:({type,limit})=>[...(S[type]||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,Math.min(+limit||30,100)).map(r=>{const o=Object.assign({},r);delete o.receipt;delete o.history;return o;})},
+ {name:'mark_reminder_done',description:'Mark a reminder as done today at the current odometer. Use only when the user says they did it.',inputSchema:{type:'object',properties:{id:{type:'string'}},required:['id']},
+  execute:async({id})=>{const ok=await markDone(id,odo(),today(),true);if(!ok)throw new Error('unknown reminder id');appendMsg('note','✓ התזכורת עודכנה');return {ok:true};}},
+ {name:'add_reminder',description:'Create a new reminder counted from today and the current odometer.',inputSchema:{type:'object',properties:{title:{type:'string'},kind:{type:'string',enum:['service','check','doc']},intervalKm:{type:['number','null']},intervalDays:{type:['number','null']}},required:['title','kind']},
+  execute:async(a)=>{if(!a.intervalKm&&!a.intervalDays)throw new Error('need intervalKm or intervalDays');await addRec('reminder',{title:a.title,kind:a.kind,intervalKm:n(a.intervalKm),intervalDays:n(a.intervalDays),lastKm:odo(),lastDate:today()});appendMsg('note','✓ נוספה תזכורת: '+esc(a.title));return {ok:true};}}
+];
+async function sendChat(q){
+  q=(q||'').trim();if(!q||chatBusy)return;
+  if(!sample){toast('היועץ זמין כשהדף פתוח ב־Claude');return;}
+  chatBusy=true;$('#sugg')&&($('#sugg').hidden=true);
+  chatLog.push({role:'user',content:q,html:esc(q)});appendMsg('user',esc(q));
+  const bubble=appendMsg('assistant','<span class="spin"></span>');
+  const input=chatLog.filter(m=>m.role==='user'||m.role==='assistant').map((m,i)=>({role:m.role,content:i===0?CHAT_SYS+'\n\n'+m.content:m.content}));
+  try{
+    const res=await sample(input,{cache:false,tools:chatTools,onText:({text})=>{if(bubble&&text&&text!=='Thinking...')bubble.innerHTML=mdLite(text);}});
+    const html=mdLite(res.text||'');if(bubble)bubble.innerHTML=html;
+    chatLog.push({role:'assistant',content:res.text||'',html});
+  }catch(e){const t=e?.code==='rate_limited'?'הגעת למגבלת השימוש, נסה שוב בעוד כמה דקות.':e?.code==='not_granted'?'היועץ לא קיבל הרשאה לפנות ל־Claude.':'משהו השתבש. נסה לשאול שוב.';if(bubble)bubble.innerHTML=t;chatLog.pop();}
+  finally{chatBusy=false;}
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click',e=>{
+  const nv=e.target.closest('[data-nav]');if(nv){if($('#ov').hidden===false)closeModal();go(nv.dataset.nav);return;}
+  const b=e.target.closest('[data-act]');if(!b)return;
+  const a=b.dataset.act,id=b.dataset.id;
+  if(!['close','rcpt'].includes(a)&&!db&&a!=='quick'){toast('המאגר לא מחובר');return;}
+  switch(a){
+    case 'close':closeModal();break;
+    case 'quick':quickSheet();break;
+    case 'fuelForm':fuelForm(id);break;
+    case 'fuelQuick':fuelQuick();break;
+    case 'serviceForm':serviceForm(id);break;
+    case 'expenseForm':expenseForm(id);break;
+    case 'remForm':remForm(null,b.dataset.kind);break;
+    case 'editRem':remForm(id);break;
+    case 'del':confirmDelete(b.dataset.col,id);break;
+    case 'odo':odoForm();break;
+    case 'car':case 'setup':carForm();break;
+    case 'checks':checksSheet();break;
+    case 'scan':scanSheet();break;
+    case 'plan':runPlan(b);break;
+    case 'insight':runInsight(b);break;
+    case 'cal':addToCalendar(id,b);break;
+    case 'rcpt':receiptView(id,b.dataset.type||'');break;
+    case 'ask':sendChat(b.dataset.q);break;
+    case 'done':{const r=S.reminder.find(x=>x.id===id);if(!r)break;
+      if(r.kind==='service'){serviceForm(null,{title:r.title,remId:r.id});}
+      else markDone(id).catch(()=>toast('העדכון נכשל'));break;}
+  }
+});
+document.addEventListener('submit',e=>{if(e.target.id==='composer'){e.preventDefault();const i=$('#chatIn');const q=i.value;i.value='';sendChat(q);}});
+window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(h&&h!==view&&NAV.some(x=>x[0]===h))go(h);});
+
+(function(){
+  const sp=$('#splash');if(!sp)return;let done=false;
+  const fin=()=>{if(done)return;done=true;sp.remove();placeInd(true);if($('#view').children.length&&!$('#view .empty:only-child'))animateView('first');};
+  sp.addEventListener('animationend',e=>{if(e.target===sp&&e.animationName==='spOut')fin();});
+  sp.addEventListener('click',()=>sp.classList.add('out'));
+  setTimeout(fin,5000);
+})();
+boot();
+})();
+</script>
