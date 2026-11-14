@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>יומן הרכב</title>
+<meta name="description" content="מעקב טיפולים, דלק, הוצאות ותזכורות לרכב">
+<meta name="theme-color" content="#09080d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="יומן הרכב">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bellefair&family=IBM+Plex+Sans+Hebrew:wght@400;500;600&display=swap">
+<style>
+:root{--bg:#07080b;--gold:#cfb284;--gold-hi:#f6e6bd;--ink:#1a1408;--fg:#e9dcc2;--muted:rgba(233,220,194,.6);color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:radial-gradient(70% 55% at 50% 42%,#1c1910 0%,#0a0b0f 58%,#050608 100%) fixed,var(--bg);color:var(--fg);
+  font-family:"IBM Plex Sans Hebrew","Heebo",system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden;
+  display:grid;place-items:center;padding:env(safe-area-inset-top) max(16px,env(safe-area-inset-right)) env(safe-area-inset-bottom) max(16px,env(safe-area-inset-left))}
+.in{display:flex;flex-direction:column;align-items:center;gap:20px;text-align:center;max-width:420px;width:100%}
+.markwrap{position:relative;display:grid;place-items:center}
+.halo{position:absolute;left:50%;top:50%;translate:-50% -50%;width:min(72vw,300px);aspect-ratio:1;border-radius:50%;border:1px solid rgba(207,178,132,.4);opacity:0;animation:halo 1.9s ease-out .35s forwards}
+.halo.h2{animation-delay:.75s}
+.mark{position:relative;width:min(46vw,190px);aspect-ratio:1;border-radius:28%;overflow:hidden;box-shadow:0 0 0 1px rgba(207,178,132,.35),0 30px 80px -24px rgba(207,178,132,.45);opacity:0;animation:mark 1.1s cubic-bezier(.2,.8,.2,1) .15s forwards}
+.mark img{width:100%;height:100%;display:block}
+.shine{position:absolute;inset:-20%;background:linear-gradient(105deg,transparent 40%,rgba(255,240,205,.55) 50%,transparent 60%);transform:translateX(-120%);animation:shine 1s ease-in-out 1.15s forwards;mix-blend-mode:screen}
+.title{font-family:"Bellefair","Frank Ruhl Libre",Georgia,serif;font-size:clamp(36px,10vw,54px);letter-spacing:.04em;color:#e6cf9f;display:flex;line-height:1;margin:0;font-weight:400}
+.title span{display:inline-block;opacity:0;transform:translateY(16px);filter:blur(6px);animation:letter .6s cubic-bezier(.2,.8,.2,1) forwards;animation-delay:calc(1s + var(--i) * 70ms)}
+.title .gap{width:.32em}
+.road{width:min(50vw,200px);height:2px;background:rgba(207,178,132,.15);border-radius:2px;position:relative}
+.road i{position:absolute;top:0;bottom:0;right:0;width:0;background:linear-gradient(270deg,var(--gold),var(--gold-hi));border-radius:2px;box-shadow:0 0 12px rgba(246,230,189,.7);animation:road .9s cubic-bezier(.6,0,.2,1) 1.6s forwards}
+.status{font-size:14px;letter-spacing:.06em;color:var(--muted);opacity:0;animation:fade .6s ease 1.95s forwards;min-height:1.5em}
+.actions{display:flex;flex-direction:column;gap:12px;width:100%;opacity:0;animation:fade .5s ease 2.2s forwards}
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;min-height:56px;border-radius:16px;border:0;background:var(--gold);color:var(--ink);font:600 17px/1 inherit;text-decoration:none;-webkit-tap-highlight-color:transparent;transition:transform .12s}
+.btn:active{transform:scale(.97)}
+.btn:focus-visible{outline:2px solid var(--gold-hi);outline-offset:3px}
+.hint{font-size:14px;line-height:1.6;color:var(--muted);background:rgba(207,178,132,.08);border:1px solid rgba(207,178,132,.2);border-radius:14px;padding:12px 14px;text-align:start}
+.hint b{color:var(--fg);font-weight:500}
+.share{display:inline-block;width:16px;height:16px;vertical-align:-3px;margin:0 3px}
+[hidden]{display:none!important}
+@keyframes mark{0%{opacity:0;transform:scale(.55) rotate(-6deg);filter:blur(10px) brightness(2)}60%{opacity:1;filter:blur(0) brightness(1.3)}100%{opacity:1;transform:none;filter:none}}
+@keyframes shine{to{transform:translateX(120%)}}
+@keyframes halo{0%{opacity:0;scale:.6}35%{opacity:1}100%{opacity:0;scale:1.55}}
+@keyframes letter{to{opacity:1;transform:none;filter:none}}
+@keyframes road{to{width:100%}}
+@keyframes fade{to{opacity:1}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important;animation-delay:0s!important}}
+</style>
+</head>
+<body>
+<main class="in">
+  <div class="markwrap" aria-hidden="true"><i class="halo"></i><i class="halo h2"></i><div class="mark"><img src="icons/emblem.png" alt=""><i class="shine"></i></div></div>
+  <h1 class="title" aria-label="יומן הרכב"><span style="--i:0">י</span><span style="--i:1">ו</span><span style="--i:2">מ</span><span style="--i:3">ן</span><span class="gap" style="--i:4"></span><span style="--i:5">ה</span><span style="--i:6">ר</span><span style="--i:7">כ</span><span style="--i:8">ב</span></h1>
+  <div class="road" aria-hidden="true"><i></i></div>
+  <div class="status" id="status" aria-live="polite">המוסך הפרטי שלך</div>
+  <div class="actions">
+    <a class="btn" id="open" href="https://claude.ai/artifact/3AAH2UtRH5DjS7ZbEF5TF8">פתיחת היומן</a>
+    <div class="hint" id="install" hidden><b>להתקנה באייפון:</b> לחץ על כפתור השיתוף
+      <svg class="share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>
+      ואז על <b>״הוסף למסך הבית״</b>. מעכשיו היומן ייפתח מהאייקון עם הפתיח.</div>
+  </div>
+</main>
+<script>
+(function(){
+  var URL_APP=document.getElementById('open').href;
+  var standalone=window.navigator.standalone===true||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches);
+  var st=document.getElementById('status');
+  if(!standalone){document.getElementById('install').hidden=false;return;}
+  var KEY='cj-opened';var already=false;try{already=sessionStorage.getItem(KEY)==='1';}catch(e){}
+  if(already){st.textContent='לחץ כדי לחזור ליומן';return;}
+  setTimeout(function(){st.textContent='פותח את היומן…';},1900);
+  setTimeout(function(){try{sessionStorage.setItem(KEY,'1');}catch(e){}location.href=URL_APP;},2700);
+  window.addEventListener('pageshow',function(e){if(e.persisted)st.textContent='לחץ כדי לחזור ליומן';});
+})();
+</script>
+</body>
+</html>
