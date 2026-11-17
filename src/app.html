@@ -471,7 +471,10 @@ const km=v=>nf0.format(Math.round(+v||0));
 const fmtD=s=>s?pd(s).toLocaleDateString('he-IL',{day:'numeric',month:'short',year:'2-digit'}):'—';
 const monthKey=s=>s.slice(0,7);
 const monthName=k=>pd(k+'-15').toLocaleDateString('he-IL',{month:'short'});
-const n=v=>{const x=parseFloat(v);return isFinite(x)?x:null};
+// numbers from forms and from the AI: accepts 291.62, "₪291.62", "291,62", "1,092.50", "14,739"
+const n=v=>{if(typeof v==='number')return isFinite(v)?v:null;if(v==null)return null;let s=String(v).replace(/[^\d.,\-]/g,'');if(!s||s==='-')return null;
+  if(s.includes(',')&&s.includes('.'))s=s.replace(/,/g,'');else if(s.includes(','))s=/,\d{1,2}$/.test(s)?s.replace(',','.'):s.replace(/,/g,'');
+  const x=parseFloat(s);return isFinite(x)?x:null};
 
 const CATS={fuel:'דלק',service:'טיפולים ותיקונים',insurance:'ביטוח',test:'טסט ורישוי',tires:'צמיגים',parking:'חניה ואגרות',wash:'שטיפה וטיפוח',parts:'חלפים ואביזרים',other:'אחר'};
 const CAT_ICON={fuel:'fuel',service:'wrench',insurance:'shield',test:'doc',tires:'tire',parking:'park',wash:'drop',parts:'filter',other:'receipt'};
@@ -962,6 +965,28 @@ async function uploadReceipt(file){
 function busy(btn,on,label){if(!btn)return;btn.disabled=on;if(on){btn._l=btn.innerHTML;btn.innerHTML=`<span class="spin"></span>${label||'שומר…'}`;}else if(btn._l)btn.innerHTML=btn._l;}
 function fv(root,id){const e=root.querySelector('#'+id);return e?(e.type==='checkbox'?e.checked:e.value.trim()):'';}
 
+/* ---------- reading fuel receipts with the agent ---------- */
+const fuelPrompt=()=>`זו תמונה של קבלה על תדלוק, לרוב צילום מסך של חשבונית דיגיטלית מאפליקציית Yellow או קבלה מתחנת דלק בישראל.
+איך לקרוא חשבונית של Yellow: הסכום ששולם מופיע בגדול בראש הקבלה (למשל "₪ 205.41") וגם בשורה "סכום לתשלום לאחר הנחות". הכמות מופיעה ליד סוג הדלק בצורה "x 27.947 ל", וזה מספר הליטרים. שם הסניף מופיע מתחת ללוגו (למשל "ויסוצקי"). התאריך מופיע בשורה "תאריך". אסור להשתמש ב"סכום ללא מע״מ", ב"מע״מ" או ב"צבירה" בתור הסכום.
+בקבלה של תחנה אחרת: total הוא הסכום הסופי ששולם, כולל מע״מ ואחרי הנחות.
+החזר JSON בלבד בצורה {"isFuel":boolean,"date":"YYYY-MM-DD"|null,"total":number|null,"liters":number|null,"pricePerL":number|null,"station":string|null,"invoice":string|null}.
+מספרים יוחזרו כמספרי JSON בלבד, בלי ₪, בלי פסיקים ובלי מרכאות. station הוא רשת וסניף, למשל "Yellow ויסוצקי". אם ערך לא מופיע בקבלה, החזר null ואל תנחש. היום ${today()}.`;
+function normFuel(r){
+  if(!r||r.isFuel===false)return null;
+  const o={total:n(r.total),liters:n(r.liters),pricePerL:n(r.pricePerL),station:r.station?String(r.station).trim():null,date:/^\d{4}-\d\d-\d\d$/.test(r.date||'')?r.date:null,invoice:r.invoice?String(r.invoice):null};
+  if(!o.total&&o.liters&&o.pricePerL)o.total=+(o.liters*o.pricePerL).toFixed(2);
+  if(!o.liters&&o.total&&o.pricePerL)o.liters=+(o.total/o.pricePerL).toFixed(2);
+  if(o.total&&o.liters&&(!o.pricePerL||Math.abs(o.liters*o.pricePerL-o.total)>Math.max(2,o.total*0.03)))o.pricePerL=+(o.total/o.liters).toFixed(3);
+  return o;
+}
+async function readFuelReceipt(blob){return normFuel(await sample.json(fuelPrompt(),{images:[blob],modelTier:'default'}));}
+function aiErr(e,fallback){const c=e&&e.code;
+  if(c==='missing_api_key')return 'הסוכן עוד לא מחובר: חסר מפתח API בשרת. אפשר למלא ידנית.';
+  if(c==='not_granted')return 'הסוכן לא קיבל הרשאה. אפשר למלא ידנית.';
+  if(c==='rate_limited')return 'הסוכן עמוס כרגע. נסה שוב בעוד דקה.';
+  if(c==='image_rejected'||c==='images_unavailable')return 'התמונה לא נתמכת. נסה צילום מסך או JPG.';
+  if(c==='invalid_json')return 'הסוכן החזיר תשובה לא תקינה. נסה שוב.';
+  return fallback||'לא הצלחתי לקרוא את הקבלה. אפשר למלא ידנית.';}
 function fuelForm(id,pre,file){
   const r=id?S.fuel.find(x=>x.id===id):Object.assign({date:today(),odo:'',full:true},pre||{});
   openModal(id?'עריכת תדלוק':'תדלוק חדש',`<form id="f"><div class="fgrid">
@@ -973,9 +998,21 @@ function fuelForm(id,pre,file){
    <div class="field"><label for="fS">תחנה</label><input type="text" id="fS" value="${esc(r.station||'')}" placeholder="פז, דלק, סונול…"></div>
    <label class="toggle full"><input type="checkbox" id="fFull" ${r.full!==false?'checked':''}> מילוי מלא של המכל (נדרש לחישוב הצריכה)</label>
    ${fileField('קבלה','fFile')}
+   ${id&&r.receipt?.id&&String(r.receipt.type||'').startsWith('image/')&&sample&&imgOK?`<div class="full" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn sm" type="button" id="fRead">${I('spark')}מילוי מהקבלה השמורה</button><span class="small muted" id="fReadSt" aria-live="polite"></span></div>`:''}
    <div class="field full"><label for="fN">הערה</label><input type="text" id="fN" value="${esc(r.note||'')}"></div>
   </div><div class="formacts"><button class="btn primary" type="submit">${I('check')}שמירה</button><button class="btn ghost" type="button" data-act="close">ביטול</button></div></form>`,root=>{
     const getFile=wireFile(root,'fFile',file);
+    const rb=root.querySelector('#fRead');
+    if(rb)rb.onclick=async()=>{const st=root.querySelector('#fReadSt');busy(rb,true,'הסוכן קורא…');st.textContent='';
+      try{const url=window.__rcptUrlAsync?await window.__rcptUrlAsync(r.receipt.id):'/_blob/'+encodeURIComponent(r.receipt.id);
+        const blob=await (await fetch(url)).blob();const x=await readFuelReceipt(blob);
+        if(!x){st.textContent='זו לא נראית קבלת דלק';return;}
+        const put=(sel,v,dec)=>{const el=root.querySelector(sel);if(v!=null&&!n(el.value))el.value=dec!=null?(+v).toFixed(dec):v;};
+        put('#fT',x.total,2);put('#fL',x.liters,2);put('#fP',x.pricePerL,3);
+        const sEl=root.querySelector('#fS');if(x.station&&!sEl.value.trim())sEl.value=x.station;
+        const tNow=n(root.querySelector('#fT').value);
+        st.textContent=x.total&&tNow&&Math.abs(tNow-x.total)>0.05?`מולא מה שהיה חסר. בקבלה כתוב ${ils2(x.total)}, ובשדה ${ils2(tNow)}.`:'הסוכן מילא את מה שהיה חסר. בדוק ושמור.';
+      }catch(e){st.textContent=aiErr(e);}finally{busy(rb,false);}};
     const L=root.querySelector('#fL'),T=root.querySelector('#fT'),Pp=root.querySelector('#fP');
     const calc=src=>{const l=n(L.value),t=n(T.value),p=n(Pp.value);
       if(src!=='p'&&l&&t) Pp.value=(t/l).toFixed(3);
@@ -1167,7 +1204,7 @@ async function runInsight(btn){
   try{
     const res=await sample(prompt,{modelTier:'complex',cache:{gcTime:6*3600e3},onText:({text})=>{box.innerHTML=mdLite(text);}});
     lastInsight=mdLite(res.text);box.innerHTML=lastInsight;
-  }catch(e){box.innerHTML=`<span class="muted">${e?.code==='not_granted'?'הסוכן לא קיבל הרשאה לפנות ל־Claude.':e?.code==='rate_limited'?'הגעת למגבלת השימוש. נסה שוב מאוחר יותר.':'הניתוח לא הצליח. נסה שוב.'}</span>`;}
+  }catch(e){box.innerHTML=`<span class="muted">${e?.code==='missing_api_key'?'האנליסט עוד לא מחובר: חסר מפתח API בשרת.':e?.code==='not_granted'?'הסוכן לא קיבל הרשאה לפנות ל־Claude.':e?.code==='rate_limited'?'הגעת למגבלת השימוש. נסה שוב מאוחר יותר.':'הניתוח לא הצליח. נסה שוב.'}</span>`;}
   finally{insightBusy=false;busy(btn,false);}
 }
 async function runPlan(btn){
@@ -1188,7 +1225,7 @@ async function runPlan(btn){
           await addRec('reminder',{title:it.title,kind:['service','check','doc'].includes(it.kind)?it.kind:'service',intervalKm:n(it.intervalKm),intervalDays:n(it.intervalDays),lastKm:odo(),lastDate:today(),note:it.why||''});k++;}
           closeModal();toast(`נוספו ${k} תזכורות`);go('reminder');}catch(err){toast('ההוספה נכשלה');busy(e.currentTarget,false);}};
     });
-  }catch(e){toast(e?.code==='not_granted'?'הסוכן לא קיבל הרשאה':'התכנון לא הצליח, נסה שוב');}
+  }catch(e){toast(aiErr(e,'התכנון לא הצליח, נסה שוב'));}
   finally{busy(btn,false);}
 }
 /* ---------- quick fuel: odometer, receipt, save ---------- */
@@ -1228,17 +1265,17 @@ function fuelQuick(){
       if(!(sample&&imgOK)){$r('#qfMore').open=true;return;}
       reading=true;status('',`<span class="spin"></span>הסוכן קורא את הקבלה…`);
       try{
-        const r=await sample.json(`זו תמונה של קבלה על תדלוק, לרוב צילום מסך של חשבונית דיגיטלית מאפליקציית Yellow או קבלה מתחנת דלק בישראל. החזר JSON בלבד בצורה {"isFuel":boolean,"date":"YYYY-MM-DD"|null,"total":number|null,"liters":number|null,"pricePerL":number|null,"station":string|null,"invoice":string|null}. total הוא הסכום ששולם בפועל בשקלים כולל מע״מ ואחרי הנחות. station הוא שם הרשת והסניף, למשל "Yellow אלוף שדה". אל תמציא ערכים שלא מופיעים. היום ${today()}.`,{images:[f],modelTier:'default'});
-        if(!r||r.isFuel===false){status('warn','זו לא נראית קבלת דלק. אפשר למלא את הפרטים ידנית.');$r('#qfMore').open=true;return;}
-        if(n(r.total))$r('#qfT').value=r.total;
-        if(n(r.liters))$r('#qfL').value=r.liters;else if(n(r.total)&&n(r.pricePerL))$r('#qfL').value=(r.total/r.pricePerL).toFixed(2);
+        const r=await readFuelReceipt(f);
+        if(!r){status('warn','זו לא נראית קבלת דלק. אפשר למלא את הפרטים ידנית.');$r('#qfMore').open=true;return;}
+        if(r.total)$r('#qfT').value=r.total.toFixed(2);
+        if(r.liters)$r('#qfL').value=+r.liters.toFixed(3);
         if(r.station)$r('#qfS').value=r.station;
-        if(/^\d{4}-\d\d-\d\d$/.test(r.date||''))$r('#qfD').value=r.date;
-        ppl=n(r.pricePerL);if(r.invoice)root._inv=r.invoice;
+        if(r.date)$r('#qfD').value=r.date;
+        ppl=r.pricePerL;if(r.invoice)root._inv=r.invoice;
         sum();
-        status('ok',`${I('check')}הסוכן מילא: ${esc($r('#qfSum').textContent)}${r.date&&r.date!==today()?` · ${fmtD(r.date)}`:''}`);
-        if(!n(r.total))$r('#qfMore').open=true;
-      }catch(e){status('warn',e?.code==='not_granted'?'הסוכן לא קיבל הרשאה. אפשר למלא ידנית.':'לא הצלחתי לקרוא את הקבלה. אפשר למלא ידנית.');$r('#qfMore').open=true;}
+        if(r.total)status('ok',`${I('check')}הסוכן מילא: ${esc($r('#qfSum').textContent)}${r.date&&r.date!==today()?` · ${fmtD(r.date)}`:''}`);
+        else{status('warn','הסוכן לא מצא את הסכום בקבלה. השלם אותו בפרטים.');$r('#qfMore').open=true;$r('#qfT').focus();}
+      }catch(e){console.warn(e);status('warn',aiErr(e));$r('#qfMore').open=true;}
       finally{reading=false;}
     });
     $r('#qf').onsubmit=async e=>{
@@ -1274,14 +1311,14 @@ function scanSheet(){
       try{
         const r=await sample.json(`זו תמונה של קבלה או חשבונית הקשורה לרכב פרטי בישראל. חלץ את הפרטים והחזר JSON בלבד:
 {"type":"fuel"|"service"|"expense","date":"YYYY-MM-DD"|null,"total":number|null,"liters":number|null,"pricePerL":number|null,"station":string|null,"odo":number|null,"title":string|null,"category":"insurance"|"test"|"tires"|"parking"|"wash"|"parts"|"other"|null,"vendor":string|null,"note":string|null}
-fuel = תדלוק בתחנת דלק. service = עבודת מוסך/טיפול/תיקון (title = תיאור קצר בעברית של מה שבוצע, note = פירוט הפריטים). expense = כל השאר. סכומים בשקלים כולל מע״מ. היום ${today()}.`,{images:[file],modelTier:'default'});
+fuel = תדלוק בתחנת דלק. service = עבודת מוסך/טיפול/תיקון (title = תיאור קצר בעברית של מה שבוצע, note = פירוט הפריטים). expense = כל השאר. total הוא הסכום הסופי ששולם בשקלים כולל מע״מ; בחשבונית של Yellow זה הסכום הגדול בראש הקבלה או "סכום לתשלום לאחר הנחות", ולא "סכום ללא מע״מ" או "צבירה". מספרים כמספרי JSON בלי ₪ ובלי פסיקים. היום ${today()}.`,{images:[file],modelTier:'default'});
         closeModal();
         const pre={date:/^\d{4}-\d\d-\d\d$/.test(r?.date||'')?r.date:today()};
-        if(r?.type==='fuel'){Object.assign(pre,{total:r.total,liters:r.liters,pricePerL:r.pricePerL,station:r.station||r.vendor||'',odo:r.odo||odo(),full:true});fuelForm(null,pre,file);}
-        else if(r?.type==='service'){Object.assign(pre,{title:r.title||'טיפול',cost:r.total,garage:r.vendor||'',note:r.note||'',odo:r.odo||odo()});serviceForm(null,pre,file);}
-        else{Object.assign(pre,{title:r?.title||r?.vendor||'',amount:r?.total,category:r?.category||'other',vendor:r?.vendor||'',note:r?.note||''});expenseForm(null,pre,file);}
+        if(r?.type==='fuel'){const x=normFuel(r)||{};Object.assign(pre,{total:x.total,liters:x.liters,pricePerL:x.pricePerL,station:x.station||r.vendor||'',odo:n(r.odo)||'',full:true});fuelForm(null,pre,file);}
+        else if(r?.type==='service'){Object.assign(pre,{title:r.title||'טיפול',cost:n(r.total),garage:r.vendor||'',note:r.note||'',odo:n(r.odo)||odo()});serviceForm(null,pre,file);}
+        else{Object.assign(pre,{title:r?.title||r?.vendor||'',amount:n(r?.total),category:r?.category||'other',vendor:r?.vendor||'',note:r?.note||''});expenseForm(null,pre,file);}
         toast('הסוכן מילא את הטופס, בדוק ואשר');
-      }catch(e){busy(go2,false);toast(e?.code==='image_rejected'?'התמונה לא נתמכת, נסה JPG או PNG':'לא הצלחתי לקרוא את הקבלה');}};
+      }catch(e){busy(go2,false);toast(aiErr(e));}};
   });
 }
 
@@ -1311,7 +1348,7 @@ async function sendChat(q){
     const res=await sample(input,{cache:false,tools:chatTools,onText:({text})=>{if(bubble&&text&&text!=='Thinking...')bubble.innerHTML=mdLite(text);}});
     const html=mdLite(res.text||'');if(bubble)bubble.innerHTML=html;
     chatLog.push({role:'assistant',content:res.text||'',html});
-  }catch(e){const t=e?.code==='rate_limited'?'הגעת למגבלת השימוש, נסה שוב בעוד כמה דקות.':e?.code==='not_granted'?'היועץ לא קיבל הרשאה לפנות ל־Claude.':'משהו השתבש. נסה לשאול שוב.';if(bubble)bubble.innerHTML=t;chatLog.pop();}
+  }catch(e){const t=e?.code==='missing_api_key'?'היועץ עוד לא מחובר: חסר מפתח API בשרת.':e?.code==='rate_limited'?'הגעת למגבלת השימוש, נסה שוב בעוד כמה דקות.':e?.code==='not_granted'?'היועץ לא קיבל הרשאה לפנות ל־Claude.':'משהו השתבש. נסה לשאול שוב.';if(bubble)bubble.innerHTML=t;chatLog.pop();}
   finally{chatBusy=false;}
 }
 
