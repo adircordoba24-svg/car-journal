@@ -17,11 +17,16 @@ head = """<!doctype html>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="יומן הרכב">
+<meta property="og:title" content="יומן הרכב">
+<meta property="og:description" content="מעקב טיפולים, דלק, הוצאות ותזכורות לרכב">
+<meta property="og:image" content="https://adircordoba24-svg.github.io/car-journal/icons/icon-512.png">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="he_IL">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <style>:root{padding-top:0;padding-bottom:0}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="vendor/supabase.js"></script>
 <script src="config.js"></script>
 <script src="supabase-shim.js"></script>
 </head>
