@@ -21,12 +21,17 @@
     ".cj-login p{margin:0;color:var(--muted);font-size:14px}" +
     ".cj-login .field{text-align:start}" +
     ".cj-login .err{color:var(--crit);font-size:14px;min-height:1.4em}" +
-    ".cj-login .switch{background:none;border:0;color:var(--accent);font-size:14px;padding:6px}";
+    ".cj-login .switch{background:none;border:0;color:var(--accent);font-size:14px;padding:6px}" +
+    ".cj-login .consent{display:flex;gap:8px;align-items:flex-start;text-align:start;font-size:13px;color:var(--muted);line-height:1.5}" +
+    ".cj-login .consent input{width:18px;height:18px;margin-top:2px;accent-color:var(--accent);flex:none}" +
+    ".cj-login a{color:var(--accent)}.cj-login .legal{font-size:12px;color:var(--faint)}.cj-login .ok{color:var(--ok);font-size:14px}";
   document.head.appendChild(css);
 
   var HEB = {
     "Invalid login credentials": "המייל או הסיסמה לא נכונים",
     "User already registered": "כבר יש חשבון עם המייל הזה. נסה להיכנס",
+    "Password should be at least 6 characters.": "הסיסמה צריכה לפחות 8 תווים",
+    "New password should be different from the old password.": "הסיסמה החדשה צריכה להיות שונה מהקודמת",
     "Signups not allowed for this instance": "ההרשמה סגורה. היכנס עם החשבון הקיים",
     "Email not confirmed": "צריך לאשר את המייל לפני הכניסה"
   };
@@ -39,29 +44,47 @@
       '<form novalidate><img src="icons/emblem.png" alt=""><h1>יומן הרכב</h1><p id="cjSub">כניסה לחשבון שלך</p>' +
       '<div class="field"><label for="cjEmail">מייל</label><input type="text" id="cjEmail" inputmode="email" autocomplete="email" dir="ltr"></div>' +
       '<div class="field"><label for="cjPass">סיסמה</label><input type="password" id="cjPass" autocomplete="current-password" dir="ltr" style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-size:16px;min-height:46px"></div>' +
+      '<label class="consent" id="cjConsentRow" hidden><input type="checkbox" id="cjConsent"><span>קראתי ואני מסכים ל<a href="terms.html" target="_blank" rel="noopener">תנאי השימוש</a> ול<a href="privacy.html" target="_blank" rel="noopener">מדיניות הפרטיות</a></span></label>' +
       '<div class="err" id="cjErr" role="alert"></div>' +
       '<button class="btn primary block" type="submit" id="cjGo">כניסה</button>' +
-      '<button class="switch" type="button" id="cjSwitch">פעם ראשונה? יצירת חשבון</button></form>';
+      '<button class="switch" type="button" id="cjForgot">שכחתי סיסמה</button>' +
+      '<button class="switch" type="button" id="cjSwitch">פעם ראשונה? יצירת חשבון</button>' +
+      '<div class="legal"><a href="privacy.html" target="_blank" rel="noopener">מדיניות פרטיות</a> · <a href="terms.html" target="_blank" rel="noopener">תנאי שימוש</a></div></form>';
     document.body.appendChild(el);
     var f = el.querySelector("form"), err = el.querySelector("#cjErr"), go = el.querySelector("#cjGo");
-    el.querySelector("#cjSwitch").onclick = function () {
-      mode = mode === "in" ? "up" : "in";
-      go.textContent = mode === "in" ? "כניסה" : "יצירת חשבון";
-      el.querySelector("#cjSub").textContent = mode === "in" ? "כניסה לחשבון שלך" : "בחר מייל וסיסמה (לפחות 8 תווים)";
-      el.querySelector("#cjPass").autocomplete = mode === "in" ? "current-password" : "new-password";
-      this.textContent = mode === "in" ? "פעם ראשונה? יצירת חשבון" : "כבר יש לי חשבון";
-      err.textContent = "";
-    };
+    var passRow = el.querySelector("#cjPass").closest(".field"), consentRow = el.querySelector("#cjConsentRow");
+    var forgotBtn = el.querySelector("#cjForgot"), switchBtn = el.querySelector("#cjSwitch");
+    function setMode(m) {
+      mode = m; err.className = "err"; err.textContent = "";
+      go.textContent = m === "in" ? "כניסה" : m === "up" ? "יצירת חשבון" : "שליחת קישור לאיפוס";
+      el.querySelector("#cjSub").textContent = m === "in" ? "כניסה לחשבון שלך" : m === "up" ? "בחר מייל וסיסמה (לפחות 8 תווים)" : "נשלח אליך קישור לבחירת סיסמה חדשה";
+      el.querySelector("#cjPass").autocomplete = m === "up" ? "new-password" : "current-password";
+      passRow.hidden = m === "reset"; consentRow.hidden = m !== "up"; forgotBtn.hidden = m !== "in";
+      switchBtn.textContent = m === "in" ? "פעם ראשונה? יצירת חשבון" : "חזרה לכניסה";
+    }
+    switchBtn.onclick = function () { setMode(mode === "in" ? "up" : "in"); };
+    forgotBtn.onclick = function () { setMode("reset"); };
     f.onsubmit = async function (e) {
       e.preventDefault();
       var email = el.querySelector("#cjEmail").value.trim(), password = el.querySelector("#cjPass").value;
+      err.className = "err";
+      if (mode === "reset") {
+        if (!/^\S+@\S+\.\S+$/.test(email)) { err.textContent = "צריך כתובת מייל תקינה"; return; }
+        go.disabled = true;
+        var rr = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+        go.disabled = false;
+        if (rr.error && /rate|429/i.test(String(rr.error.message || rr.error.status))) { err.textContent = "נשלחו יותר מדי בקשות. נסה שוב בעוד כמה דקות."; return; }
+        err.className = "ok"; err.textContent = "אם המייל רשום אצלנו, נשלח אליו קישור לאיפוס הסיסמה.";
+        return;
+      }
       if (!email || !password) { err.textContent = "צריך מייל וסיסמה"; return; }
       if (mode === "up" && password.length < 8) { err.textContent = "הסיסמה צריכה לפחות 8 תווים"; return; }
+      if (mode === "up" && !el.querySelector("#cjConsent").checked) { err.textContent = "צריך לאשר את תנאי השימוש ומדיניות הפרטיות"; return; }
       go.disabled = true; err.textContent = "";
       try {
         var res = mode === "in"
           ? await sb.auth.signInWithPassword({ email: email, password: password })
-          : await sb.auth.signUp({ email: email, password: password });
+          : await sb.auth.signUp({ email: email, password: password, options: { emailRedirectTo: location.origin + location.pathname, data: { terms_accepted_at: new Date().toISOString() } } });
         if (res.error) throw res.error;
         if (!res.data.session) { err.textContent = "נשלח אליך מייל לאישור. אשר אותו ואז היכנס."; go.disabled = false; return; }
         uid = res.data.session.user.id;
@@ -78,8 +101,29 @@
       if (s) { uid = s.user.id; res(); } else showLogin(res);
     });
   });
+  function showNewPassword() {
+    if (!document.body) { document.addEventListener("DOMContentLoaded", showNewPassword); return; }
+    if (document.querySelector(".cj-login")) return;
+    var el = document.createElement("div");
+    el.className = "cj-login"; el.style.zIndex = "120";
+    el.innerHTML = '<form novalidate><img src="icons/emblem.png" alt=""><h1>סיסמה חדשה</h1><p>בחר סיסמה חדשה לחשבון שלך</p>' +
+      '<div class="field"><label for="cjNew">סיסמה חדשה (לפחות 8 תווים)</label><input type="password" id="cjNew" autocomplete="new-password" dir="ltr" style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-size:16px;min-height:46px"></div>' +
+      '<div class="err" id="cjNErr" role="alert"></div><button class="btn primary block" type="submit" id="cjNGo">שמירת הסיסמה</button></form>';
+    document.body.appendChild(el);
+    el.querySelector("form").onsubmit = async function (e) {
+      e.preventDefault();
+      var p = el.querySelector("#cjNew").value, er = el.querySelector("#cjNErr"), b = el.querySelector("#cjNGo");
+      if (p.length < 8) { er.textContent = "הסיסמה צריכה לפחות 8 תווים"; return; }
+      b.disabled = true;
+      var r = await sb.auth.updateUser({ password: p });
+      if (r.error) { er.textContent = HEB[r.error.message] || "השמירה לא הצליחה. נסה שוב."; b.disabled = false; return; }
+      try { history.replaceState(null, "", location.pathname); } catch (x) {}
+      el.remove();
+    };
+  }
   sb.auth.onAuthStateChange(function (ev, s) {
     if (s) uid = s.user.id;
+    if (ev === "PASSWORD_RECOVERY") showNewPassword();
     if (ev === "SIGNED_OUT") location.reload();
   });
   window.cjSignOut = function () { sb.auth.signOut(); };
@@ -222,12 +266,14 @@
       try {
         var j = r.error.context && r.error.context.json ? await r.error.context.json() : null;
         if (j && j.error === "missing_api_key") code = "missing_api_key";
+        else if (j && j.error === "quota_exceeded") { code = "quota_exceeded"; msg = j.kind || ""; }
         else if (j && j.error && j.error.type === "rate_limit_error") code = "rate_limited";
         else if (j && j.error && j.error.type === "overloaded_error") code = "rate_limited";
         if (j && j.error && j.error.message) msg = j.error.message;
       } catch (e) {}
-      throw { code: code, message: msg };
+      throw { code: code, message: msg, kind: code === "quota_exceeded" ? msg : undefined };
     }
+    if (window.cjAccount) window.cjAccount._quota = null;
     return r.data;
   }
   async function buildMessages(input, images) {
@@ -281,6 +327,39 @@
     catch (e) { var m = t.match(/[\[{][\s\S]*[\]}]/); if (m) return JSON.parse(m[0]); throw { code: "invalid_json", message: "bad json" }; }
   };
   sample.limits = async function () { return { images: { maxCount: 5, mediaTypes: ["image/jpeg", "image/png", "image/webp", "image/gif"] } }; };
+
+  /* ---------- account ---------- */
+  window.cjAccount = {
+    _quota: null,
+    quota: async function () {
+      if (window.cjAccount._quota) return window.cjAccount._quota;
+      var r = await sb.rpc("ai_quota");
+      if (r.error) throw r.error;
+      window.cjAccount._quota = r.data; return r.data;
+    },
+    exportData: async function () {
+      var r = await sb.from("docs").select("collection,id,data,updated_at");
+      if (r.error) throw r.error;
+      var out = { app: "יומן הרכב", exportedAt: new Date().toISOString(), email: window.cjAccount._email || null, records: {} };
+      r.data.forEach(function (x) { (out.records[x.collection] = out.records[x.collection] || []).push(Object.assign({ id: x.id, updated_at: x.updated_at }, x.data)); });
+      var blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob); a.download = "car-journal-" + new Date().toISOString().slice(0, 10) + ".json";
+      document.body.appendChild(a); a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+      return r.data.length;
+    },
+    deleteAccount: async function () {
+      var r = await sb.functions.invoke("delete-account", { body: { confirm: "DELETE" } });
+      if (r.error) throw r.error;
+      try { await sb.auth.signOut(); } catch (e) {}
+      try { localStorage.removeItem("cj-auth"); } catch (e) {}
+      location.reload();
+    },
+    signOut: function () { sb.auth.signOut(); }
+  };
+  sb.auth.getSession().then(function (r) { var s = r.data && r.data.session; if (s) window.cjAccount._email = s.user.email; });
+  sb.auth.onAuthStateChange(function (ev, s) { if (s) window.cjAccount._email = s.user.email; });
 
   window.claude = {
     use: async function (name) {

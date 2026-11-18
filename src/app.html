@@ -348,6 +348,38 @@ textarea{resize:vertical;min-height:70px}
 .qf-status.ok{background:var(--ok-soft);color:var(--ok)} .qf-status.warn{background:var(--warn-soft);color:var(--warn)}
 .qf-more summary{cursor:pointer;font-size:14px;font-weight:500;padding:6px 0;list-style-position:inside}
 .btn.block{width:100%;justify-content:center;min-height:54px;font-size:16px;border-radius:14px}
+
+/* onboarding */
+.onb{position:fixed;inset:0;z-index:80;background:var(--bg);display:flex;flex-direction:column;overflow-y:auto;
+  padding:calc(env(safe-area-inset-top,0px) + 18px) max(18px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 22px) max(18px,env(safe-area-inset-left,0px))}
+.onb-in{width:min(480px,100%);margin:auto;display:flex;flex-direction:column;gap:18px}
+.onb-dots{display:flex;gap:6px;justify-content:center}
+.onb-dots i{width:22px;height:4px;border-radius:4px;background:var(--line)}
+.onb-dots i.on{background:var(--accent)}
+.onb h1{font-family:var(--f-display);font-size:34px;line-height:1.1}
+.onb .lead{color:var(--muted);font-size:15.5px;line-height:1.6;margin:0}
+.onb-feats{display:flex;flex-direction:column;gap:12px}
+.onb-feat{display:flex;gap:12px;align-items:flex-start;padding:14px;border-radius:14px;background:var(--surface);border:1px solid var(--line-soft)}
+.onb-feat .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);flex:none}
+.onb-feat b{display:block;font-weight:500;margin-bottom:2px}
+.onb-feat span{color:var(--muted);font-size:14px}
+.onb-mark{width:84px;height:84px;border-radius:24px;box-shadow:0 0 0 1px var(--line)}
+.onb-acts{display:flex;flex-direction:column;gap:10px}
+.onb-skip{background:none;border:0;color:var(--muted);font-size:14px;padding:8px}
+.onb-choice{display:flex;gap:12px;align-items:flex-start;padding:14px;border-radius:14px;border:1.5px solid var(--line);background:var(--surface);cursor:pointer;text-align:start}
+.onb-choice:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.onb-choice input{margin-top:3px;accent-color:var(--accent);width:18px;height:18px;flex:none}
+.onb-choice b{display:block;font-weight:500}
+.onb-choice span{color:var(--muted);font-size:13.5px}
+@media (prefers-reduced-motion:no-preference){.onb-in{animation:vin .35s cubic-bezier(.2,.8,.2,1) both}}
+
+/* account */
+.acct-q{display:flex;flex-direction:column;gap:10px}
+.acct-q .row{display:flex;justify-content:space-between;font-size:14px}
+.acct-list{display:flex;flex-direction:column;border:1px solid var(--line-soft);border-radius:14px;overflow:hidden}
+.acct-list button,.acct-list a{display:flex;align-items:center;gap:10px;padding:14px;border:0;border-top:1px solid var(--line-soft);background:var(--surface);color:var(--fg);font-size:15px;text-align:start;text-decoration:none;min-height:50px}
+.acct-list>:first-child{border-top:0}
+.acct-list .danger{color:var(--crit)}
 .sec-title{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:26px 0 12px;flex-wrap:wrap}
 .sec-title h2{font-family:var(--f-display);font-size:28px}
 
@@ -402,6 +434,7 @@ textarea{resize:vertical;min-height:70px}
   <header class="top">
     <div class="brand"><img class="mark" src="/_blob/e659200739c3afba0768da39720081ed" alt="" width="52" height="52"><div class="brand-txt"><h1>יומן הרכב</h1><span class="sub" id="subline">המוסך הפרטי שלך</span></div></div>
     <div class="top-actions">
+      <button class="iconbtn" data-act="account" id="acctBtn" aria-label="החשבון שלי" title="החשבון שלי" hidden><svg class="i" viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0"/></svg></button>
       <button class="iconbtn" data-act="quick" aria-label="רישום חדש" title="רישום חדש"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
       <button class="iconbtn" data-act="car" aria-label="פרטי הרכב" title="פרטי הרכב"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4"/></svg></button>
     </div>
@@ -569,6 +602,7 @@ function sortedReminders(filter){
 /* ---------- db ---------- */
 async function boot(){
   renderNav();
+  if(window.cjAccount){const ab=$('#acctBtn');if(ab)ab.hidden=false;}
   const timer=setTimeout(()=>{if(S.ready.size<COLS.length){S.offline=true;render();}},10000);
   try{ db=await window.claude?.use?.('db'); }catch(e){ db=null; }
   if(!db){clearTimeout(timer);S.noDb=true;render();return;}
@@ -737,12 +771,15 @@ function renderNow(){
   const keepChat=view==='agents'?captureChat():null;
   v.innerHTML=fn();
   if(keepChat) restoreChat(keepChat);
+  if(view==='agents') fillAgentQuota();
 }
+const APP_URL='https://adircordoba24-svg.github.io/car-journal/';
 function renderBanner(){
   const b=$('#banner');
+  if(!window.cjSB&&!S.noDb){b.innerHTML=`<div class="banner"><span><b>היומן עבר לאפליקציה העצמאית.</b> כל הנתונים נמצאים שם, והגרסה הזאת לא מתעדכנת יותר.</span><a class="btn primary sm" href="${APP_URL}" target="_blank" rel="noopener">${I('home')}פתיחת האפליקציה</a></div>`;return;}
   if(S.offline&&!S.noDb){b.innerHTML=`<div class="banner warn">המאגר לא עונה כרגע, ייתכן שהנתונים שמוצגים לא מעודכנים. השינויים יישמרו כשהחיבור יחזור.</div>`;return;}
   if(S.car?.example){b.innerHTML=`<div class="banner"><span><b>אלה נתוני דוגמה</b> כדי שתראה איך היומן עובד. כשתגדיר את הרכב שלך, הדוגמאות יימחקו.</span><button class="btn primary sm" data-act="setup">${I('edit')}הגדרת הרכב שלי</button></div>`;return;}
-  if(!S.car&&S.ready.size===COLS.length){b.innerHTML=`<div class="banner"><span><b>ברוך הבא.</b> נתחיל בפרטי הרכב ובקילומטראז׳ הנוכחי.</span><button class="btn primary sm" data-act="setup">${I('plus')}הוספת הרכב</button></div>`;return;}
+  if(!S.car&&S.ready.size===COLS.length){maybeOnboard();b.innerHTML=`<div class="banner"><span><b>ברוך הבא.</b> נתחיל בפרטי הרכב ובקילומטראז׳ הנוכחי.</span><button class="btn primary sm" data-act="onboard">${I('plus')}הגדרת הרכב</button></div>`;return;}
   b.innerHTML='';
 }
 
@@ -932,6 +969,7 @@ function vAgents(){
   const off=!sample;
   return `<div class="sec-title"><h2>סוכנים</h2><span class="small muted">עוזרים חכמים שעובדים על הנתונים של הרכב שלך</span></div>
   ${off?`<div class="banner warn">הסוכנים זמינים כשהדף פתוח ב־Claude עם חשבון מחובר.</div>`:''}
+  ${window.cjAccount?`<div class="small muted" id="agQuota" style="margin:-4px 0 14px"></div>`:''}
   <section class="agents">
     <div class="card agent"><div class="badge">${I('cam')}</div><h3>סוכן הקבלות</h3><p>צלם קבלה מהתחנה או מהמוסך. הסוכן יזהה אם זה תדלוק, טיפול או הוצאה, ימלא סכום, ליטרים, תאריך ותחנה, ויצרף את הקבלה לרישום.</p><button class="btn primary" data-act="scan" ${off||!imgOK?'disabled':''}>${I('cam')}סריקת קבלה</button>${!off&&!imgOK?'<span class="small muted">סריקת תמונות לא זמינה בתצוגה הזו</span>':''}</div>
     <div class="card agent"><div class="badge">${I('list')}</div><h3>מתכנן הטיפולים</h3><p>לפי היצרן, הדגם, השנה והקילומטראז׳, הסוכן בונה לוח טיפולים מומלץ עם מרווחים בק״מ ובזמן. אתה בוחר מה להוסיף לתזכורות.</p><button class="btn primary" data-act="plan" ${off?'disabled':''}>${I('spark')}בניית תוכנית</button></div>
@@ -986,6 +1024,7 @@ function aiErr(e,fallback){const c=e&&e.code;
   if(c==='rate_limited')return 'הסוכן עמוס כרגע. נסה שוב בעוד דקה.';
   if(c==='image_rejected'||c==='images_unavailable')return 'התמונה לא נתמכת. נסה צילום מסך או JPG.';
   if(c==='invalid_json')return 'הסוכן החזיר תשובה לא תקינה. נסה שוב.';
+  if(c==='quota_exceeded')return e.kind==='receipt'?'נגמרו צילומי הקבלות לחודש הזה. אפשר למלא ידנית, והמכסה מתחדשת ב־1 לחודש.':e.kind==='analysis'?'נגמרו הניתוחים לחודש הזה. המכסה מתחדשת ב־1 לחודש.':'נגמרה מכסת השיחות לחודש הזה. המכסה מתחדשת ב־1 לחודש.';
   return fallback||'לא הצלחתי לקרוא את הקבלה. אפשר למלא ידנית.';}
 function fuelForm(id,pre,file){
   const r=id?S.fuel.find(x=>x.id===id):Object.assign({date:today(),odo:'',full:true},pre||{});
@@ -1022,8 +1061,8 @@ function fuelForm(id,pre,file){
     root.querySelector('#f').onsubmit=async e=>{e.preventDefault();const btn=e.submitter||root.querySelector('[type=submit]');busy(btn,true);
       try{const data={date:fv(root,'fDate'),odo:n(fv(root,'fOdo')),liters:n(fv(root,'fL')),total:n(fv(root,'fT')),pricePerL:n(fv(root,'fP')),station:fv(root,'fS'),full:fv(root,'fFull'),note:fv(root,'fN')};
         if(!data.liters&&data.total&&data.pricePerL) data.liters=+(data.total/data.pricePerL).toFixed(2);
-        const f=getFile(); if(f){const rc=await uploadReceipt(f); if(rc) data.receipt=rc;}
-        if(id) await updRec('fuel',id,data); else await addRec('fuel',data);
+        const f=getFile(); const oldRid=id?(((S.fuel.concat(S.service,S.expense)).find(x=>x.id===id)||{}).receipt||{}).id:null; if(f){const rc=await uploadReceipt(f); if(rc) data.receipt=rc;}
+        if(id) await updRec('fuel',id,data); else await addRec('fuel',data); if(oldRid&&data.receipt&&data.receipt.id!==oldRid)cleanupReceipt(oldRid,id);
         await bumpOdo(data.odo); closeModal(); toast('התדלוק נשמר');
       }catch(err){console.error(err);busy(btn,false);toast('השמירה נכשלה. בדוק את החיבור ונסה שוב');}};
   });
@@ -1044,8 +1083,8 @@ function serviceForm(id,pre,file){
     const getFile=wireFile(root,'sFile',file);
     root.querySelector('#f').onsubmit=async e=>{e.preventDefault();const btn=e.submitter||root.querySelector('[type=submit]');busy(btn,true);
       try{const data={title:fv(root,'sT'),date:fv(root,'sD'),odo:n(fv(root,'sO')),cost:n(fv(root,'sC'))||0,garage:fv(root,'sG'),note:fv(root,'sN')};
-        const f=getFile(); if(f){const rc=await uploadReceipt(f); if(rc) data.receipt=rc;}
-        if(id) await updRec('service',id,data); else await addRec('service',data);
+        const f=getFile(); const oldRid=id?(((S.fuel.concat(S.service,S.expense)).find(x=>x.id===id)||{}).receipt||{}).id:null; if(f){const rc=await uploadReceipt(f); if(rc) data.receipt=rc;}
+        if(id) await updRec('service',id,data); else await addRec('service',data); if(oldRid&&data.receipt&&data.receipt.id!==oldRid)cleanupReceipt(oldRid,id);
         await bumpOdo(data.odo);
         for(const cb of root.querySelectorAll('.remDone:checked')) await markDone(cb.value,data.odo,data.date,true);
         closeModal(); toast('הטיפול נשמר');
@@ -1066,8 +1105,8 @@ function expenseForm(id,pre,file){
     const getFile=wireFile(root,'eFile',file);
     root.querySelector('#f').onsubmit=async e=>{e.preventDefault();const btn=e.submitter||root.querySelector('[type=submit]');busy(btn,true);
       try{const data={title:fv(root,'eT'),category:fv(root,'eC'),amount:n(fv(root,'eA'))||0,date:fv(root,'eD'),vendor:fv(root,'eV'),note:fv(root,'eN')};
-        const f=getFile(); if(f){const rc=await uploadReceipt(f); if(rc) data.receipt=rc;}
-        if(id) await updRec('expense',id,data); else await addRec('expense',data);
+        const f=getFile(); const oldRid=id?(((S.fuel.concat(S.service,S.expense)).find(x=>x.id===id)||{}).receipt||{}).id:null; if(f){const rc=await uploadReceipt(f); if(rc) data.receipt=rc;}
+        if(id) await updRec('expense',id,data); else await addRec('expense',data); if(oldRid&&data.receipt&&data.receipt.id!==oldRid)cleanupReceipt(oldRid,id);
         closeModal(); toast('ההוצאה נשמרה');
       }catch(err){console.error(err);busy(btn,false);toast('השמירה נכשלה. נסה שוב');}};
   });
@@ -1172,9 +1211,14 @@ async function addToCalendar(id,btn){
   }catch(err){console.warn(err);toast(err?.code==='server_not_connected'||err?.code==='not_connected'?'חבר את יומן Google ב־Claude כדי להשתמש בזה':'ההוספה ליומן נכשלה');}
   finally{busy(btn,false);}
 }
+function cleanupReceipt(rid,exceptId){
+  if(!rid||!assets||!assets.delete)return;
+  const used=['fuel','service','expense'].some(c=>(S[c]||[]).some(x=>x.id!==exceptId&&x.receipt&&x.receipt.id===rid));
+  if(!used)Promise.resolve(assets.delete(rid)).catch(()=>{});
+}
 function confirmDelete(colName,id){
   openModal('מחיקה',`<p>למחוק את הרישום הזה? אי אפשר לשחזר אחר כך.</p><div class="formacts"><button class="btn primary" id="yes" style="background:var(--crit);border-color:var(--crit)">${I('trash')}מחיקה</button><button class="btn ghost" data-act="close">ביטול</button></div>`,root=>{
-    root.querySelector('#yes').onclick=async()=>{try{await delRec(colName,id);closeModal();toast('נמחק');}catch(e){toast('המחיקה נכשלה');}};
+    root.querySelector('#yes').onclick=async()=>{const rid=((S[colName]||[]).find(x=>x.id===id)||{}).receipt?.id;try{await delRec(colName,id);cleanupReceipt(rid,id);closeModal();toast('נמחק');}catch(e){toast('המחיקה נכשלה');}};
   });
 }
 
@@ -1204,7 +1248,7 @@ async function runInsight(btn){
   try{
     const res=await sample(prompt,{modelTier:'complex',cache:{gcTime:6*3600e3},onText:({text})=>{box.innerHTML=mdLite(text);}});
     lastInsight=mdLite(res.text);box.innerHTML=lastInsight;
-  }catch(e){box.innerHTML=`<span class="muted">${e?.code==='missing_api_key'?'האנליסט עוד לא מחובר: חסר מפתח API בשרת.':e?.code==='not_granted'?'הסוכן לא קיבל הרשאה לפנות ל־Claude.':e?.code==='rate_limited'?'הגעת למגבלת השימוש. נסה שוב מאוחר יותר.':'הניתוח לא הצליח. נסה שוב.'}</span>`;}
+  }catch(e){box.innerHTML=`<span class="muted">${e?.code==='missing_api_key'?'האנליסט עוד לא מחובר: חסר מפתח API בשרת.':e?.code==='not_granted'?'הסוכן לא קיבל הרשאה לפנות ל־Claude.':e?.code==='rate_limited'?'הגעת למגבלת השימוש. נסה שוב מאוחר יותר.':e?.code==='quota_exceeded'?aiErr(e,''):'הניתוח לא הצליח. נסה שוב.'}</span>`;}
   finally{insightBusy=false;busy(btn,false);}
 }
 async function runPlan(btn){
@@ -1240,7 +1284,7 @@ function fuelQuick(){
       <div class="small muted">הקילומטראז׳ האחרון: ${km(last)}</div></div>
     <label class="qf-cam" id="qfCam"><input type="file" id="qfFile" accept="image/*">
       <span class="qf-cam-ic" id="qfThumb">${I('cam')}</span>
-      <span class="qf-cam-t"><b id="qfCamT">קבלה מ־Yellow או מהתחנה</b><span class="small muted">${ai?'צילום מסך או תמונה, והסוכן ימלא את הפרטים':'צירוף תמונה של הקבלה'}</span></span></label>
+      <span class="qf-cam-t"><b id="qfCamT">קבלה מ־Yellow או מהתחנה</b><span class="small muted">${ai?'צילום מסך או תמונה, והסוכן ימלא את הפרטים':'צירוף תמונה של הקבלה'}</span><span class="small muted" id="qfQuota"></span></span></label>
     <div class="qf-status" id="qfStatus" hidden></div>
     <details class="qf-more" id="qfMore" ${ai?'':'open'}><summary>פרטי התדלוק <span class="muted small" id="qfSum"></span></summary>
       <div class="fgrid" style="margin-top:12px">
@@ -1254,6 +1298,7 @@ function fuelQuick(){
   </form>`,root=>{
     const $r=q=>root.querySelector(q);
     const odoIn=$r('#qfOdo'),file=$r('#qfFile'),st=$r('#qfStatus');
+    quotaText('receipt').then(t=>{const q=$r('#qfQuota');if(q&&t)q.textContent=t;});
     let rcpt=null,ppl=null,okLow=false,reading=false;
     try{odoIn.focus({preventScroll:true});}catch(e){}
     const status=(cls,html)=>{st.hidden=!html;st.className='qf-status'+(cls?' '+cls:'');st.innerHTML=html||'';};
@@ -1298,6 +1343,132 @@ function fuelQuick(){
       }catch(err){console.error(err);busy(btn,false);status('warn','השמירה נכשלה. בדוק את החיבור ונסה שוב.');}
     };
   });
+}
+
+/* ---------- AI quota ---------- */
+async function quotaText(kind){
+  if(!window.cjAccount)return '';
+  try{const q=await window.cjAccount.quota();if(q.unlimited)return '';const k=q[kind];if(!k)return '';
+    const left=Math.max(0,k.limit-k.used);
+    return kind==='receipt'?`נשארו ${left} מתוך ${k.limit} צילומים החודש`:kind==='chat'?`נשארו ${left} מתוך ${k.limit} שאלות ליועץ החודש`:`נשארו ${left} מתוך ${k.limit} ניתוחים החודש`;
+  }catch(e){return '';}
+}
+function fillAgentQuota(){const el=$('#agQuota');if(!el||!window.cjAccount)return;
+  Promise.all(['receipt','chat','analysis'].map(quotaText)).then(t=>{const x=t.filter(Boolean);if($('#agQuota'))$('#agQuota').textContent=x.length?x.join(' · '):'';});}
+
+/* ---------- account (standalone app) ---------- */
+async function accountSheet(){
+  const A=window.cjAccount;if(!A)return;
+  openModal('החשבון שלי',`<div class="stack" style="gap:18px">
+    <div class="small muted" dir="ltr" style="text-align:right">${esc(A._email||'')}</div>
+    <div class="acct-q" id="acQ"><div class="small muted">טוען את המכסה…</div></div>
+    <div class="acct-list">
+      <button type="button" data-act="car">${I('edit')}פרטי הרכב</button>
+      <button type="button" id="acExport">${I('doc')}ייצוא כל הנתונים (קובץ JSON)</button>
+      <a href="privacy.html" target="_blank" rel="noopener">${I('shield')}מדיניות פרטיות</a>
+      <a href="terms.html" target="_blank" rel="noopener">${I('list')}תנאי שימוש</a>
+      <button type="button" id="acOut">${I('send')}התנתקות</button>
+      <button type="button" id="acDel" class="danger">${I('trash')}מחיקת החשבון</button>
+    </div></div>`,root=>{
+    A.quota().then(q=>{const box=root.querySelector('#acQ');if(!box)return;
+      if(q.unlimited){box.innerHTML='<div class="small muted">שימוש בסוכנים ללא הגבלה.</div>';return;}
+      const L={receipt:'צילומי קבלות',chat:'שאלות ליועץ',analysis:'ניתוחים ותוכניות'};
+      box.innerHTML='<div class="eyebrow">שימוש בסוכנים החודש</div>'+Object.keys(L).map(k=>{const x=q[k]||{limit:0,used:0};const pct=x.limit?Math.min(100,x.used/x.limit*100):0;
+        return `<div><div class="row"><span>${L[k]}</span><span class="num">${x.used}/${x.limit}</span></div><div class="bar"><i style="width:${pct}%;background:${pct>=100?'var(--crit)':pct>=80?'var(--warn)':'var(--accent)'}"></i></div></div>`;}).join('')+'<div class="small muted">המכסה מתחדשת ב־1 בכל חודש.</div>';
+    }).catch(()=>{const b=root.querySelector('#acQ');if(b)b.innerHTML='';});
+    root.querySelector('#acExport').onclick=async e=>{busy(e.currentTarget,true,'מכין קובץ…');try{const nRec=await A.exportData();toast(`יוצאו ${nRec} רשומות`);}catch(x){toast('הייצוא נכשל, נסה שוב');}finally{busy(e.currentTarget,false);}};
+    root.querySelector('#acOut').onclick=()=>A.signOut();
+    root.querySelector('#acDel').onclick=()=>deleteAccountSheet();
+  });
+}
+function deleteAccountSheet(){
+  openModal('מחיקת החשבון',`<p style="margin-top:0">המחיקה מוחקת לצמיתות את החשבון, את כל הרישומים ואת כל הקבלות. אי אפשר לשחזר אחר כך.</p>
+    <p class="small muted">כדאי לייצא קודם את הנתונים מתוך ״החשבון שלי״.</p>
+    <div class="field"><label for="delTxt">כדי לאשר, הקלד <b>מחק</b></label><input type="text" id="delTxt" autocomplete="off"></div>
+    <div class="formacts"><button class="btn primary" id="delGo" disabled style="background:var(--crit);border-color:var(--crit)">${I('trash')}מחיקה לצמיתות</button><button class="btn ghost" data-act="close">ביטול</button></div>`,root=>{
+    const t=root.querySelector('#delTxt'),g=root.querySelector('#delGo');
+    t.oninput=()=>{g.disabled=t.value.trim()!=='מחק';};
+    g.onclick=async()=>{busy(g,true,'מוחק…');try{await window.cjAccount.deleteAccount();}catch(e){busy(g,false);toast('המחיקה נכשלה. נסה שוב או פנה אלינו.');}};
+  });
+}
+
+/* ---------- onboarding for a new user ---------- */
+let onbShown=false;
+function maybeOnboard(){
+  if(onbShown||S.car||!window.cjSB)return;
+  let skipped=false;try{skipped=localStorage.getItem('cj-onb-skip')==='1';}catch(e){}
+  if(skipped)return;
+  onbShown=true;setTimeout(()=>onboarding(1),50);
+}
+function onboarding(step,st){
+  st=st||{};
+  let el=$('#onb');if(!el){el=document.createElement('div');el.id='onb';el.className='onb';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label','הגדרה ראשונית');document.body.appendChild(el);}
+  const dots=`<div class="onb-dots" aria-hidden="true">${[1,2,3].map(i=>`<i class="${i<=step?'on':''}"></i>`).join('')}</div>`;
+  const close=(skip)=>{if(skip){try{localStorage.setItem('cj-onb-skip','1');}catch(e){}}el.remove();};
+  if(step===1){
+    el.innerHTML=`<div class="onb-in">${dots}
+      <img class="onb-mark" src="icons/emblem.png" alt="">
+      <h1>ברוך הבא ליומן הרכב</h1>
+      <p class="lead">כל מה שקשור לרכב במקום אחד. שתי דקות של הגדרה, ומשם היומן עובד בשבילך.</p>
+      <div class="onb-feats">
+        <div class="onb-feat"><div class="ic">${I('fuel')}</div><div><b>תדלוק בשלוש הקשות</b><span>מצלמים את הקבלה, הסוכן ממלא סכום, ליטרים ותחנה, ומחשב צריכה.</span></div></div>
+        <div class="onb-feat"><div class="ic">${I('bell')}</div><div><b>תזכורות שלא שוכחות</b><span>טיפולים, טסט, שמן, מים ואוויר בצמיגים, לפי ק״מ או לפי זמן.</span></div></div>
+        <div class="onb-feat"><div class="ic">${I('receipt')}</div><div><b>כל ההוצאות והקבלות</b><span>תמונה מלאה של כמה הרכב באמת עולה לך.</span></div></div>
+      </div>
+      <div class="onb-acts"><button class="btn primary block" id="onbNext">בוא נתחיל</button><button class="onb-skip" id="onbSkip">אחר כך</button></div></div>`;
+    el.querySelector('#onbNext').onclick=()=>onboarding(2,st);
+    el.querySelector('#onbSkip').onclick=()=>close(true);
+    return;
+  }
+  if(step===2){
+    el.innerHTML=`<div class="onb-in">${dots}
+      <h1>הרכב שלך</h1><p class="lead">רק השדות המסומנים חובה. את השאר אפשר להשלים אחר כך.</p>
+      <form id="onbCar" class="fgrid" novalidate>
+        <div class="field"><label for="oMk">יצרן *</label><input type="text" id="oMk" value="${esc(st.make||'')}" placeholder="טויוטה, קיה, שברולט…" autocomplete="off"></div>
+        <div class="field"><label for="oMd">דגם *</label><input type="text" id="oMd" value="${esc(st.model||'')}" placeholder="קורולה, פיקנטו…" autocomplete="off"></div>
+        <div class="field"><label for="oY">שנת ייצור</label><input type="number" id="oY" inputmode="numeric" value="${esc(st.year||'')}"></div>
+        <div class="field"><label for="oF">סוג דלק</label><select id="oF">${['95','98','סולר','היברידי','פלאג־אין','חשמלי'].map(x=>`<option ${st.fuelType===x?'selected':''}>${x}</option>`).join('')}</select></div>
+        <div class="field"><label for="oP">מספר רישוי</label><input type="text" id="oP" dir="ltr" value="${esc(st.plate||'')}" placeholder="12-345-67"></div>
+        <div class="field"><label for="oO">קילומטראז׳ נוכחי *</label><input type="number" id="oO" inputmode="numeric" value="${esc(st.odometer||'')}"></div>
+        <div class="err full" id="onbErr" role="alert" style="color:var(--crit);font-size:14px;min-height:1.2em"></div>
+        <div class="onb-acts full"><button class="btn primary block" type="submit">המשך</button><button class="onb-skip" type="button" id="onbBack">חזרה</button></div>
+      </form></div>`;
+    el.querySelector('#onbBack').onclick=()=>onboarding(1,st);
+    el.querySelector('#onbCar').onsubmit=e=>{e.preventDefault();const g=id=>el.querySelector('#'+id).value.trim();
+      Object.assign(st,{make:g('oMk'),model:g('oMd'),year:n(g('oY')),fuelType:g('oF'),plate:g('oP'),odometer:n(g('oO'))});
+      if(!st.make||!st.model||!st.odometer){el.querySelector('#onbErr').textContent='צריך יצרן, דגם וקילומטראז׳';return;}
+      onboarding(3,st);};
+    return;
+  }
+  if(step===3){
+    const aiOk=!!sample;
+    el.innerHTML=`<div class="onb-in">${dots}
+      <h1>תזכורות</h1><p class="lead">איך לבנות את לוח הטיפולים של ה־${esc(st.model)}?</p>
+      <label class="onb-choice"><input type="radio" name="plan" value="ai" ${aiOk?'checked':'disabled'}><div><b>תוכנית מותאמת לדגם</b><span>הסוכן בונה לוח טיפולים לפי היצרן, הדגם והקילומטראז׳. אתה בוחר מה להוסיף.</span></div></label>
+      <label class="onb-choice"><input type="radio" name="plan" value="basic" ${aiOk?'':'checked'}><div><b>תזכורות בסיסיות</b><span>טיפול שנתי, טסט, ובדיקות של שמן, מים, אוויר ונוזל שמשות.</span></div></label>
+      <div class="fgrid">
+        <div class="field"><label for="oLs">הטיפול האחרון היה ב־</label><input type="date" id="oLs" max="${today()}"></div>
+        <div class="field"><label for="oT">הטסט הבא בתאריך</label><input type="date" id="oT" min="${today()}"></div>
+      </div>
+      <div class="onb-acts"><button class="btn primary block" id="onbDone">${I('check')}סיום</button><button class="onb-skip" id="onbBack">חזרה</button></div></div>`;
+    el.querySelector('#onbBack').onclick=()=>onboarding(2,st);
+    el.querySelector('#onbDone').onclick=async e=>{const btn=e.currentTarget;busy(btn,true,'שומר…');
+      try{
+        const mode=(el.querySelector('input[name=plan]:checked')||{}).value||'basic';
+        const lastSvc=el.querySelector('#oLs').value||today(),testDue=el.querySelector('#oT').value;
+        await setRec('garage','car',{make:st.make,model:st.model,year:st.year,fuelType:st.fuelType,plate:st.plate,odometer:st.odometer,odoUpdatedAt:today(),nickname:'',tankL:null,psiFront:null,psiRear:null,example:false});
+        const base=[
+          {title:'בדיקת מפלס שמן',kind:'check',intervalKm:null,intervalDays:14,lastKm:st.odometer,lastDate:''},
+          {title:'מים ונוזל קירור',kind:'check',intervalKm:null,intervalDays:14,lastKm:st.odometer,lastDate:''},
+          {title:'לחץ אוויר בצמיגים',kind:'check',intervalKm:null,intervalDays:14,lastKm:st.odometer,lastDate:''},
+          {title:'נוזל שמשות ומגבים',kind:'check',intervalKm:null,intervalDays:30,lastKm:st.odometer,lastDate:''}];
+        if(testDue)base.push({title:'טסט שנתי',kind:'doc',intervalKm:null,intervalDays:365,lastKm:st.odometer,lastDate:addDays(testDue,-365)});
+        if(mode==='basic')base.push({title:'טיפול תקופתי (שמן ומסנן)',kind:'service',intervalKm:15000,intervalDays:365,lastKm:st.odometer,lastDate:lastSvc});
+        for(const x of base)await addRec('reminder',Object.assign({note:'',history:[]},x));
+        close(false);toast('הרכב נוסף. ברוך הבא!');go('home');
+        if(mode==='ai')setTimeout(()=>runPlan(null),400);
+      }catch(err){console.error(err);busy(btn,false);toast('השמירה נכשלה. בדוק את החיבור ונסה שוב');}};
+  }
 }
 
 function scanSheet(){
@@ -1348,7 +1519,7 @@ async function sendChat(q){
     const res=await sample(input,{cache:false,tools:chatTools,onText:({text})=>{if(bubble&&text&&text!=='Thinking...')bubble.innerHTML=mdLite(text);}});
     const html=mdLite(res.text||'');if(bubble)bubble.innerHTML=html;
     chatLog.push({role:'assistant',content:res.text||'',html});
-  }catch(e){const t=e?.code==='missing_api_key'?'היועץ עוד לא מחובר: חסר מפתח API בשרת.':e?.code==='rate_limited'?'הגעת למגבלת השימוש, נסה שוב בעוד כמה דקות.':e?.code==='not_granted'?'היועץ לא קיבל הרשאה לפנות ל־Claude.':'משהו השתבש. נסה לשאול שוב.';if(bubble)bubble.innerHTML=t;chatLog.pop();}
+  }catch(e){const t=e?.code==='missing_api_key'?'היועץ עוד לא מחובר: חסר מפתח API בשרת.':e?.code==='rate_limited'?'הגעת למגבלת השימוש, נסה שוב בעוד כמה דקות.':e?.code==='not_granted'?'היועץ לא קיבל הרשאה לפנות ל־Claude.':e?.code==='quota_exceeded'?aiErr(e,''):'משהו השתבש. נסה לשאול שוב.';if(bubble)bubble.innerHTML=t;chatLog.pop();}
   finally{chatBusy=false;}
 }
 
@@ -1370,6 +1541,8 @@ document.addEventListener('click',e=>{
     case 'del':confirmDelete(b.dataset.col,id);break;
     case 'odo':odoForm();break;
     case 'car':case 'setup':carForm();break;
+    case 'account':accountSheet();break;
+    case 'onboard':onbShown=true;onboarding(1);break;
     case 'checks':checksSheet();break;
     case 'scan':scanSheet();break;
     case 'plan':runPlan(b);break;

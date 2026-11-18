@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>מדיניות פרטיות · יומן הרכב</title>
+<meta name="description" content="איזה מידע יומן הרכב שומר, למה, ומה הזכויות שלך">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bellefair&family=IBM+Plex+Sans+Hebrew:wght@400;500;600&display=swap">
+<style>
+:root{--bg:#eef0f2;--surface:#fff;--fg:#16191e;--muted:#5d6570;--line:#d9dce1;--accent:#8a6a2f;--todo:#fff4d6;--todo-ink:#6b4a00;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0c0f13;--surface:#141920;--fg:#ebe7df;--muted:#8d96a2;--line:#29313b;--accent:#cfb284;--todo:#3a2f12;--todo-ink:#f3d58c;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.75 "IBM Plex Sans Hebrew","Heebo",system-ui,sans-serif;-webkit-font-smoothing:antialiased;
+  padding:calc(env(safe-area-inset-top,0px) + 24px) max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 48px) max(16px,env(safe-area-inset-left,0px))}
+main{max-width:720px;margin:0 auto;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:clamp(20px,5vw,44px)}
+header{display:flex;align-items:center;gap:14px;margin-bottom:8px}
+header img{width:48px;height:48px;border-radius:14px}
+h1{font-family:"Bellefair",Georgia,serif;font-weight:400;font-size:clamp(30px,6vw,40px);margin:0;line-height:1.15;text-wrap:balance}
+h2{font-size:19px;font-weight:600;margin:32px 0 6px}
+p,li{max-width:65ch}
+ul{padding-inline-start:20px;margin:6px 0}
+.meta{color:var(--muted);font-size:14px;margin:4px 0 22px}
+a{color:var(--accent)}
+.todo{background:var(--todo);color:var(--todo-ink);padding:1px 6px;border-radius:6px;font-weight:500}
+.back{display:inline-block;max-width:720px;margin:0 auto 16px;color:var(--accent);text-decoration:none;font-size:15px}
+.wrap{max-width:720px;margin:0 auto}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+</style>
+</head>
+<body>
+<div class="wrap"><a class="back" href="./">→ חזרה ליומן הרכב</a></div>
+<main>
+<header><img src="icons/emblem.png" alt=""><h1>מדיניות פרטיות</h1></header>
+<p class="meta">עדכון אחרון: 18 בנובמבר 2026</p>
+<p>יומן הרכב (״השירות״) מופעל על ידי <span class="todo">[שם מפעיל השירות]</span>. המדיניות מסבירה איזה מידע נשמר כשמשתמשים בשירות, למה הוא נשמר, עם מי הוא משותף ומה הזכויות שלך.</p>
+<h2>איזה מידע נשמר</h2>
+<ul>
+<li><b>פרטי חשבון:</b> כתובת מייל וסיסמה. הסיסמה נשמרת מוצפנת (hash) ואיש אינו יכול לקרוא אותה.</li>
+<li><b>פרטי הרכב:</b> יצרן, דגם, שנה, סוג דלק, מספר רישוי וקילומטראז׳, לפי מה שהזנת.</li>
+<li><b>רישומים:</b> תדלוקים, טיפולים, הוצאות ותזכורות שהזנת או שהסוכן מילא בשבילך.</li>
+<li><b>קבלות:</b> תמונות של קבלות וחשבוניות שצירפת. קבלה יכולה לכלול פרטים כמו מספר רכב, מספר חשבונית ושם תחנה.</li>
+<li><b>מונה שימוש בסוכנים:</b> כמה פעמים השתמשת בכל סוג סוכן החודש, כדי לאכוף את המכסה החודשית.</li>
+</ul>
+<p>השירות לא אוסף מיקום, אנשי קשר או פרטי תשלום, ואין בו פרסומות או כלי מעקב של צד שלישי. בדפדפן נשמר מזהה התחברות, כדי שלא תצטרך להתחבר בכל פעם.</p>
+<h2>למה המידע נשמר</h2>
+<p>רק כדי להפעיל את השירות: להציג את היומן שלך, לחשב צריכת דלק והוצאות, להזכיר לך על טיפולים ובדיקות, ולהפעיל את הסוכנים כשאתה מבקש.</p>
+<h2>הסוכנים (בינה מלאכותית)</h2>
+<p>כשאתה משתמש בסוכן, למשל כדי לקרוא קבלה, לשאול את יועץ הרכב או לבנות תוכנית טיפולים, המידע שנדרש לבקשה נשלח לעיבוד אצל Anthropic, מפעילת המודל Claude: תמונת הקבלה, או נתוני הרכב והרישומים הרלוונטיים. המידע נשלח רק כשאתה מפעיל סוכן. לפי התנאים המסחריים של Anthropic, מידע שנשלח דרך ה־API שלה אינו משמש לאימון מודלים.</p>
+<h2>ספקים שמעבדים מידע בשבילנו</h2>
+<ul>
+<li><b>Supabase:</b> מסד הנתונים, אחסון הקבלות וההתחברות. השרתים באירופה.</li>
+<li><b>Anthropic:</b> עיבוד הבקשות לסוכנים, כמתואר למעלה.</li>
+<li><b>GitHub Pages:</b> אחסון קבצי האתר עצמו. המידע האישי שלך לא נשמר שם.</li>
+<li><b>Google Fonts:</b> טעינת הגופנים. כתובת ה־IP של הדפדפן נחשפת ל־Google בעת הטעינה.</li>
+</ul>
+<p>אנחנו לא מוכרים מידע ולא משתפים אותו עם אף גורם אחר, אלא אם החוק מחייב זאת.</p>
+<h2>אבטחה</h2>
+<p>התעבורה מוצפנת (HTTPS). כל משתמש רואה רק את הנתונים שלו, לפי כללי הרשאה במסד הנתונים. הקבלות נשמרות באחסון פרטי ונפתחות רק דרך קישורים זמניים. מפתח הגישה לבינה המלאכותית נשמר בשרת ואינו מגיע לדפדפן.</p>
+<h2>כמה זמן המידע נשמר</h2>
+<p>כל עוד החשבון קיים. כשאתה מוחק רישום, הקבלה שלו נמחקת איתו. כשאתה מוחק את החשבון, נמחקים מיד החשבון, כל הרישומים וכל הקבלות.</p>
+<h2>הזכויות שלך</h2>
+<ul>
+<li><b>עיון והעתקה:</b> ״החשבון שלי״ ← ״ייצוא כל הנתונים״ מוריד קובץ עם כל המידע שלך.</li>
+<li><b>תיקון:</b> אפשר לערוך כל רישום ואת פרטי הרכב בכל רגע.</li>
+<li><b>מחיקה:</b> ״החשבון שלי״ ← ״מחיקת החשבון״ מוחק הכל לצמיתות.</li>
+</ul>
+<p>לכל שאלה או בקשה בנושא פרטיות: <span class="todo">[כתובת מייל ליצירת קשר]</span>.</p>
+<h2>גיל</h2>
+<p>השירות מיועד לבני 18 ומעלה.</p>
+<h2>שינויים במדיניות</h2>
+<p>אם נשנה את המדיניות באופן מהותי, נעדכן כאן את התאריך ונודיע באפליקציה.</p>
+</main>
+</body>
+</html>
