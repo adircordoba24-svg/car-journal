@@ -1,0 +1,16 @@
+# Secrets: never commit. The Anthropic key lives only in Supabase function secrets.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Supabase CLI local state
+supabase/.temp/
+supabase/.branches/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,14 @@
+# Gitleaks config: default rules plus Supabase secret keys.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "supabase-secret-key"
+description = "Supabase secret key (server only, never in the repo)"
+regex = '''sb_secret_[A-Za-z0-9_-]{20,}'''
+keywords = ["sb_secret_"]
+
+[[allowlists]]
+description = "Public by design: the Supabase publishable key in config.js, and bundled third-party library code"
+paths = ['''^vendor/''']
+regexes = ['''sb_publishable_[A-Za-z0-9_-]+''']

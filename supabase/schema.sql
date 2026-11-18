@@ -12,6 +12,8 @@ drop policy if exists "own docs" on public.docs;
 create policy "own docs" on public.docs for all to authenticated
   using (user_id = auth.uid()) with check (user_id = auth.uid());
 grant select, insert, update, delete on public.docs to authenticated;
+-- TRUNCATE ignores RLS: signed-in users get only the four rights above.
+revoke truncate, references, trigger on public.docs from authenticated;
 revoke all on public.docs from anon;
 
 insert into storage.buckets (id, name, public) values ('receipts', 'receipts', false)
