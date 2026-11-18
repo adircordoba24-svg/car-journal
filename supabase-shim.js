@@ -96,11 +96,54 @@
     };
   }
   function emit(c) { (listeners[c] || []).forEach(function (f) { try { f(snap(c)); } catch (e) { console.error(e); } }); }
+  /* ---------- הצפנת שדות רגישים ----------
+     מספר הרישוי וכל ההערות נשמרים מוצפנים (AES-256-GCM). המפתח נמצא רק בשרת, בפונקציה vault.
+     ערך ישן שלא הוצפן נקרא כרגיל ומוצפן בשמירה הבאה. אם vault לא זמין, לא נשמר כלום בטקסט גלוי. */
+  var ENC = "enc:v1:";
+  var SENSITIVE = { garage: ["plate", "note"] };
+  function fieldsOf(c) { return SENSITIVE[c] || ["note"]; }
+  async function vault(op, items) {
+    if (!items.length) return [];
+    var r = await sb.functions.invoke("vault", { body: { op: op, items: items } });
+    if (r.error || !r.data || !Array.isArray(r.data.items)) throw { code: "vault_unavailable", message: "vault_unavailable" };
+    return r.data.items;
+  }
+  async function encryptDoc(c, d) {
+    var out = Object.assign({}, d), keys = [], items = [];
+    fieldsOf(c).forEach(function (f) {
+      var v = out[f];
+      if (typeof v === "string" && v !== "" && v.indexOf(ENC) !== 0) { keys.push(f); items.push({ f: c + "." + f, v: v }); }
+    });
+    var res = await vault("enc", items);
+    keys.forEach(function (f, i) { out[f] = res[i]; });
+    return out;
+  }
+  async function decryptRows(c, rows) {
+    var refs = [], items = [], legacy = [];
+    rows.forEach(function (row) {
+      var d = row.data = Object.assign({}, row.data), plain = false;
+      fieldsOf(c).forEach(function (f) {
+        var v = d[f];
+        if (typeof v !== "string" || v === "") return;
+        if (v.indexOf(ENC) === 0) { refs.push([d, f]); items.push({ f: c + "." + f, v: v }); }
+        else plain = true;
+      });
+      if (plain) legacy.push(row);
+    });
+    var res = await vault("dec", items);
+    refs.forEach(function (ref, i) { ref[0][ref[1]] = res[i]; });
+    return legacy;
+  }
   async function load(c) {
     var r = await sb.from("docs").select("id,data").eq("collection", c);
     if (r.error) throw r.error;
-    cache[c] = r.data.map(function (x) { return { id: x.id, data: x.data }; });
+    var rows = r.data.map(function (x) { return { id: x.id, data: x.data }; });
+    var legacy = await decryptRows(c, rows);
+    cache[c] = rows;
     emit(c);
+    for (var i = 0; i < legacy.length; i++) {
+      try { await upsert(c, legacy[i].id, legacy[i].data); } catch (e) { /* retried on next load */ }
+    }
   }
   function setLocal(c, id, d) {
     var arr = cache[c] = cache[c] || [];
@@ -109,8 +152,9 @@
     emit(c);
   }
   async function upsert(c, id, d) {
+    var stored = await encryptDoc(c, d);
     var r = await sb.from("docs").upsert(
-      { id: id, collection: c, data: d, user_id: uid, updated_at: new Date().toISOString() },
+      { id: id, collection: c, data: stored, user_id: uid, updated_at: new Date().toISOString() },
       { onConflict: "user_id,collection,id" });
     if (r.error) throw r.error;
   }
