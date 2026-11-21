@@ -1038,6 +1038,9 @@ function fv(root,id){const e=root.querySelector('#'+id);return e?(e.type==='chec
 const fuelPrompt=()=>`זו תמונה של קבלה על תדלוק, לרוב צילום מסך של חשבונית דיגיטלית מאפליקציית Yellow או קבלה מתחנת דלק בישראל.
 איך לקרוא חשבונית של Yellow: הסכום ששולם מופיע בגדול בראש הקבלה (למשל "₪ 205.41") וגם בשורה "סכום לתשלום לאחר הנחות". הכמות מופיעה ליד סוג הדלק בצורה "x 27.947 ל", וזה מספר הליטרים. שם הסניף מופיע מתחת ללוגו (למשל "ויסוצקי"). התאריך מופיע בשורה "תאריך". אסור להשתמש ב"סכום ללא מע״מ", ב"מע״מ" או ב"צבירה" בתור הסכום.
 בקבלה של תחנה אחרת: total הוא הסכום הסופי ששולם, כולל מע״מ ואחרי הנחות.
+ליטרים: חפש בכל הקבלה מספר עם 2–3 ספרות אחרי הנקודה ליד "ל", "ל'", "ליטר", "ליטרים", "כמות", "L" או ליד סוג הדלק (95, 98, סולר, בנזין). זה כמעט תמיד מופיע, גם בשורה קטנה באמצע הקבלה.
+מחיר לליטר: מופיע ליד "מחיר ליטר", "מחיר יחידה", "₪/ל" או כמספר כמו 7.62 ליד הכמות.
+תחנה: שם הרשת (Yellow, פז, סונול, דלק, Ten, דור אלון) ושם הסניף מראש הקבלה.
 החזר JSON בלבד בצורה {"isFuel":boolean,"date":"YYYY-MM-DD"|null,"total":number|null,"liters":number|null,"pricePerL":number|null,"station":string|null,"invoice":string|null}.
 מספרים יוחזרו כמספרי JSON בלבד, בלי ₪, בלי פסיקים ובלי מרכאות. station הוא רשת וסניף, למשל "Yellow ויסוצקי". אם ערך לא מופיע בקבלה, החזר null ואל תנחש. היום ${today()}.`;
 function normFuel(r){
@@ -1048,7 +1051,16 @@ function normFuel(r){
   if(o.total&&o.liters&&(!o.pricePerL||Math.abs(o.liters*o.pricePerL-o.total)>Math.max(2,o.total*0.03)))o.pricePerL=+(o.total/o.liters).toFixed(3);
   return o;
 }
-async function readFuelReceipt(blob){return normFuel(await sample.json(fuelPrompt(),{images:[blob],modelTier:'default'}));}
+async function readFuelReceipt(blob){
+  let raw=await sample.json(fuelPrompt(),{images:[blob],modelTier:'default'});let o=normFuel(raw);
+  // partial read (amount only): one more careful pass with the stronger model
+  if(o&&o.total&&!o.liters&&!o.pricePerL){
+    try{const raw2=await sample.json(fuelPrompt()+'\nבקריאה קודמת לא נמצאו הליטרים. קרא שוב בקפידה כל שורה בקבלה.',{images:[blob],modelTier:'complex'});const o2=normFuel(raw2);
+      if(o2&&(o2.liters||o2.pricePerL)){o=Object.assign({},o,Object.fromEntries(Object.entries(o2).filter(([k,v])=>v!=null&&v!=='')));raw=raw2;}}catch(e){}
+    if(!o.liters&&window.cjReport)window.cjReport('receipt-partial: '+JSON.stringify(raw).slice(0,600),'receipt');
+  }
+  return o;
+}
 function aiErr(e,fallback){const c=e&&e.code;
   if(c==='missing_api_key')return 'הסוכן עוד לא מחובר: חסר מפתח API בשרת. אפשר למלא ידנית.';
   if(c==='not_granted')return 'הסוכן לא קיבל הרשאה. אפשר למלא ידנית.';

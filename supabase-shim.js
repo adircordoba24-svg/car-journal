@@ -317,19 +317,29 @@
   };
 
   /* ---------- Claude ---------- */
-  async function toImage(blob) {
+  // Long receipts (e.g. a full Yellow invoice screenshot) are cut into overlapping parts,
+  // so small lines like the liters stay readable instead of shrinking to fit one image.
+  async function toImages(blob) {
     var max = 1568;
     try {
       var bmp = await createImageBitmap(blob);
-      var k = Math.min(1, max / Math.max(bmp.width, bmp.height));
-      var cv = document.createElement("canvas");
-      cv.width = Math.round(bmp.width * k); cv.height = Math.round(bmp.height * k);
-      cv.getContext("2d").drawImage(bmp, 0, 0, cv.width, cv.height);
-      var url = cv.toDataURL("image/jpeg", 0.9);
-      return { media_type: "image/jpeg", data: url.split(",")[1] };
+      var w = bmp.width, h = bmp.height, tiles = [];
+      var tileH = h / w > 1.8 ? Math.round(w * 1.4) : h;
+      var step = Math.round(tileH * 0.9), n = Math.min(4, Math.max(1, Math.ceil((h - tileH) / step) + 1));
+      if (n > 1) step = Math.round((h - tileH) / (n - 1));
+      for (var i = 0; i < n; i++) {
+        var y = n === 1 ? 0 : Math.min(h - tileH, i * step), th = Math.min(tileH, h);
+        var k = Math.min(1, max / Math.max(w, th));
+        var cv = document.createElement("canvas");
+        cv.width = Math.round(w * k); cv.height = Math.round(th * k);
+        var ctx = cv.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
+        ctx.drawImage(bmp, 0, y, w, th, 0, 0, cv.width, cv.height);
+        tiles.push({ media_type: "image/jpeg", data: cv.toDataURL("image/jpeg", 0.92).split(",")[1] });
+      }
+      return tiles;
     } catch (e) {
       var b64 = await new Promise(function (res, rej) { var fr = new FileReader(); fr.onload = function () { res(String(fr.result).split(",")[1]); }; fr.onerror = rej; fr.readAsDataURL(blob); });
-      return { media_type: blob.type || "image/jpeg", data: b64 };
+      return [{ media_type: blob.type || "image/jpeg", data: b64 }];
     }
   }
   async function callClaude(tier, messages, extra) {
@@ -357,10 +367,11 @@
     if (imgs.length) {
       var last = msgs[msgs.length - 1], parts = [];
       for (var i = 0; i < imgs.length; i++) {
-        var x = await toImage(imgs[i]);
-        parts.push({ type: "image", source: { type: "base64", media_type: x.media_type, data: x.data } });
+        var xs = await toImages(imgs[i]);
+        xs.forEach(function (x) { parts.push({ type: "image", source: { type: "base64", media_type: x.media_type, data: x.data } }); });
       }
-      parts.push({ type: "text", text: last.content });
+      var extraNote = parts.length > imgs.length ? "\n(התמונה ארוכה ולכן חולקה ל־" + parts.length + " חלקים חופפים של אותו מסמך, לפי הסדר מלמעלה למטה.)" : "";
+      parts.push({ type: "text", text: last.content + extraNote });
       last.content = parts;
     }
     return msgs;
