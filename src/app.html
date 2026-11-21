@@ -826,8 +826,18 @@ function daysLabel(d){d=+d;if(d%365===0)return d===365?'שנה':`${d/365} שני
 /* ---------- views ---------- */
 let rq=0;
 function render(){if(rq)return;rq=requestAnimationFrame(()=>{rq=0;renderNow();});}
+function movedScreen(){
+  $('#banner').innerHTML='';
+  $('#view').innerHTML=`<div class="card docs-empty" style="margin-top:12px"><img src="${$('.brand .mark')?.src||''}" alt="" width="84" height="84" style="border-radius:22px">
+    <b style="font-size:20px">היומן עבר לאפליקציה העצמאית</b>
+    <p>כל הנתונים שלך נמצאים שם, עם כל התכונות החדשות: ביטוח ומסמכים, שני רכבים, התראות לטלפון וקריאת קבלות משופרת. הגרסה הזאת בתוך Claude כבר לא שומרת שינויים, כדי שלא יהיו שני יומנים שונים.</p>
+    <a class="btn primary" href="${APP_URL}" target="_blank" rel="noopener">${I('send')}פתיחת היומן</a>
+    <p class="small">כדאי להוסיף אותו למסך הבית: ב־Safari לוחצים שיתוף ← ״הוספה למסך הבית״.</p></div>`;
+  const nav=$('#nav');if(nav)nav.hidden=true;document.querySelectorAll('.top-actions,.fab,#fabFuel').forEach(x=>x.hidden=true);
+}
 function renderNow(){
   const v=$('#view');
+  if(!window.cjSB){movedScreen();return;}
   renderBanner();
   if(S.noDb){v.innerHTML=`<div class="card empty"><b>היומן לא מצליח להתחבר למאגר הנתונים</b>פתח את הדף מחשבון Claude מחובר כדי לשמור ולקרוא את הנתונים של הרכב.</div>`;return;}
   if(S.ready.size<COLS.length&&!S.offline){return;}
@@ -1588,10 +1598,20 @@ function licCard(l){
       <button class="btn sm ghost" data-act="docDel" data-id="${l.id}" style="color:var(--crit)">${I('trash')}מחיקה</button></div>
   </section>`;
 }
-const policyPrompt=()=>`אלה עמודים של פוליסת ביטוח רכב בישראל (או אישור/דף פרטי ביטוח). קרא את כל העמודים והחזר JSON בלבד, בצורה:
+const policyPrompt=()=>`אלה עמודים של פוליסת ביטוח רכב בישראל, או מפרט/דף פרטי ביטוח/אישור ביטוח. קרא את כל העמודים, כולל הכותרת העליונה, הכותרת התחתונה והלוגו בכל עמוד, והחזר JSON בלבד, בצורה:
 {"isPolicy":boolean,"insurer":string|null,"policyType":"חובה"|"מקיף"|"צד ג׳"|"חובה ומקיף"|string|null,"policyNo":string|null,"start":"YYYY-MM-DD"|null,"end":"YYYY-MM-DD"|null,"premium":number|null,
 "plate":string|null,"drivers":string|null,"summary":string,"deductibles":[{"label":string,"amount":string}],
 "coverages":[{"title":string,"plain":string,"limit":string|null,"deductible":string|null}],"notCovered":[string],"claimsPhone":string|null,"roadsidePhone":string|null,"agentPhone":string|null}
+איפה למצוא:
+- insurer: שם חברת הביטוח מופיע לרוב רק בלוגו או בשורה התחתונה של כל עמוד, למשל "IDI חברה לביטוח בע״מ" (ביטוח ישיר / 9000000), הראל, מגדל, הפניקס, כלל, מנורה, AIG, שלמה, איילון, ליברה, הכשרה, שומרה. כתוב את השם המוכר בקיצור, למשל "ביטוח ישיר (IDI)".
+- policyType: לפי כותרת המסמך ("מפרט פוליסה ... ביטוח מקיף" = מקיף; "תעודת ביטוח חובה" = חובה), גם אם השדה "סוג ביטוח" ריק.
+- start/end: מתוך "תקופת הביטוח: מ־... עד־...". תאריכים בישראל כתובים יום/חודש/שנה (01/12/2026 = 2026-12-01). end הוא התאריך שאחרי "עד".
+- premium: הפרמיה השנתית לתשלום (לא התשלום החודשי).
+- claimsPhone: מספר הטלפון הראשי של חברת הביטוח, לרוב בשורה התחתונה של כל עמוד ("טל. 03-..."), או מוקד תביעות אם כתוב במפורש.
+- roadsidePhone: מוקד גרירה ושירותי דרך (למשל "דרכים *5553"). אם יש מוקד נפרד לשמשות או לרכב חלופי, הוסף אותו לכיסוי המתאים בתוך plain.
+- drivers: מי רשאי לנהוג. אפשר שמות ותפקיד (נהג עיקרי / נהג נוסף), אבל בלי מספרי תעודת זהות ובלי תאריכי לידה.
+- אם הפוליסה משועבדת לגוף מימון, ציין זאת במשפט ב־notCovered או ב־summary.
+פרטיות: אל תעתיק לשום שדה מספרי תעודת זהות, תאריכי לידה, כתובת מגורים, טלפון נייד או מייל של המבוטח.
 הנחיות:
 - summary: 2–3 משפטים בשפה פשוטה, בגובה העיניים: איזה ביטוח זה, ממתי עד מתי, ומה הדבר הכי חשוב לדעת.
 - drivers: מי מותר לנהוג לפי הפוליסה (גיל, ותק, נהגים נקובים), במשפט פשוט.
@@ -1629,7 +1649,15 @@ async function readDoc(id,blobs,type){
   const ins=type==='insurance';
   openModal(ins?'קורא את הפוליסה':'קורא את הרישיון',`<div class="docread"><span class="spin" style="width:28px;height:28px"></span><b>${ins?'הסוכן קורא את הפוליסה ומסביר אותה בשפה פשוטה':'הסוכן קורא את הרישיון'}</b><span class="small muted">${ins?'זה יכול לקחת עד דקה.':'כמה שניות.'}</span></div>`);
   try{
-    const raw=await sample.json(ins?policyPrompt():licensePrompt(),{images:blobs,modelTier:ins?'complex':'default',maxTokens:ins?7000:800,purpose:'document'});
+    const ask=imgs=>sample.json(ins?policyPrompt():licensePrompt(),{images:imgs,modelTier:'default',maxTokens:ins?6000:800,purpose:'document'});
+    let raw;
+    try{raw=await ask(blobs);}
+    catch(e1){
+      // the PDF could not be read as is: turn its pages into pictures and try once more
+      if(e1&&e1.code==='quota_exceeded'||!blobs.some(b=>b.type==='application/pdf'))throw e1;
+      if(window.cjReport)window.cjReport('doc-pdf-native: '+(e1&&(e1.code||e1.message)),'docs');
+      raw=await ask(await pdfToImages(blobs.find(b=>b.type==='application/pdf'),8));
+    }
     const ok=ins?raw&&raw.isPolicy!==false:raw&&raw.isLicense!==false;
     if(!ok){closeModal();toast(ins?'זה לא נראה כמו פוליסת ביטוח רכב':'זה לא נראה כמו רישיון רכב');docEditSheet(id);return;}
     const d=/^\d{4}-\d\d-\d\d$/;const clean={readAt:Date.now()};
@@ -1643,6 +1671,22 @@ async function readDoc(id,blobs,type){
     await syncDocReminder(p);
     closeModal();toast(ins?'הפוליסה נקראה ונשמרה':'הרישיון נקרא ונשמר');go('agents');agTab='docs';render();
   }catch(e){closeModal();toast(aiErr(e,'הסוכן לא הצליח לקרוא. אפשר למלא את התאריכים ידנית'));docEditSheet(id);}
+}
+let pdfjsP=null;
+function loadPdfjs(){
+  if(window.pdfjsLib)return Promise.resolve(window.pdfjsLib);
+  return pdfjsP||(pdfjsP=new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='vendor/pdf.min.js';
+    sc.onload=()=>{try{window.pdfjsLib.GlobalWorkerOptions.workerSrc='vendor/pdf.worker.min.js';res(window.pdfjsLib);}catch(e){rej(e);}};sc.onerror=()=>{pdfjsP=null;rej(new Error('pdfjs'));};document.head.appendChild(sc);}));
+}
+async function pdfToImages(file,maxPages){
+  const lib=await loadPdfjs();const doc=await lib.getDocument({data:await file.arrayBuffer()}).promise;const out=[];
+  for(let i=1;i<=Math.min(doc.numPages,maxPages||8);i++){
+    const page=await doc.getPage(i);const vp1=page.getViewport({scale:1});const vp=page.getViewport({scale:Math.min(2.2,1500/vp1.width)});
+    const cv=document.createElement('canvas');cv.width=Math.round(vp.width);cv.height=Math.round(vp.height);const ctx=cv.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);
+    await page.render({canvasContext:ctx,viewport:vp}).promise;
+    out.push(await new Promise(r=>cv.toBlob(b=>r(new File([b],`page-${i}.jpg`,{type:'image/jpeg'})),'image/jpeg',0.9)));
+  }
+  return out;
 }
 async function syncDocReminder(p){
   const date=p.type==='license'?p.validUntil:p.end;if(!date)return;
