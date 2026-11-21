@@ -888,7 +888,7 @@ function renderBanner(){
   if(!S.car&&S.ready.size===COLS.length){maybeOnboard();b.innerHTML=`<div class="banner"><span><b>ברוך הבא.</b> נתחיל בפרטי הרכב ובקילומטראז׳ הנוכחי.</span><button class="btn primary sm" data-act="onboard">${I('plus')}הגדרת הרכב</button></div>`;return;}
   {let dis=false;try{dis=localStorage.getItem('cj-install-hint')==='1';}catch(e){}
    const ios=/iPad|iPhone|iPod/.test(navigator.userAgent),standalone=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
-   if(S.car&&ios&&!standalone&&!dis){b.innerHTML=`<div class="banner"><span><b>התקן את היומן בטלפון.</b> ככה הוא נפתח כמו אפליקציה ושולח התראות לפני טיפול, טסט וביטוח.</span><span style="display:flex;gap:6px"><button class="btn primary sm" data-act="installHint">איך?</button><button class="btn ghost sm" data-act="installHintX" aria-label="סגירה">✕</button></span></div>`;return;}}
+   if(S.car&&view==='home'&&ios&&!standalone&&!dis){b.innerHTML=`<div class="banner"><span><b>התקן את היומן בטלפון.</b> ככה הוא נפתח כמו אפליקציה ושולח התראות לפני טיפול, טסט וביטוח.</span><span style="display:flex;gap:6px"><button class="btn primary sm" data-act="installHint">איך?</button><button class="btn ghost sm" data-act="installHintX" aria-label="סגירה">✕</button></span></div>`;return;}}
   b.innerHTML='';
 }
 
@@ -1069,7 +1069,7 @@ function vExpense(){
 function vReminder(){
   const groups=['service','check','doc'];
   return `<div class="sec-title"><h2>תזכורות</h2><button class="btn primary" data-act="remForm">${I('plus')}תזכורת חדשה</button></div>
-  <p class="muted small" style="margin:-4px 0 16px;max-width:65ch">כל תזכורת נמדדת לפי קילומטרים, לפי זמן, או לפי מה שמגיע קודם. המועד המשוער מחושב לפי קצב הנסיעה שלך. אפשר לשלוח כל תזכורת ליומן Google כדי לקבל התראה בטלפון.</p>
+  <p class="muted small" style="margin:-4px 0 16px;max-width:65ch">כל תזכורת נמדדת לפי קילומטרים, לפי זמן, או לפי מה שמגיע קודם. המועד המשוער מחושב לפי קצב הנסיעה שלך. ${window.cjPush?'כשמגיע המועד, היומן שולח התראה לטלפון (מפעילים ב״החשבון שלי״). אפשר גם להוסיף תזכורת ליומן של הטלפון.':'אפשר לשלוח כל תזכורת ליומן Google כדי לקבל התראה בטלפון.'}</p>
   <div class="stack">${groups.map(g=>{const list=sortedReminders(r=>(r.kind||'service')===g);return `<section class="card"><div class="card-head"><h2>${KIND[g]}</h2><button class="link" data-act="remForm" data-kind="${g}">הוספה</button></div><div class="rlist">${list.map(x=>remRow(x,false)).join('')||'<div class="empty">אין תזכורות בקבוצה הזו</div>'}</div></section>`;}).join('')}</div>`;
 }
 
