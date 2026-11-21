@@ -397,6 +397,33 @@ textarea{resize:vertical;min-height:70px}
 .onb-choice b{display:block;font-weight:500}
 .onb-choice span{color:var(--muted);font-size:13.5px}
 @media (prefers-reduced-motion:no-preference){.onb-in{animation:vin .35s cubic-bezier(.2,.8,.2,1) both}}
+/* intro slides for a new user */
+.intro{width:min(480px,100%);margin:auto;display:flex;flex-direction:column;gap:18px;min-height:100%;justify-content:center}
+.intro-top{display:flex;justify-content:space-between;align-items:center;min-height:36px}
+.intro-track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+.intro-track::-webkit-scrollbar{display:none}
+.slide{flex:0 0 100%;scroll-snap-align:center;display:flex;flex-direction:column;gap:16px;padding:4px 2px;min-width:0}
+.slide h2{font-family:var(--f-display);font-size:32px;line-height:1.12;margin:0;text-wrap:balance}
+.slide p{color:var(--muted);font-size:15.5px;line-height:1.65;margin:0;max-width:44ch}
+.stage{flex:none;position:relative;height:clamp(200px,34vh,260px);border-radius:24px;border:1px solid var(--line-soft);background:radial-gradient(120% 90% at 50% 0%,var(--accent-soft),transparent 70%),var(--surface);display:grid;place-items:center;overflow:hidden}
+.stage .mk{width:104px;height:104px;border-radius:28px;box-shadow:0 0 0 1px var(--line),0 18px 40px rgba(0,0,0,.25)}
+.mock{width:min(300px,86%);display:flex;flex-direction:column;gap:10px}
+.mrow{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;background:var(--bg);border:1px solid var(--line-soft);box-shadow:0 8px 24px rgba(0,0,0,.12)}
+.mrow .ic{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);flex:none}
+.mrow b{display:block;font-size:14px;font-weight:600}.mrow span{font-size:12.5px;color:var(--muted)}
+.mrow .tag{margin-inline-start:auto;font-size:12px;color:var(--accent);white-space:nowrap}
+.mrow.notif{border-radius:20px;backdrop-filter:blur(8px)}
+.mrow.warn .tag{color:var(--warn)}.mrow.ok .tag{color:var(--ok)}
+.perks{display:flex;flex-wrap:wrap;gap:8px}
+.perks span{display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:5px 11px;border-radius:999px;border:1px solid var(--line);color:var(--fg)}
+.perks .i{width:15px;height:15px;color:var(--accent)}
+.intro-dots{display:flex;gap:7px;justify-content:center}
+.intro-dots button{width:8px;height:8px;border-radius:8px;border:0;padding:0;background:var(--line);transition:width .25s,background .25s;cursor:pointer}
+.intro-dots button.on{width:24px;background:var(--accent)}
+.intro-dots button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@media (prefers-reduced-motion:no-preference){.slide.on .mrow{animation:mIn .5s cubic-bezier(.2,.8,.2,1) both}.slide.on .mrow:nth-child(2){animation-delay:.08s}.slide.on .mrow:nth-child(3){animation-delay:.16s}}
+@media (max-height:700px){.stage{height:205px}.mock{gap:7px}.mrow{padding:8px 12px;gap:10px;border-radius:13px}.mrow .ic{width:30px;height:30px;border-radius:9px}.mrow b{font-size:13px}.mrow span{font-size:11.5px}.stage .mk{width:86px;height:86px}.slide h2{font-size:27px}.slide p{font-size:14.5px;line-height:1.55}.slide{gap:12px}.intro{gap:12px}}
+@keyframes mIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 
 /* account */
 .acct-q{display:flex;flex-direction:column;gap:10px}
@@ -450,7 +477,7 @@ textarea{resize:vertical;min-height:70px}
 .seg span{display:block;text-align:center;padding:10px;border:1px solid var(--line);border-radius:12px;cursor:pointer}
 .seg input:checked+span{border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
 .seg input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
-.beta{font-family:var(--f-body,inherit);font-size:11px;letter-spacing:.06em;color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:0 5px;vertical-align:middle;margin-inline-start:6px;position:relative;top:-3px}
+.beta{background:none;cursor:pointer;font-family:var(--f-body,inherit);font-size:11px;letter-spacing:.06em;color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:0 5px;vertical-align:middle;margin-inline-start:6px;position:relative;top:-3px}
 .carpill{border:1px solid var(--line);background:transparent;color:var(--accent);border-radius:999px;padding:2px 10px;font:inherit;font-size:12px;line-height:1.6;cursor:pointer;white-space:nowrap}
 .carpill:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .carlist{display:flex;flex-direction:column;gap:10px}
@@ -511,7 +538,7 @@ textarea{resize:vertical;min-height:70px}
 <div class="scroller" id="scroller">
 <div class="app" id="app">
   <header class="top">
-    <div class="brand"><img class="mark" src="icons/emblem.png" alt="" width="52" height="52"><div class="brand-txt"><h1>יומן הרכב<span class="beta" id="betaTag" hidden>בטא</span></h1><span class="sub-row"><span class="sub" id="subline">המוסך הפרטי שלך</span><button type="button" class="carpill" id="carBtn" data-act="cars" hidden>+ רכב</button></span></div></div>
+    <div class="brand"><img class="mark" src="icons/emblem.png" alt="" width="52" height="52"><div class="brand-txt"><h1>יומן הרכב<button type="button" class="beta" id="betaTag" data-act="feedback" aria-label="גרסת בטא: שליחת משוב" hidden>בטא</button></h1><span class="sub-row"><span class="sub" id="subline">המוסך הפרטי שלך</span><button type="button" class="carpill" id="carBtn" data-act="cars" hidden>+ רכב</button></span></div></div>
     <div class="top-actions">
       <button class="iconbtn" data-act="account" id="acctBtn" aria-label="החשבון שלי" title="החשבון שלי" hidden><svg class="i" viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0"/></svg></button>
       <button class="iconbtn" data-act="quick" aria-label="רישום חדש" title="רישום חדש"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
@@ -884,6 +911,9 @@ function renderBanner(){
   if(S.offline&&!S.noDb){b.innerHTML=`<div class="banner warn">המאגר לא עונה כרגע, ייתכן שהנתונים שמוצגים לא מעודכנים. השינויים יישמרו כשהחיבור יחזור.</div>`;return;}
   if(S.car?.example){b.innerHTML=`<div class="banner"><span><b>אלה נתוני דוגמה</b> כדי שתראה איך היומן עובד. כשתגדיר את הרכב שלך, הדוגמאות יימחקו.</span><button class="btn primary sm" data-act="setup">${I('edit')}הגדרת הרכב שלי</button></div>`;return;}
   if(!S.car&&S.ready.size===COLS.length){maybeOnboard();b.innerHTML=`<div class="banner"><span><b>ברוך הבא.</b> נתחיל בפרטי הרכב ובקילומטראז׳ הנוכחי.</span><button class="btn primary sm" data-act="onboard">${I('plus')}הגדרת הרכב</button></div>`;return;}
+  {let dis=false;try{dis=localStorage.getItem('cj-install-hint')==='1';}catch(e){}
+   const ios=/iPad|iPhone|iPod/.test(navigator.userAgent),standalone=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
+   if(S.car&&ios&&!standalone&&!dis){b.innerHTML=`<div class="banner"><span><b>התקן את היומן בטלפון.</b> ככה הוא נפתח כמו אפליקציה ושולח התראות לפני טיפול, טסט וביטוח.</span><span style="display:flex;gap:6px"><button class="btn primary sm" data-act="installHint">איך?</button><button class="btn ghost sm" data-act="installHintX" aria-label="סגירה">✕</button></span></div>`;return;}}
   b.innerHTML='';
 }
 
@@ -1525,7 +1555,7 @@ async function setupPushRow(root){
   };
 }
 function pushInstallSheet(){
-  openModal('התראות באייפון',`<p style="margin-top:0">באייפון, התראות עובדות רק כשהיומן מותקן במסך הבית:</p>
+  openModal('התקנה במסך הבית',`<p style="margin-top:0">ככה היומן נפתח כמו אפליקציה, בלי שורת כתובת, ויכול לשלוח התראות:</p>
     <ol class="steps-list"><li>לוחצים על כפתור השיתוף <b>⎙</b> בתחתית Safari.</li><li>בוחרים <b>״הוספה למסך הבית״</b>.</li><li>פותחים את היומן מהאייקון החדש, ומפעילים התראות ב״החשבון שלי״.</li></ol>
     <div class="formacts"><button class="btn primary" data-act="close">הבנתי</button></div>`);
 }
@@ -1794,18 +1824,39 @@ function onboarding(step,st){
   const dots=`<div class="onb-dots" aria-hidden="true">${[1,2,3].map(i=>`<i class="${i<=step?'on':''}"></i>`).join('')}</div>`;
   const close=(skip)=>{if(skip){try{localStorage.setItem('cj-onb-skip','1');}catch(e){}}el.remove();};
   if(step===1){
-    el.innerHTML=`<div class="onb-in">${dots}
-      <img class="onb-mark" src="icons/emblem.png" alt="">
-      <h1>ברוך הבא ליומן הרכב</h1>
-      <p class="lead">כל מה שקשור לרכב במקום אחד. שתי דקות של הגדרה, ומשם היומן עובד בשבילך.</p>
-      <div class="onb-feats">
-        <div class="onb-feat"><div class="ic">${I('fuel')}</div><div><b>תדלוק בשלוש הקשות</b><span>מצלמים את הקבלה, הסוכן ממלא סכום, ליטרים ותחנה, ומחשב צריכה.</span></div></div>
-        <div class="onb-feat"><div class="ic">${I('bell')}</div><div><b>תזכורות שלא שוכחות</b><span>טיפולים, טסט, שמן, מים ואוויר בצמיגים, לפי ק״מ או לפי זמן.</span></div></div>
-        <div class="onb-feat"><div class="ic">${I('receipt')}</div><div><b>כל ההוצאות והקבלות</b><span>תמונה מלאה של כמה הרכב באמת עולה לך.</span></div></div>
+    const SL=[
+      {h:'ברוך הבא ליומן הרכב',p:'כל מה שקשור לרכב במקום אחד: דלק, טיפולים, הוצאות, ביטוח ומסמכים. פשוט, יפה, ועובד בשבילך.',stage:`<img class="mk" src="icons/emblem.png" alt="">`,
+        perks:[['fuel','דלק וצריכה'],['wrench','טיפולים'],['receipt','הוצאות'],['shield','ביטוח']]},
+      {h:'מצלמים קבלה. זהו.',p:'הסוכן קורא את הקבלה מהתחנה או מהמוסך, ממלא סכום, ליטרים ותחנה, ומחשב לך כמה הרכב באמת צורך ועולה.',stage:`<div class="mock">
+        <div class="mrow"><div class="ic">${I('cam')}</div><div><b>קבלה מ־Yellow</b><span>נקראה תוך שניות</span></div><span class="tag">₪291.62</span></div>
+        <div class="mrow"><div class="ic">${I('fuel')}</div><div><b>37.2 ליטר</b><span>7.85 ₪ לליטר</span></div><span class="tag">14.3 ק״מ/ל׳</span></div>
+        <div class="mrow"><div class="ic">${I('chart')}</div><div><b>החודש על הרכב</b><span>דלק, טיפולים והוצאות</span></div><span class="tag">₪1,092</span></div></div>`},
+      {h:'לא שוכחים כלום',p:'טיפול תקופתי, טסט, חידוש ביטוח ובדיקות של שמן, מים ואוויר. היומן יודע מתי, ושולח התראה לטלפון לפני הזמן.',stage:`<div class="mock">
+        <div class="mrow notif warn"><div class="ic">${I('bell')}</div><div><b>טסט שנתי</b><span>יומן הרכב · עכשיו</span></div><span class="tag">עוד 7 ימים</span></div>
+        <div class="mrow notif"><div class="ic">${I('wrench')}</div><div><b>טיפול 15,000</b><span>לפי הק״מ שלך</span></div><span class="tag">עוד 1,200 ק״מ</span></div>
+        <div class="mrow notif ok"><div class="ic">${I('tire')}</div><div><b>לחץ אוויר בצמיגים</b><span>סימנת שבדקת</span></div><span class="tag">${I('check')}</span></div></div>`},
+      {h:'הביטוח שלך, בשפה פשוטה',p:'מעלים את הפוליסה ורישיון הרכב. הסוכן מסביר מה מכוסה ומה לא, ויועץ הרכב עונה על כל שאלה. הנתונים שלך פרטיים, מוצפנים, ואפשר לייצא או למחוק אותם בכל רגע.',stage:`<div class="mock">
+        <div class="mrow"><div class="ic">${I('shield')}</div><div><b>נזק לרכב שלך</b><span>גם אם אתה אשם</span></div><span class="tag">עד שווי הרכב</span></div>
+        <div class="mrow"><div class="ic">${I('car')}</div><div><b>רכב חלופי</b><span>כשהרכב במוסך</span></div><span class="tag">עד 14 ימים</span></div>
+        <div class="mrow"><div class="ic">${I('chat')}</div><div><b>״מה מכוסה אם נכנסו בי?״</b><span>יועץ הרכב</span></div><span class="tag">${I('send')}</span></div></div>`}];
+    el.innerHTML=`<div class="intro">
+      <div class="intro-top"><span class="beta" style="top:0;margin:0">בטא</span><button class="onb-skip" id="onbSkipI">דילוג</button></div>
+      <div class="intro-track" id="itr" aria-roledescription="קרוסלה" aria-label="מה יש ביומן הרכב">
+        ${SL.map((x,i)=>`<section class="slide ${i===0?'on':''}" aria-roledescription="שקופית" aria-label="${i+1} מתוך ${SL.length}">
+          <div class="stage">${x.stage}</div><h2>${x.h}</h2><p>${x.p}</p>${x.perks?`<div class="perks">${x.perks.map(([ic,t])=>`<span>${I(ic)}${t}</span>`).join('')}</div>`:''}</section>`).join('')}
       </div>
-      <div class="onb-acts"><button class="btn primary block" id="onbNext">בוא נתחיל</button><button class="onb-skip" id="onbSkip">אחר כך</button></div></div>`;
-    el.querySelector('#onbNext').onclick=()=>onboarding(2,st);
-    el.querySelector('#onbSkip').onclick=()=>close(true);
+      <div class="intro-dots" role="tablist">${SL.map((x,i)=>`<button type="button" role="tab" aria-label="שקופית ${i+1}" class="${i===0?'on':''}" data-i="${i}"></button>`).join('')}</div>
+      <div class="onb-acts"><button class="btn primary block" id="onbNext">הבא</button><button class="onb-skip" id="onbLater">אחר כך</button></div></div>`;
+    const tr=el.querySelector('#itr'),slides=[...tr.children],dotsB=[...el.querySelectorAll('.intro-dots button')],nx=el.querySelector('#onbNext');
+    let cur=0;
+    const show=i=>{cur=i;slides.forEach((x,k)=>x.classList.toggle('on',k===i));dotsB.forEach((d,k)=>{d.classList.toggle('on',k===i);d.setAttribute('aria-selected',k===i);});nx.textContent=i===slides.length-1?'בוא נגדיר את הרכב':'הבא';};
+    const goTo=i=>{tr.scrollTo({left:slides[i].offsetLeft-tr.offsetLeft+(getComputedStyle(tr).direction==='rtl'?0:0),behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth'});show(i);};
+    let t;tr.addEventListener('scroll',()=>{clearTimeout(t);t=setTimeout(()=>{const c=tr.getBoundingClientRect();let best=0,bd=1e9;slides.forEach((x,k)=>{const r=x.getBoundingClientRect();const d=Math.abs(r.left-c.left);if(d<bd){bd=d;best=k;}});if(best!==cur)show(best);},60);},{passive:true});
+    dotsB.forEach(d=>d.onclick=()=>goTo(+d.dataset.i));
+    nx.onclick=()=>cur<slides.length-1?goTo(cur+1):onboarding(2,st);
+    el.querySelector('#onbSkipI').onclick=()=>onboarding(2,st);
+    el.querySelector('#onbLater').onclick=()=>close(true);
+    el.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'&&cur<slides.length-1)goTo(cur+1);if(e.key==='ArrowRight'&&cur>0)goTo(cur-1);});
     return;
   }
   if(step===2){
@@ -1935,6 +1986,8 @@ document.addEventListener('click',e=>{
     case 'account':accountSheet();break;
     case 'cars':carSheet();break;
     case 'feedback':feedbackSheet();break;
+    case 'installHint':pushInstallSheet();break;
+    case 'installHintX':try{localStorage.setItem('cj-install-hint','1');}catch(x){}render();break;
     case 'onboard':onbShown=true;onboarding(1);break;
     case 'checks':checksSheet();break;
     case 'scan':scanSheet();break;
