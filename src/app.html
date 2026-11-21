@@ -381,6 +381,44 @@ textarea{resize:vertical;min-height:70px}
 .acct-list>:first-child{border-top:0}
 .acct-list .danger{color:var(--crit)}
 .sub-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.agtabs{margin:0 0 18px}.agtabs button{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--fg);font:inherit;cursor:pointer;min-height:46px}
+.agtabs button.on{border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.agtabs button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.docs-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:16px}
+.dstat{display:flex;align-items:center;gap:12px;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--surface);min-width:0}
+.dstat .ic{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;flex:none;background:rgba(207,178,132,.14);color:var(--accent)}
+.dstat.warn .ic{color:var(--warn)}.dstat.crit .ic{color:var(--crit)}
+.dstat b{display:block;font-weight:600}.dstat span{font-size:13px;color:var(--muted)}
+.dstat .when{margin-inline-start:auto;text-align:end;white-space:nowrap;font-size:13px}
+.dstat.warn .when{color:var(--warn)}.dstat.crit .when{color:var(--crit)}.dstat.ok .when{color:var(--ok)}
+.pol{display:flex;flex-direction:column;gap:16px;margin-bottom:16px}
+.pol-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.pol-head h2{margin:0;font-size:22px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;border:1px solid var(--line);font-size:13px;color:var(--muted);white-space:nowrap}
+.chip.acc{color:var(--accent);border-color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.pol h3{font-size:15px;margin:0 0 8px;color:var(--muted);font-weight:600;letter-spacing:.02em}
+.pol .lead2{margin:0;line-height:1.7;max-width:70ch}
+.covs{display:flex;flex-direction:column;border:1px solid var(--line-soft,var(--line));border-radius:14px;overflow:hidden}
+.cov{border-top:1px solid var(--line-soft,var(--line))}.cov:first-child{border-top:0}
+.cov summary{display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer;list-style:none;min-height:50px}
+.cov summary::-webkit-details-marker{display:none}
+.cov summary .t{flex:1;min-width:0;font-weight:500}
+.cov summary .lim{font-size:13px;color:var(--accent);white-space:nowrap}
+.cov summary::after{content:"";width:8px;height:8px;border-left:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .2s;flex:none;margin-inline-start:4px}
+.cov[open] summary::after{transform:rotate(-45deg) translateY(-2px)}
+.cov .body{padding:0 14px 14px;color:var(--fg);line-height:1.7}
+.cov .body .small{display:block;margin-top:6px}
+.cov summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.nocov{margin:0;padding-inline-start:20px;display:flex;flex-direction:column;gap:6px;line-height:1.6}
+.phones{display:flex;flex-wrap:wrap;gap:10px}
+.phone{display:flex;flex-direction:column;padding:10px 14px;border:1px solid var(--line);border-radius:12px;min-width:150px}
+.phone span{font-size:12px;color:var(--muted)}.phone a,.phone b{font-size:18px;color:var(--fg);text-decoration:none;user-select:all;direction:ltr;text-align:end}
+.pol-acts{display:flex;flex-wrap:wrap;gap:8px}
+.docs-empty{text-align:center;padding:28px 18px;display:flex;flex-direction:column;align-items:center;gap:12px}
+.docs-empty p{max-width:46ch;margin:0;color:var(--muted);line-height:1.7}
+.docs-up{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.docread{display:flex;flex-direction:column;align-items:center;gap:12px;padding:24px 8px;text-align:center}
 .acct-state{margin-inline-start:auto;font-size:13px;color:var(--muted)}.acct-state.on{color:var(--ok)}
 .steps-list{padding-inline-start:20px;margin:8px 0 4px;display:flex;flex-direction:column;gap:8px}
 .seg{display:flex;gap:8px;flex-wrap:wrap}.seg label{flex:1;min-width:80px}.seg input{position:absolute;opacity:0;pointer-events:none}
@@ -545,16 +583,16 @@ function iconFor(title,kind){
 }
 
 /* ---------- state ---------- */
-const COLS=['garage','fuel','service','expense','reminder'];
-const S={car:null,cars:[],fuel:[],service:[],expense:[],reminder:[],ready:new Set(),offline:false};
-const RAW={garage:[],fuel:[],service:[],expense:[],reminder:[]};
+const COLS=['garage','fuel','service','expense','reminder','paper'];
+const S={car:null,cars:[],fuel:[],service:[],expense:[],reminder:[],paper:[],ready:new Set(),offline:false};
+const RAW={garage:[],fuel:[],service:[],expense:[],reminder:[],paper:[]};
 const MAX_CARS=2;
 let CAR='car';try{CAR=localStorage.getItem('cj-car')||'car';}catch(e){}
 function applyCar(){
   const cars=[...RAW.garage].sort((a,b)=>a.id==='car'?-1:b.id==='car'?1:(a.createdAt||0)-(b.createdAt||0));
   if(cars.length&&!cars.some(c=>c.id===CAR))CAR=cars[0].id;
   S.cars=cars;S.car=cars.find(c=>c.id===CAR)||null;
-  for(const c of ['fuel','service','expense','reminder'])S[c]=RAW[c].filter(r=>(r.carId||'car')===CAR);
+  for(const c of ['fuel','service','expense','reminder','paper'])S[c]=RAW[c].filter(r=>(r.carId||'car')===CAR);
 }
 function switchCar(id){if(id===CAR)return;CAR=id;try{localStorage.setItem('cj-car',id);}catch(e){}chatLog.length=0;applyCar();render();toast('עברת ל'+carName(S.car));}
 function carName(c){c=c||{};return c.nickname||[c.make,c.model].filter(Boolean).join(' ')||'הרכב';}
@@ -802,7 +840,7 @@ function renderNow(){
   const keepChat=view==='agents'?captureChat():null;
   v.innerHTML=fn();
   if(keepChat) restoreChat(keepChat);
-  if(view==='agents') fillAgentQuota();
+  if(view==='agents'&&agTab==='agents') fillAgentQuota();
 }
 const APP_URL='https://adircordoba24-svg.github.io/car-journal/';
 function renderBanner(){
@@ -996,9 +1034,14 @@ function vReminder(){
 }
 
 let lastInsight='',insightBusy=false;
+let agTab='agents';try{if(location.hash==='#docs')agTab='docs';}catch(e){}
+function agTabs(){return `<div class="seg agtabs" role="tablist" aria-label="סוכנים ומסמכים">
+  <button type="button" role="tab" aria-selected="${agTab==='agents'}" class="${agTab==='agents'?'on':''}" data-act="agtab" data-id="agents">${I('spark')}סוכנים</button>
+  <button type="button" role="tab" aria-selected="${agTab==='docs'}" class="${agTab==='docs'?'on':''}" data-act="agtab" data-id="docs">${I('shield')}הביטוח והמסמכים</button></div>`;}
 function vAgents(){
+  if(agTab==='docs')return agTabs()+vDocs();
   const off=!sample;
-  return `<div class="sec-title"><h2>סוכנים</h2><span class="small muted">עוזרים חכמים שעובדים על הנתונים של הרכב שלך</span></div>
+  return agTabs()+`<div class="sec-title"><h2>סוכנים</h2><span class="small muted">עוזרים חכמים שעובדים על הנתונים של הרכב שלך</span></div>
   ${off?`<div class="banner warn">הסוכנים זמינים כשהדף פתוח ב־Claude עם חשבון מחובר.</div>`:''}
   ${window.cjAccount?`<div class="small muted" id="agQuota" style="margin:-4px 0 14px"></div>`:''}
   <section class="agents">
@@ -1231,10 +1274,10 @@ async function markDone(id,atKm,atDate,silent){
 }
 const rcptSrc=id=>window.__rcptUrl?window.__rcptUrl(id):'/_blob/'+encodeURIComponent(id);
 window.__rcptRefresh=()=>render();
-async function receiptView(id,type){
+async function receiptView(id,type,title){
   let url=rcptSrc(id);
   if(window.__rcptUrlAsync){try{url=await window.__rcptUrlAsync(id);}catch(e){toast('לא הצלחתי לטעון את הקבלה');return;}}
-  openModal('קבלה',type.startsWith('image/')?`<img src="${url}" alt="קבלה" style="width:100%;border-radius:12px">`:`<div class="empty"><b>קובץ PDF</b><a href="${url}" target="_blank" rel="noopener" style="color:var(--accent)">פתיחת הקבלה בלשונית חדשה</a></div>`);
+  openModal(title||'קבלה',type.startsWith('image/')?`<img src="${url}" alt="${esc(title||'קבלה')}" style="width:100%;border-radius:12px">`:`<div class="empty"><b>קובץ PDF</b><a href="${url}" target="_blank" rel="noopener" style="color:var(--accent)">פתיחת הקובץ בלשונית חדשה</a></div>`);
 }
 async function addToCalendar(id,btn){
   const r=S.reminder.find(x=>x.id===id);if(!r)return;
@@ -1483,6 +1526,157 @@ function deleteAccountSheet(){
   });
 }
 
+/* ---------- insurance & documents ---------- */
+const DOC_KIND={insurance:'פוליסת ביטוח',license:'רישיון רכב'};
+function docDays(d){return d?daysBetween(today(),d):null;}
+function docWhen(d){const k=docDays(d);if(k===null)return {txt:'אין תאריך',cls:''};
+  if(k<0)return {txt:`פג לפני ${-k} ימים`,cls:'crit'};if(k===0)return {txt:'פג היום',cls:'crit'};
+  return {txt:k<=45?`עוד ${k} ימים`:`עד ${fmtD(d)}`,cls:k<=14?'crit':k<=45?'warn':'ok'};}
+function money(v){const x=n(v);return x==null?'':'₪'+nf0.format(x);}
+function vDocs(){
+  const pols=S.paper.filter(p=>p.type==='insurance').sort((a,b)=>(a.end||'').localeCompare(b.end||''));
+  const lic=S.paper.find(p=>p.type==='license');
+  const upBtns=`<div class="docs-up"><button class="btn primary" data-act="docUp" data-type="insurance">${I('shield')}העלאת פוליסת ביטוח</button><button class="btn ghost" data-act="docUp" data-type="license">${I('doc')}העלאת רישיון רכב</button></div>`;
+  if(!pols.length&&!lic)return `<div class="sec-title"><h2>הביטוח והמסמכים</h2><span class="small muted">${esc(carName(S.car))}</span></div>
+    <div class="card docs-empty"><div class="dstat" style="border:0;padding:0"><div class="ic">${I('shield')}</div></div>
+      <b style="font-size:18px">כל הביטוח במקום אחד, בשפה פשוטה</b>
+      <p>מעלים את פוליסת הביטוח (PDF או צילומים) ואת רישיון הרכב. הסוכן קורא אותם, מסביר בשפה פשוטה מה מכוסה ומה לא, ומזכיר לך לפני שהביטוח או הטסט נגמרים.</p>
+      ${upBtns}</div>`;
+  const strip=[...pols.map(p=>{const w=docWhen(p.end);return `<div class="dstat ${w.cls}"><div class="ic">${I('shield')}</div><div style="min-width:0"><b>ביטוח ${esc(p.policyType||'')}</b><span>${esc(p.insurer||'')}</span></div><div class="when">${w.txt}</div></div>`;}),
+    lic?(()=>{const w=docWhen(lic.validUntil);return `<div class="dstat ${w.cls}"><div class="ic">${I('doc')}</div><div style="min-width:0"><b>טסט ורישיון רכב</b><span>${lic.validUntil?'בתוקף עד '+fmtD(lic.validUntil):'אין תאריך'}</span></div><div class="when">${w.txt}</div></div>`;})():''].join('');
+  return `<div class="sec-title"><h2>הביטוח והמסמכים</h2><span class="small muted">${esc(carName(S.car))}</span></div>
+  <div class="docs-strip">${strip}</div>
+  ${pols.map(polCard).join('')}
+  ${lic?licCard(lic):''}
+  <div class="card" style="margin-bottom:16px">${upBtns}<p class="small muted" style="text-align:center;margin:12px 0 0">אפשר להעלות כמה פוליסות, למשל חובה ומקיף בנפרד. העלאה של רישיון חדש מחליפה את הקודם.</p></div>`;
+}
+function polCard(p){
+  const w=docWhen(p.end);
+  const ded=(p.deductibles||[]).filter(d=>d&&d.label);
+  const covs=(p.coverages||[]).filter(c=>c&&c.title);
+  const nc=(p.notCovered||[]).filter(Boolean);
+  const ph=[['תביעות ונזקים',p.claimsPhone],['גרירה ושירותי דרך',p.roadsidePhone],['סוכן הביטוח',p.agentPhone]].filter(x=>x[1]);
+  return `<section class="card pol">
+    <div class="pol-head"><div style="min-width:0"><div class="eyebrow">${esc(p.insurer||'חברת ביטוח')}</div><h2>ביטוח ${esc(p.policyType||'רכב')}</h2></div>
+      <div class="chips"><span class="chip ${w.cls==='ok'?'acc':''}" style="${w.cls==='crit'?'color:var(--crit);border-color:var(--crit)':w.cls==='warn'?'color:var(--warn);border-color:var(--warn)':''}">${p.end?`בתוקף עד ${fmtD(p.end)}`:'אין תאריך סיום'}</span>${n(p.premium)?`<span class="chip">פרמיה ${money(p.premium)}</span>`:''}${p.policyNo?`<span class="chip" dir="ltr">${esc(p.policyNo)}</span>`:''}</div></div>
+    ${p.summary?`<p class="lead2">${esc(p.summary)}</p>`:''}
+    ${p.drivers?`<div><h3>מי רשאי לנהוג</h3><p class="lead2">${esc(p.drivers)}</p></div>`:''}
+    ${ded.length?`<div><h3>השתתפות עצמית</h3><div class="chips">${ded.map(d=>`<span class="chip">${esc(d.label)}${d.amount?': <b style="color:var(--fg)">'+esc(String(d.amount))+'</b>':''}</span>`).join('')}</div></div>`:''}
+    ${covs.length?`<div><h3>מה מכוסה (${covs.length})</h3><div class="covs">${covs.map(c=>`<details class="cov"><summary><span class="t">${esc(c.title)}</span>${c.limit?`<span class="lim">${esc(String(c.limit))}</span>`:''}</summary><div class="body">${esc(c.plain||'')}${c.deductible?`<span class="small muted">השתתפות עצמית: ${esc(String(c.deductible))}</span>`:''}</div></details>`).join('')}</div></div>`:''}
+    ${nc.length?`<div><h3>מה לא מכוסה</h3><ul class="nocov">${nc.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:''}
+    ${ph.length?`<div><h3>טלפונים חשובים</h3><div class="phones">${ph.map(([l,v])=>`<div class="phone"><span>${l}</span><a href="tel:${esc(String(v).replace(/[^\d*+#]/g,''))}">${esc(v)}</a></div>`).join('')}</div></div>`:''}
+    ${!covs.length&&!p.summary?`<p class="small muted" style="margin:0">הפוליסה נשמרה, אבל הסוכן עוד לא קרא אותה. ${sample?'אפשר לבקש קריאה בכפתור למטה.':''}</p>`:''}
+    <div class="pol-acts">
+      ${(p.files||[]).map((f,i)=>`<button class="btn sm ghost" data-act="docFile" data-id="${p.id}" data-i="${i}">${I('doc')}${(p.files.length>1?'עמוד '+(i+1):'קובץ הפוליסה')}</button>`).join('')}
+      ${sample&&covs.length?`<button class="btn sm ghost" data-act="docAsk">${I('chat')}שאלה על הביטוח</button>`:''}
+      ${sample&&!covs.length&&(p.files||[]).length?`<button class="btn sm primary" data-act="docEdit" data-id="${p.id}" data-reread="1">${I('spark')}קריאה ע״י הסוכן</button>`:''}
+      <button class="btn sm ghost" data-act="docEdit" data-id="${p.id}">${I('edit')}עריכה</button>
+      <button class="btn sm ghost" data-act="docDel" data-id="${p.id}" style="color:var(--crit)">${I('trash')}מחיקה</button>
+    </div>
+    ${p.readAt?`<p class="small muted" style="margin:0">הסיכום נכתב על ידי סוכן ועלול לטעות. הנוסח המחייב הוא הפוליסה עצמה.</p>`:''}
+  </section>`;
+}
+function licCard(l){
+  const w=docWhen(l.validUntil);
+  const rows=[['מספר רישוי',l.plate],['רכב',[l.make,l.model,l.year].filter(Boolean).join(' ')],['בעלות',l.ownership],['צבע',l.color]].filter(x=>x[1]);
+  return `<section class="card pol">
+    <div class="pol-head"><div><div class="eyebrow">רישיון רכב</div><h2>טסט הבא</h2></div><div class="chips"><span class="chip" style="${w.cls==='crit'?'color:var(--crit);border-color:var(--crit)':w.cls==='warn'?'color:var(--warn);border-color:var(--warn)':''}">${l.validUntil?'עד '+fmtD(l.validUntil)+' · '+w.txt:'אין תאריך'}</span></div></div>
+    ${rows.length?`<div class="chips">${rows.map(([k,v])=>`<span class="chip">${k}: <b style="color:var(--fg)" ${k==='מספר רישוי'?'dir="ltr"':''}>${esc(String(v))}</b></span>`).join('')}</div>`:''}
+    <p class="small muted" style="margin:0">את הטסט אפשר לעשות עד חודשיים לפני תום תוקף הרישיון בלי לאבד ימים. נזכיר לך מראש.</p>
+    <div class="pol-acts">${(l.files||[]).map((f,i)=>`<button class="btn sm ghost" data-act="docFile" data-id="${l.id}" data-i="${i}">${I('doc')}קובץ הרישיון</button>`).join('')}
+      <button class="btn sm ghost" data-act="docEdit" data-id="${l.id}">${I('edit')}עריכה</button>
+      <button class="btn sm ghost" data-act="docDel" data-id="${l.id}" style="color:var(--crit)">${I('trash')}מחיקה</button></div>
+  </section>`;
+}
+const policyPrompt=()=>`אלה עמודים של פוליסת ביטוח רכב בישראל (או אישור/דף פרטי ביטוח). קרא את כל העמודים והחזר JSON בלבד, בצורה:
+{"isPolicy":boolean,"insurer":string|null,"policyType":"חובה"|"מקיף"|"צד ג׳"|"חובה ומקיף"|string|null,"policyNo":string|null,"start":"YYYY-MM-DD"|null,"end":"YYYY-MM-DD"|null,"premium":number|null,
+"plate":string|null,"drivers":string|null,"summary":string,"deductibles":[{"label":string,"amount":string}],
+"coverages":[{"title":string,"plain":string,"limit":string|null,"deductible":string|null}],"notCovered":[string],"claimsPhone":string|null,"roadsidePhone":string|null,"agentPhone":string|null}
+הנחיות:
+- summary: 2–3 משפטים בשפה פשוטה, בגובה העיניים: איזה ביטוח זה, ממתי עד מתי, ומה הדבר הכי חשוב לדעת.
+- drivers: מי מותר לנהוג לפי הפוליסה (גיל, ותק, נהגים נקובים), במשפט פשוט.
+- coverages: כל כיסוי בנפרד, כולל כתבי שירות (גרירה, שמשות, רכב חלופי, פנסים ומראות, רדיו) וכיסויים נוספים. title קצר (2–5 מילים). plain מסביר במשפט־שניים מה זה אומר בפועל, עם דוגמה מהחיים אם עוזר ("אם מישהו נכנס בך בחניה..."). limit: גבול האחריות או התקרה, כמו שכתוב ("עד ₪1,000,000", "עד 14 ימים"). deductible: השתתפות עצמית לכיסוי הזה אם יש.
+- deductibles: כל ההשתתפויות העצמיות בפוליסה (נזק עצמי, צד ג׳, שמשות, גניבה וכו׳) עם הסכום כמו שכתוב.
+- notCovered: חריגים חשובים במשפטים פשוטים ("נהג מתחת לגיל 24 לא מכוסה", "נזק כשנוהגים בלי רישיון בתוקף").
+- בלי מונחים משפטיים כשאפשר להגיד פשוט. בלי לנחש: מה שלא מופיע הוא null או רשימה ריקה. סכומים בשקלים כמו שמופיעים. היום ${today()}.`;
+const licensePrompt=()=>`זה רישיון רכב ישראלי (צילום או PDF). החזר JSON בלבד:
+{"isLicense":boolean,"plate":string|null,"make":string|null,"model":string|null,"year":number|null,"validUntil":"YYYY-MM-DD"|null,"ownership":string|null,"color":string|null}
+validUntil הוא תאריך "תוקף הרישיון" / "בתוקף עד" (זה מועד הטסט). אל תנחש; מה שלא מופיע הוא null. היום ${today()}.`;
+function docUploadSheet(type){
+  const ins=type==='insurance';
+  openModal(ins?'העלאת פוליסת ביטוח':'העלאת רישיון רכב',`<form id="du" class="stack" style="gap:14px">
+    <p class="small muted" style="margin:0">${ins?'PDF של הפוליסה, או צילומים של העמודים (אפשר לבחור כמה תמונות). אם יש פוליסת חובה ומקיף נפרדות, מעלים כל אחת בנפרד.':'צילום ברור של רישיון הרכב, או PDF.'}</p>
+    <div class="drop" id="duBox"><input type="file" id="duFile" accept="image/*,application/pdf" ${ins?'multiple':''}><span id="duTxt">${I('doc')} בחירת קובץ</span></div>
+    <div class="formacts"><button class="btn primary" type="submit" id="duGo" disabled>${I('spark')}${sample?'העלאה וקריאה':'העלאה'}</button><button class="btn ghost" type="button" data-act="close">ביטול</button></div>
+    ${!sample?'<p class="small muted" style="margin:0">הסוכן לא זמין כרגע, אז תמלא את התאריכים בעצמך אחרי ההעלאה.</p>':''}</form>`,root=>{
+    const inp=root.querySelector('#duFile'),go=root.querySelector('#duGo');
+    inp.onchange=()=>{const fs=[...inp.files];go.disabled=!fs.length;root.querySelector('#duTxt').textContent=fs.length?(fs.length===1?fs[0].name:`${fs.length} קבצים`):'בחירת קובץ';root.querySelector('#duBox').classList.toggle('has',!!fs.length);};
+    root.querySelector('#du').onsubmit=async e=>{e.preventDefault();let fs=[...inp.files];if(!fs.length)return;
+      const pdf=fs.find(f=>f.type==='application/pdf');if(pdf)fs=[pdf];fs=fs.slice(0,8);
+      if(fs.some(f=>f.size>15*1024*1024)){toast('הקובץ גדול מדי (עד 15MB)');return;}
+      busy(go,true,'מעלה…');
+      try{
+        const files=[];for(const f of fs){const a=await assets.upload(f);files.push({id:a.id,type:f.type||a.contentType||'',name:(f.name||'').slice(0,120)});}
+        const base={type,files,createdAt:Date.now()};
+        if(type==='license'){const old=S.paper.filter(p=>p.type==='license');for(const o of old){await delRec('paper',o.id);for(const f of o.files||[])Promise.resolve(assets.delete(f.id)).catch(()=>{});}}
+        const ref=await addRec('paper',base);const id=ref&&ref.id;
+        if(sample&&id){await readDoc(id,fs,type);}else{closeModal();toast('הקובץ נשמר');if(id)docEditSheet(id);}
+      }catch(err){console.error(err);busy(go,false);toast('ההעלאה נכשלה, נסה שוב');}
+    };
+  });
+}
+async function readDoc(id,blobs,type){
+  const ins=type==='insurance';
+  openModal(ins?'קורא את הפוליסה':'קורא את הרישיון',`<div class="docread"><span class="spin" style="width:28px;height:28px"></span><b>${ins?'הסוכן קורא את הפוליסה ומסביר אותה בשפה פשוטה':'הסוכן קורא את הרישיון'}</b><span class="small muted">${ins?'זה יכול לקחת עד דקה.':'כמה שניות.'}</span></div>`);
+  try{
+    const raw=await sample.json(ins?policyPrompt():licensePrompt(),{images:blobs,modelTier:ins?'complex':'default',maxTokens:ins?7000:800,purpose:'document'});
+    const ok=ins?raw&&raw.isPolicy!==false:raw&&raw.isLicense!==false;
+    if(!ok){closeModal();toast(ins?'זה לא נראה כמו פוליסת ביטוח רכב':'זה לא נראה כמו רישיון רכב');docEditSheet(id);return;}
+    const d=/^\d{4}-\d\d-\d\d$/;const clean={readAt:Date.now()};
+    if(ins){Object.assign(clean,{insurer:raw.insurer||'',policyType:raw.policyType||'',policyNo:raw.policyNo||'',start:d.test(raw.start||'')?raw.start:'',end:d.test(raw.end||'')?raw.end:'',premium:n(raw.premium),drivers:raw.drivers||'',summary:raw.summary||'',
+      deductibles:(raw.deductibles||[]).slice(0,20).map(x=>({label:String(x.label||'').slice(0,80),amount:String(x.amount||'').slice(0,60)})),
+      coverages:(raw.coverages||[]).slice(0,40).map(x=>({title:String(x.title||'').slice(0,80),plain:String(x.plain||'').slice(0,600),limit:x.limit?String(x.limit).slice(0,80):'',deductible:x.deductible?String(x.deductible).slice(0,80):''})),
+      notCovered:(raw.notCovered||[]).slice(0,20).map(x=>String(x).slice(0,300)),claimsPhone:raw.claimsPhone||'',roadsidePhone:raw.roadsidePhone||'',agentPhone:raw.agentPhone||''});}
+    else Object.assign(clean,{plate:raw.plate||'',make:raw.make||'',model:raw.model||'',year:n(raw.year),validUntil:d.test(raw.validUntil||'')?raw.validUntil:'',ownership:raw.ownership||'',color:raw.color||''});
+    await updRec('paper',id,clean);
+    const p=Object.assign({},S.paper.find(x=>x.id===id)||{},clean,{id,type});
+    await syncDocReminder(p);
+    closeModal();toast(ins?'הפוליסה נקראה ונשמרה':'הרישיון נקרא ונשמר');go('agents');agTab='docs';render();
+  }catch(e){closeModal();toast(aiErr(e,'הסוכן לא הצליח לקרוא. אפשר למלא את התאריכים ידנית'));docEditSheet(id);}
+}
+async function syncDocReminder(p){
+  const date=p.type==='license'?p.validUntil:p.end;if(!date)return;
+  const key=p.type==='license'?'test':'ins:'+p.id;
+  const title=p.type==='license'?'טסט שנתי':`חידוש ביטוח ${p.policyType||'רכב'}`;
+  let r=S.reminder.find(x=>x.docKey===key)||(p.type==='license'?S.reminder.find(x=>/טסט/.test(x.title||'')):null);
+  const data={title,kind:'doc',intervalKm:null,intervalDays:365,lastDate:addDays(date,-365),docKey:key};
+  if(r)await updRec('reminder',r.id,data);else await addRec('reminder',Object.assign({note:'',history:[],lastKm:odo()},data));
+}
+function docEditSheet(id){
+  const p=S.paper.find(x=>x.id===id);if(!p)return;const ins=p.type==='insurance';
+  openModal(ins?'פרטי הפוליסה':'פרטי הרישיון',`<form id="de"><div class="fgrid">
+    ${ins?`<div class="field"><label for="deI">חברת ביטוח</label><input type="text" id="deI" value="${esc(p.insurer||'')}"></div>
+    <div class="field"><label for="deT">סוג</label><input type="text" id="deT" list="deTl" value="${esc(p.policyType||'')}"><datalist id="deTl"><option>חובה</option><option>מקיף</option><option>צד ג׳</option><option>חובה ומקיף</option></datalist></div>
+    <div class="field"><label for="deS">מתאריך</label><input type="date" id="deS" value="${esc(p.start||'')}"></div>
+    <div class="field"><label for="deE">בתוקף עד *</label><input type="date" id="deE" value="${esc(p.end||'')}"></div>
+    <div class="field"><label for="deC">טלפון לתביעות</label><input type="tel" id="deC" dir="ltr" value="${esc(p.claimsPhone||'')}"></div>
+    <div class="field"><label for="deR">טלפון לגרירה</label><input type="tel" id="deR" dir="ltr" value="${esc(p.roadsidePhone||'')}"></div>`
+    :`<div class="field full"><label for="deV">תוקף הרישיון (מועד הטסט) *</label><input type="date" id="deV" value="${esc(p.validUntil||'')}"></div>`}
+    </div><div class="formacts"><button class="btn primary" type="submit">${I('check')}שמירה</button>${sample&&(p.files||[]).length?`<button class="btn ghost" type="button" id="deRe">${I('spark')}קריאה מחדש ע״י הסוכן</button>`:''}<button class="btn ghost" type="button" data-act="close">ביטול</button></div></form>`,root=>{
+    root.querySelector('#de').onsubmit=async e=>{e.preventDefault();const g=k=>{const el=root.querySelector('#'+k);return el?el.value.trim():'';};
+      const data=ins?{insurer:g('deI'),policyType:g('deT'),start:g('deS'),end:g('deE'),claimsPhone:g('deC'),roadsidePhone:g('deR')}:{validUntil:g('deV')};
+      if(ins?!data.end:!data.validUntil){toast(ins?'צריך תאריך סיום':'צריך תאריך תוקף');return;}
+      try{await updRec('paper',id,data);await syncDocReminder(Object.assign({},p,data));closeModal();toast('נשמר. התזכורת עודכנה');agTab='docs';go('agents');}catch(x){toast('השמירה נכשלה');}};
+    const re=root.querySelector('#deRe');if(re)re.onclick=async()=>{busy(re,true,'טוען…');try{const blobs=[];for(const f of p.files){const url=window.__rcptUrlAsync?await window.__rcptUrlAsync(f.id):rcptSrc(f.id);const b=await (await fetch(url)).blob();blobs.push(new File([b],f.name||'doc',{type:f.type||b.type}));}await readDoc(id,blobs,p.type);}catch(x){busy(re,false);toast('לא הצלחתי לטעון את הקובץ');}};
+  });
+}
+function docDeleteSheet(id){
+  const p=S.paper.find(x=>x.id===id);if(!p)return;
+  openModal('מחיקת מסמך',`<p style="margin-top:0">למחוק את ${p.type==='license'?'רישיון הרכב':'הפוליסה'} ואת הקובץ? התזכורת שנוצרה ממנו תישאר.</p><div class="formacts"><button class="btn primary" id="ddY" style="background:var(--crit);border-color:var(--crit)">${I('trash')}מחיקה</button><button class="btn ghost" data-act="close">ביטול</button></div>`,root=>{
+    root.querySelector('#ddY').onclick=async()=>{try{await delRec('paper',id);for(const f of p.files||[])Promise.resolve(assets&&assets.delete&&assets.delete(f.id)).catch(()=>{});closeModal();toast('נמחק');}catch(e){toast('המחיקה נכשלה');}};
+  });
+}
+
 /* ---------- cars (up to MAX_CARS per account) ---------- */
 function carSheet(){
   const list=S.cars.map(c=>{const on=c.id===CAR;const cnt=['fuel','service','expense'].reduce((t,k)=>t+RAW[k].filter(r=>(r.carId||'car')===c.id).length,0);
@@ -1500,7 +1694,7 @@ function carSheet(){
 }
 function deleteCarSheet(){
   const c=S.car;if(!c||S.cars.length<2)return;
-  const recs=['fuel','service','expense','reminder'].flatMap(k=>RAW[k].filter(r=>(r.carId||'car')===c.id).map(r=>[k,r]));
+  const recs=['fuel','service','expense','reminder','paper'].flatMap(k=>RAW[k].filter(r=>(r.carId||'car')===c.id).map(r=>[k,r]));
   openModal('מחיקת רכב',`<p>יימחקו <b>${esc(carName(c))}</b> ו־${recs.length} רישומים שלו, כולל הקבלות. אי אפשר לשחזר.</p>
     <div class="field"><label for="cdTxt">כדי לאשר, הקלד <b>מחק</b></label><input type="text" id="cdTxt" autocomplete="off"></div>
     <div class="formacts"><button class="btn primary" id="cdYes" style="background:var(--crit);border-color:var(--crit)">${I('trash')}מחיקה</button><button class="btn ghost" data-act="close">ביטול</button></div>`,root=>{
@@ -1508,7 +1702,7 @@ function deleteCarSheet(){
       if(root.querySelector('#cdTxt').value.trim()!=='מחק'){toast('צריך להקליד מחק');return;}
       busy(e.currentTarget,true,'מוחק…');
       try{
-        for(const [k,r] of recs){await delRec(k,r.id);if(r.receipt&&r.receipt.id&&assets&&assets.delete)await Promise.resolve(assets.delete(r.receipt.id)).catch(()=>{});}
+        for(const [k,r] of recs){await delRec(k,r.id);for(const f of [r.receipt,...(r.files||[])])if(f&&f.id&&assets&&assets.delete)await Promise.resolve(assets.delete(f.id)).catch(()=>{});}
         await delRec('garage',c.id);
         const other=S.cars.find(x=>x.id!==c.id);if(other){CAR=other.id;try{localStorage.setItem('cj-car',other.id);}catch(x){}}
         applyCar();closeModal();render();toast('הרכב נמחק');
@@ -1629,6 +1823,8 @@ const chatTools=[
  {name:'get_overview',description:'Car profile, odometer, km per day, fuel economy series, monthly spend, and every reminder with its status and expected date.',inputSchema:{type:'object',properties:{}},execute:()=>snapshotData()},
  {name:'get_records',description:'List logged records of one type, newest first. fuel=fill-ups, service=garage work, expense=other costs.',inputSchema:{type:'object',properties:{type:{type:'string',enum:['fuel','service','expense']},limit:{type:'number'}},required:['type']},
   execute:({type,limit})=>[...(S[type]||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,Math.min(+limit||30,100)).map(r=>{const o=Object.assign({},r);delete o.receipt;delete o.history;return o;})},
+ {name:'get_insurance',description:'The car insurance policies and the vehicle license read from the documents the user uploaded: insurer, type, dates, who may drive, deductibles, every coverage in plain Hebrew, what is not covered, and phone numbers. Use it for any question about insurance, coverage, claims or the annual test.',inputSchema:{type:'object',properties:{}},
+  execute:()=>S.paper.map(p=>{const o=Object.assign({},p);delete o.files;return o;})},
  {name:'mark_reminder_done',description:'Mark a reminder as done today at the current odometer. Use only when the user says they did it.',inputSchema:{type:'object',properties:{id:{type:'string'}},required:['id']},
   execute:async({id})=>{const ok=await markDone(id,odo(),today(),true);if(!ok)throw new Error('unknown reminder id');appendMsg('note','✓ התזכורת עודכנה');return {ok:true};}},
  {name:'add_reminder',description:'Create a new reminder counted from today and the current odometer.',inputSchema:{type:'object',properties:{title:{type:'string'},kind:{type:'string',enum:['service','check','doc']},intervalKm:{type:['number','null']},intervalDays:{type:['number','null']}},required:['title','kind']},
@@ -1675,6 +1871,12 @@ document.addEventListener('click',e=>{
     case 'scan':scanSheet();break;
     case 'plan':runPlan(b);break;
     case 'insight':runInsight(b);break;
+    case 'agtab':agTab=id;render();break;
+    case 'docUp':docUploadSheet(b.dataset.type||'insurance');break;
+    case 'docFile':{const pp=S.paper.find(x=>x.id===id);const f=pp&&(pp.files||[])[+(b.dataset.i||0)];if(f)receiptView(f.id,f.type||'',pp.type==='license'?'רישיון הרכב':'פוליסת הביטוח');break;}
+    case 'docEdit':docEditSheet(id);break;
+    case 'docDel':docDeleteSheet(id);break;
+    case 'docAsk':agTab='agents';render();setTimeout(()=>{const i=$('#chatIn');if(i){i.value='לפי הביטוח שלי, ';i.focus();}},60);break;
     case 'cal':addToCalendar(id,b);break;
     case 'rcpt':receiptView(id,b.dataset.type||'');break;
     case 'ask':sendChat(b.dataset.q);break;

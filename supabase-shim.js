@@ -173,7 +173,7 @@
      מספר הרישוי וכל ההערות נשמרים מוצפנים (AES-256-GCM). המפתח נמצא רק בשרת, בפונקציה vault.
      ערך ישן שלא הוצפן נקרא כרגיל ומוצפן בשמירה הבאה. אם vault לא זמין, לא נשמר כלום בטקסט גלוי. */
   var ENC = "enc:v1:";
-  var SENSITIVE = { garage: ["plate", "note"] };
+  var SENSITIVE = { garage: ["plate", "note"], paper: ["plate", "policyNo", "note"] };
   function fieldsOf(c) { return SENSITIVE[c] || ["note"]; }
   async function vault(op, items) {
     if (!items.length) return [];
@@ -367,10 +367,15 @@
     if (imgs.length) {
       var last = msgs[msgs.length - 1], parts = [];
       for (var i = 0; i < imgs.length; i++) {
+        if (imgs[i].type === "application/pdf") {
+          var pdf = await new Promise(function (res, rej) { var fr = new FileReader(); fr.onload = function () { res(String(fr.result).split(",")[1]); }; fr.onerror = rej; fr.readAsDataURL(imgs[i]); });
+          parts.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data: pdf } });
+          continue;
+        }
         var xs = await toImages(imgs[i]);
         xs.forEach(function (x) { parts.push({ type: "image", source: { type: "base64", media_type: x.media_type, data: x.data } }); });
       }
-      var extraNote = parts.length > imgs.length ? "\n(התמונה ארוכה ולכן חולקה ל־" + parts.length + " חלקים חופפים של אותו מסמך, לפי הסדר מלמעלה למטה.)" : "";
+      var extraNote = parts.length > imgs.length ? "\n(תמונה ארוכה חולקה לחלקים חופפים של אותו עמוד, לפי הסדר מלמעלה למטה.)" : "";
       parts.push({ type: "text", text: last.content + extraNote });
       last.content = parts;
     }
@@ -384,7 +389,7 @@
     var tools = defs.map(function (t) { return { name: t.name, description: t.description || "", input_schema: t.inputSchema || { type: "object", properties: {} } }; });
     for (var round = 0; round < 8; round++) {
       if (opts.signal && opts.signal.aborted) throw { code: "cancelled", message: "cancelled" };
-      var r = await callClaude(tier, messages, { system: opts.system, tools: tools, max_tokens: opts.maxTokens || 1600 });
+      var r = await callClaude(tier, messages, { system: opts.system, tools: tools, max_tokens: opts.maxTokens || 1600, purpose: opts.purpose || undefined });
       var text = (r.content || []).filter(function (b) { return b.type === "text"; }).map(function (b) { return b.text; }).join("");
       if (r.stop_reason === "tool_use") {
         messages.push({ role: "assistant", content: r.content });
@@ -405,7 +410,7 @@
     throw { code: "error", message: "too many tool rounds" };
   }
   sample.json = async function (input, opts) {
-    var r = await sample(input, Object.assign({}, opts, { system: "Respond with a single valid JSON value only. No prose and no code fences.", maxTokens: 2500 }));
+    var r = await sample(input, Object.assign({}, opts, { system: "Respond with a single valid JSON value only. No prose and no code fences.", maxTokens: (opts && opts.maxTokens) || 2500 }));
     var t = r.text.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
     try { return JSON.parse(t); }
     catch (e) { var m = t.match(/[\[{][\s\S]*[\]}]/); if (m) return JSON.parse(m[0]); throw { code: "invalid_json", message: "bad json" }; }

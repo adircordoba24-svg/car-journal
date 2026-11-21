@@ -1,5 +1,5 @@
 // Car Journal: holds the API key and calls Claude, with a monthly quota per user.
-// Sonnet 5.5 for receipts and chat, Opus 5.5 for planning and analysis.
+// Sonnet 5.5 for receipts and chat, Opus 5.5 for planning, analysis and reading insurance documents.
 const MODELS: Record<string, string> = { sonnet: "claude-sonnet-5-5", opus: "claude-opus-5-5" };
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -16,8 +16,9 @@ function serviceKey(): string {
 }
 function kindOf(body: any): string {
   const msgs = Array.isArray(body.messages) ? body.messages : [];
-  const hasImage = msgs.some((m: any) => Array.isArray(m.content) && m.content.some((p: any) => p && p.type === "image"));
-  if (hasImage) return "receipt";
+  const has = (t: string) => msgs.some((m: any) => Array.isArray(m.content) && m.content.some((p: any) => p && p.type === t));
+  if (has("document") || body.purpose === "document") return "analysis"; // insurance policy / vehicle license
+  if (has("image")) return "receipt";
   if (Array.isArray(body.tools) && body.tools.length) return "chat";
   if (body.tier === "opus") return "analysis";
   return "chat";
@@ -56,9 +57,9 @@ Deno.serve(async (req) => {
   const remaining = await q.json().catch(() => null);
 
   const model = MODELS[body.tier] ?? MODELS.sonnet;
-  const payload: Record<string, unknown> = { model, max_tokens: Math.min(Number(body.max_tokens) || 1500, 3000), messages: body.messages };
+  const payload: Record<string, unknown> = { model, max_tokens: Math.min(Number(body.max_tokens) || 1500, body.tier === "opus" ? 8000 : 3000), messages: body.messages };
   if (typeof body.system === "string") payload.system = body.system;
-  if (Array.isArray(body.tools) && body.tools.length) payload.tools = body.tools.slice(0, 8);
+  if (Array.isArray(body.tools) && body.tools.length) payload.tools = body.tools.slice(0, 12);
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
