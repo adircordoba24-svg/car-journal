@@ -2,5 +2,7 @@
 // הגישה לנתונים מוגנת בכניסה עם סיסמה ובכללי אבטחה במסד הנתונים.
 window.CJ_CONFIG = {
   url: "https://tvsmdynvnhvibimnmdla.supabase.co",
-  anonKey: "sb_publishable_df0Ygjj_he56cXuJUjxYdQ_C1HsPmaK"
+  anonKey: "sb_publishable_df0Ygjj_he56cXuJUjxYdQ_C1HsPmaK",
+  // מפתח האתר הציבורי של Cloudflare Turnstile. כשהוא ריק, בדיקת האבטחה כבויה.
+  turnstileSiteKey: ""
 };

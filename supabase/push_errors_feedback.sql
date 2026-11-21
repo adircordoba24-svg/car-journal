@@ -1,0 +1,4 @@
+-- Applied via Supabase migrations: push_errors_feedback, pg_net_to_extensions.
+-- Tables: push_subs (per-device subscriptions, own rows), push_sent and push_config (server only),
+-- client_errors (insert own, rate limited 30/hour), feedback (insert/read own, 20/day).
+-- Daily job: cron 'car-journal-push-daily' at 07:30 UTC calls the push edge function with the token from push_config.

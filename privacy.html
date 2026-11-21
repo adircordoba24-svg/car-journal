@@ -23,7 +23,6 @@ p,li{max-width:65ch}
 ul{padding-inline-start:20px;margin:6px 0}
 .meta{color:var(--muted);font-size:14px;margin:4px 0 22px}
 a{color:var(--accent)}
-.todo{background:var(--todo);color:var(--todo-ink);padding:1px 6px;border-radius:6px;font-weight:500}
 .back{display:inline-block;max-width:720px;margin:0 auto 16px;color:var(--accent);text-decoration:none;font-size:15px}
 .wrap{max-width:720px;margin:0 auto}
 a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
@@ -33,8 +32,8 @@ a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius
 <div class="wrap"><a class="back" href="./">→ חזרה ליומן הרכב</a></div>
 <main>
 <header><img src="icons/emblem.png" alt=""><h1>מדיניות פרטיות</h1></header>
-<p class="meta">עדכון אחרון: 18 בנובמבר 2026</p>
-<p>יומן הרכב (״השירות״) מופעל על ידי <span class="todo">[שם מפעיל השירות]</span>. המדיניות מסבירה איזה מידע נשמר כשמשתמשים בשירות, למה הוא נשמר, עם מי הוא משותף ומה הזכויות שלך.</p>
+<p class="meta">עדכון אחרון: 21 בנובמבר 2026</p>
+<p>יומן הרכב (״השירות״) מפותח ומופעל על ידי מפתח עצמאי (״אנחנו״). המדיניות מסבירה איזה מידע נשמר כשמשתמשים בשירות, למה הוא נשמר, עם מי הוא משותף ומה הזכויות שלך.</p>
 <h2>איזה מידע נשמר</h2>
 <ul>
 <li><b>פרטי חשבון:</b> כתובת מייל וסיסמה. הסיסמה נשמרת מוצפנת (hash) ואיש אינו יכול לקרוא אותה.</li>
@@ -42,6 +41,9 @@ a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius
 <li><b>רישומים:</b> תדלוקים, טיפולים, הוצאות ותזכורות שהזנת או שהסוכן מילא בשבילך.</li>
 <li><b>קבלות:</b> תמונות של קבלות וחשבוניות שצירפת. קבלה יכולה לכלול פרטים כמו מספר רכב, מספר חשבונית ושם תחנה.</li>
 <li><b>מונה שימוש בסוכנים:</b> כמה פעמים השתמשת בכל סוג סוכן החודש, כדי לאכוף את המכסה החודשית.</li>
+<li><b>התראות:</b> אם הפעלת התראות לטלפון, נשמרת כתובת מנוי שהדפדפן יוצר לשם כך, וכן אילו תזכורות כבר נשלחו, כדי לא לשלוח אותן שוב ושוב.</li>
+<li><b>תקלות:</b> כשמשהו נשבר באפליקציה, נשמרים תיאור טכני של השגיאה, סוג הדפדפן וגרסת האפליקציה, כדי שנוכל לתקן. נתוני הרכב והקבלות לא נכללים.</li>
+<li><b>משוב:</b> מה שכתבת לנו בטופס המשוב.</li>
 </ul>
 <p>השירות לא אוסף מיקום, אנשי קשר או פרטי תשלום, ואין בו פרסומות או כלי מעקב של צד שלישי. בדפדפן נשמר מזהה התחברות, כדי שלא תצטרך להתחבר בכל פעם.</p>
 <h2>למה המידע נשמר</h2>
@@ -53,6 +55,8 @@ a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius
 <li><b>Supabase:</b> מסד הנתונים, אחסון הקבלות וההתחברות. השרתים באירופה.</li>
 <li><b>Anthropic:</b> עיבוד הבקשות לסוכנים, כמתואר למעלה.</li>
 <li><b>GitHub Pages:</b> אחסון קבצי האתר עצמו. המידע האישי שלך לא נשמר שם.</li>
+<li><b>Cloudflare Turnstile:</b> בדיקת אבטחה במסך הכניסה, שמבדילה בין אדם לבוט.</li>
+<li><b>שירותי ההתראות של יצרן הדפדפן</b> (Apple, Google, Mozilla): מעבירים את ההתראה לטלפון. תוכן ההתראה מוצפן בדרך.</li>
 <li><b>Google Fonts:</b> טעינת הגופנים. כתובת ה־IP של הדפדפן נחשפת ל־Google בעת הטעינה.</li>
 </ul>
 <p>אנחנו לא מוכרים מידע ולא משתפים אותו עם אף גורם אחר, אלא אם החוק מחייב זאת.</p>
@@ -66,7 +70,7 @@ a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius
 <li><b>תיקון:</b> אפשר לערוך כל רישום ואת פרטי הרכב בכל רגע.</li>
 <li><b>מחיקה:</b> ״החשבון שלי״ ← ״מחיקת החשבון״ מוחק הכל לצמיתות.</li>
 </ul>
-<p>לכל שאלה או בקשה בנושא פרטיות: <span class="todo">[כתובת מייל ליצירת קשר]</span>.</p>
+<p>לכל שאלה או בקשה בנושא פרטיות: דרך האפליקציה: ״החשבון שלי״ ← ״משוב ודיווח על תקלה״.</p>
 <h2>גיל</h2>
 <p>השירות מיועד לבני 18 ומעלה.</p>
 <h2>שינויים במדיניות</h2>

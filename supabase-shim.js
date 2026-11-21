@@ -24,6 +24,7 @@
     ".cj-login .switch{background:none;border:0;color:var(--accent);font-size:14px;padding:6px}" +
     ".cj-login .consent{display:flex;gap:8px;align-items:flex-start;text-align:start;font-size:13px;color:var(--muted);line-height:1.5}" +
     ".cj-login .consent input{width:18px;height:18px;margin-top:2px;accent-color:var(--accent);flex:none}" +
+    ".cj-login .cj-captcha:empty{display:none}.cj-login .cj-captcha{display:flex;justify-content:center}" +
     ".cj-login a{color:var(--accent)}.cj-login .legal{font-size:12px;color:var(--faint)}.cj-login .ok{color:var(--ok);font-size:14px}";
   document.head.appendChild(css);
 
@@ -35,6 +36,28 @@
     "Signups not allowed for this instance": "ההרשמה סגורה. היכנס עם החשבון הקיים",
     "Email not confirmed": "צריך לאשר את המייל לפני הכניסה"
   };
+  /* CAPTCHA (Cloudflare Turnstile): turned on only when CJ_CONFIG.turnstileSiteKey is set */
+  function captcha(box) {
+    var key = C.turnstileSiteKey, wid = null, tok = null, waiters = [];
+    if (!key) return { on: false, token: function () { return Promise.resolve(null); }, reset: function () {} };
+    function render() {
+      wid = window.turnstile.render(box, { sitekey: key, language: "he", appearance: "interaction-only",
+        callback: function (t) { tok = t; waiters.splice(0).forEach(function (w) { w(t); }); },
+        "expired-callback": function () { tok = null; }, "error-callback": function () { tok = null; } });
+    }
+    if (window.turnstile) render();
+    else {
+      window.cjTurnstileReady = render;
+      var sc = document.createElement("script");
+      sc.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=cjTurnstileReady";
+      sc.async = true; document.head.appendChild(sc);
+    }
+    return {
+      on: true,
+      token: function () { return tok ? Promise.resolve(tok) : new Promise(function (res) { waiters.push(res); setTimeout(function () { res(null); }, 15000); }); },
+      reset: function () { tok = null; try { if (wid !== null) window.turnstile.reset(wid); } catch (e) {} }
+    };
+  }
   function showLogin(done) {
     if (!document.body) { document.addEventListener("DOMContentLoaded", function () { showLogin(done); }); return; }
     var mode = "in";
@@ -45,6 +68,7 @@
       '<div class="field"><label for="cjEmail">מייל</label><input type="text" id="cjEmail" inputmode="email" autocomplete="email" dir="ltr"></div>' +
       '<div class="field"><label for="cjPass">סיסמה</label><input type="password" id="cjPass" autocomplete="current-password" dir="ltr" style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-size:16px;min-height:46px"></div>' +
       '<label class="consent" id="cjConsentRow" hidden><input type="checkbox" id="cjConsent"><span>קראתי ואני מסכים ל<a href="terms.html" target="_blank" rel="noopener">תנאי השימוש</a> ול<a href="privacy.html" target="_blank" rel="noopener">מדיניות הפרטיות</a></span></label>' +
+      '<div id="cjCaptcha" class="cj-captcha"></div>' +
       '<div class="err" id="cjErr" role="alert"></div>' +
       '<button class="btn primary block" type="submit" id="cjGo">כניסה</button>' +
       '<button class="switch" type="button" id="cjForgot">שכחתי סיסמה</button>' +
@@ -54,6 +78,7 @@
     var f = el.querySelector("form"), err = el.querySelector("#cjErr"), go = el.querySelector("#cjGo");
     var passRow = el.querySelector("#cjPass").closest(".field"), consentRow = el.querySelector("#cjConsentRow");
     var forgotBtn = el.querySelector("#cjForgot"), switchBtn = el.querySelector("#cjSwitch");
+    var cap = captcha(el.querySelector("#cjCaptcha"));
     function setMode(m) {
       mode = m; err.className = "err"; err.textContent = "";
       go.textContent = m === "in" ? "כניסה" : m === "up" ? "יצירת חשבון" : "שליחת קישור לאיפוס";
@@ -71,8 +96,10 @@
       if (mode === "reset") {
         if (!/^\S+@\S+\.\S+$/.test(email)) { err.textContent = "צריך כתובת מייל תקינה"; return; }
         go.disabled = true;
-        var rr = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
-        go.disabled = false;
+        var rt = await cap.token();
+        if (cap.on && !rt) { go.disabled = false; err.textContent = "צריך להשלים את בדיקת האבטחה"; return; }
+        var rr = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname, captchaToken: rt || undefined });
+        go.disabled = false; cap.reset();
         if (rr.error && /rate|429/i.test(String(rr.error.message || rr.error.status))) { err.textContent = "נשלחו יותר מדי בקשות. נסה שוב בעוד כמה דקות."; return; }
         err.className = "ok"; err.textContent = "אם המייל רשום אצלנו, נשלח אליו קישור לאיפוס הסיסמה.";
         return;
@@ -81,17 +108,19 @@
       if (mode === "up" && password.length < 8) { err.textContent = "הסיסמה צריכה לפחות 8 תווים"; return; }
       if (mode === "up" && !el.querySelector("#cjConsent").checked) { err.textContent = "צריך לאשר את תנאי השימוש ומדיניות הפרטיות"; return; }
       go.disabled = true; err.textContent = "";
+      var ct = await cap.token();
+      if (cap.on && !ct) { go.disabled = false; err.textContent = "צריך להשלים את בדיקת האבטחה"; return; }
       try {
         var res = mode === "in"
-          ? await sb.auth.signInWithPassword({ email: email, password: password })
-          : await sb.auth.signUp({ email: email, password: password, options: { emailRedirectTo: location.origin + location.pathname, data: { terms_accepted_at: new Date().toISOString() } } });
+          ? await sb.auth.signInWithPassword({ email: email, password: password, options: { captchaToken: ct || undefined } })
+          : await sb.auth.signUp({ email: email, password: password, options: { captchaToken: ct || undefined, emailRedirectTo: location.origin + location.pathname, data: { terms_accepted_at: new Date().toISOString() } } });
         if (res.error) throw res.error;
         if (!res.data.session) { err.textContent = "נשלח אליך מייל לאישור. אשר אותו ואז היכנס."; go.disabled = false; return; }
         uid = res.data.session.user.id;
         el.remove(); done();
       } catch (x) {
-        err.textContent = HEB[x && x.message] || "הכניסה לא הצליחה. בדוק את הפרטים ונסה שוב.";
-        go.disabled = false;
+        err.textContent = HEB[x && x.message] || (/captcha/i.test(String(x && x.message)) ? "בדיקת האבטחה נכשלה. נסה שוב." : "הכניסה לא הצליחה. בדוק את הפרטים ונסה שוב.");
+        go.disabled = false; cap.reset();
       }
     };
   }
@@ -407,6 +436,64 @@
   };
   sb.auth.getSession().then(function (r) { var s = r.data && r.data.session; if (s) window.cjAccount._email = s.user.email; });
   sb.auth.onAuthStateChange(function (ev, s) { if (s) window.cjAccount._email = s.user.email; });
+
+  /* ---------- phone notifications ---------- */
+  function b64u(s) { var p = "=".repeat((4 - s.length % 4) % 4), b = atob((s + p).replace(/-/g, "+").replace(/_/g, "/")); var a = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return a; }
+  function standalone() { return (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true; }
+  var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  window.cjPush = {
+    // "ok" | "need-install" (iPhone: add to home screen first) | "unsupported" | "denied"
+    support: function () {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return isIOS && !standalone() ? "need-install" : "unsupported";
+      if (Notification.permission === "denied") return "denied";
+      return "ok";
+    },
+    status: async function () {
+      try { var reg = await navigator.serviceWorker.getRegistration(); var s = reg && await reg.pushManager.getSubscription(); return !!s; } catch (e) { return false; }
+    },
+    enable: async function () {
+      var perm = await Notification.requestPermission();
+      if (perm !== "granted") throw { code: "denied" };
+      var reg = await navigator.serviceWorker.register("sw.js"); await navigator.serviceWorker.ready;
+      var k = await sb.functions.invoke("push", { body: { action: "key" } });
+      if (k.error || !k.data || !k.data.publicKey) throw { code: "server" };
+      var sub = await reg.pushManager.getSubscription();
+      if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(k.data.publicKey) });
+      var j = sub.toJSON();
+      var r = await sb.from("push_subs").upsert({ endpoint: j.endpoint, user_id: uid, p256dh: j.keys.p256dh, auth: j.keys.auth, ua: navigator.userAgent.slice(0, 300) });
+      if (r.error) throw { code: "server" };
+      await sb.functions.invoke("push", { body: { action: "test" } });
+      return true;
+    },
+    disable: async function () {
+      var reg = await navigator.serviceWorker.getRegistration(); var sub = reg && await reg.pushManager.getSubscription();
+      if (sub) { await sb.from("push_subs").delete().eq("endpoint", sub.endpoint); await sub.unsubscribe(); }
+      return true;
+    }
+  };
+
+  /* ---------- error monitoring: what breaks for users lands in client_errors ---------- */
+  var VER = "2026.11.21", sentErr = 0, seen = {};
+  function report(msg, src, stack) {
+    try {
+      msg = String(msg || "").slice(0, 2000);
+      if (!uid || !msg || sentErr >= 20 || seen[msg]) return;
+      if (/ResizeObserver loop|Script error\.?$|turnstile/i.test(msg)) return;
+      seen[msg] = 1; sentErr++;
+      sb.from("client_errors").insert({ user_id: uid, msg: msg, src: String(src || location.hash || "").slice(0, 500), stack: String(stack || "").slice(0, 4000), ua: navigator.userAgent.slice(0, 300), ver: VER }).then(function () {}, function () {});
+    } catch (e) {}
+  }
+  window.addEventListener("error", function (e) { report(e.message, (e.filename || "") + ":" + (e.lineno || ""), e.error && e.error.stack); });
+  window.addEventListener("unhandledrejection", function (e) { var r = e.reason || {}; report(r.message || r.code || String(r), "promise", r.stack); });
+  window.cjReport = report;
+
+  /* ---------- beta feedback ---------- */
+  window.cjFeedback = async function (kind, body) {
+    var r = await sb.from("feedback").insert({ user_id: uid, kind: kind, body: String(body).slice(0, 3000), ua: navigator.userAgent.slice(0, 300), ver: VER });
+    if (r.error) throw { code: /feedback_limit/.test(r.error.message) ? "limit" : "error" };
+    return true;
+  };
+  window.cjVersion = VER;
 
   window.claude = {
     use: async function (name) {
