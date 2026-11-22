@@ -58,6 +58,11 @@ const ok = (cond, name, extra) => { if (cond) { passed++; console.log("  ✓ " +
   await p.click("#qfSave");
   ok(await until(p, () => __rows.some((r) => r.collection === "fuel" && r.data.odo === 30900)), "quick fuel saves");
 
+  // regression: closing the window while the agent reads a receipt used to throw
+  await p.click(".m-act.primary"); await p.waitForTimeout(300);
+  await p.setInputFiles("#qfFile", IMG); await p.keyboard.press("Escape"); await p.waitForTimeout(1200);
+  ok(!errors.some((e) => /qfT|qfMore/.test(e)), "closing quick fuel while reading is safe", errors);
+
   console.log("offline");
   await p.evaluate(() => { window.__offline = true; }); await p.context().setOffline(true);
   await p.click(".m-act.primary"); await p.waitForTimeout(300);

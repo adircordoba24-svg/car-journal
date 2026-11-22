@@ -70,7 +70,7 @@ function fuelForm(id,pre,file){
     const rb=root.querySelector('#fRead');
     if(rb)rb.onclick=async()=>{const st=root.querySelector('#fReadSt');busy(rb,true,'הסוכן קורא…');st.textContent='';
       try{const url=window.__rcptUrlAsync?await window.__rcptUrlAsync(r.receipt.id):'/_blob/'+encodeURIComponent(r.receipt.id);
-        const blob=await (await fetch(url)).blob();const x=await readFuelReceipt(blob);
+        const blob=await (await fetch(url)).blob();const x=await readFuelReceipt(blob);if(!rb.isConnected)return;
         if(!x){st.textContent='זו לא נראית קבלת דלק';return;}
         const put=(sel,v,dec)=>{const el=root.querySelector(sel);if(v!=null&&!n(el.value))el.value=dec!=null?(+v).toFixed(dec):v;};
         put('#fT',x.total,2);put('#fL',x.liters,2);put('#fP',x.pricePerL,3);

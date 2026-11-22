@@ -37,6 +37,7 @@ function fuelQuick(){
       reading=true;status('',`<span class="spin"></span>הסוכן קורא את הקבלה…`);
       try{
         const r=await readFuelReceipt(f);
+        if(!root.contains(file))return; // the window was closed while the agent was reading
         if(!r){status('warn','זו לא נראית קבלת דלק. אפשר למלא את הפרטים ידנית.');$r('#qfMore').open=true;return;}
         if(r.total)$r('#qfT').value=r.total.toFixed(2);
         if(r.liters)$r('#qfL').value=+r.liters.toFixed(3);
@@ -46,7 +47,7 @@ function fuelQuick(){
         sum();
         if(r.total)status('ok',`${I('check')}הסוכן מילא: ${esc($r('#qfSum').textContent)}${r.date&&r.date!==today()?` · ${fmtD(r.date)}`:''}`);
         else{status('warn','הסוכן לא מצא את הסכום בקבלה. השלם אותו בפרטים.');$r('#qfMore').open=true;$r('#qfT').focus();}
-      }catch(e){console.warn(e);status('warn',aiErr(e));$r('#qfMore').open=true;}
+      }catch(e){console.warn(e);if(!root.contains(file))return;status('warn',aiErr(e));$r('#qfMore').open=true;}
       finally{reading=false;}
     });
     $r('#qf').onsubmit=async e=>{

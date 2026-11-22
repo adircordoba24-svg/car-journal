@@ -112,12 +112,12 @@ function ticketSheet(id){
     <div class="formacts"><button class="btn primary" type="submit">${I('check')}שמירה</button>${id?`<button class="btn ghost" type="button" id="tkDel" style="color:var(--crit)">${I('trash')}מחיקה</button>`:''}<button class="btn ghost" type="button" data-act="close">ביטול</button></div></form>`,root=>{
     let file=null;const v=k=>root.querySelector('#'+k);
     const sc=v('tkScan');if(sc){sc.onclick=()=>v('tkF').click();v('tkF').onchange=async()=>{file=v('tkF').files[0];if(!file)return;busy(sc,true,'הסוכן קורא את הדוח…');
-      try{const r=await sample.json(ticketPrompt(),{images:[file],modelTier:'default',maxTokens:600,purpose:'scan'});const d=/^\d{4}-\d\d-\d\d$/;
+      try{const r=await sample.json(ticketPrompt(),{images:[file],modelTier:'default',maxTokens:600,purpose:'scan'});if(!sc.isConnected)return;const d=/^\d{4}-\d\d-\d\d$/;
         if(!r||r.isTicket===false){v('tkS').textContent='זה לא נראה כמו דוח. אפשר למלא ידנית.';}
         else{if(TK_KIND[r.kind])v('tkK').value=r.kind;if(r.description)v('tkD').value=r.description;['offenseDate:tkO','serviceDate:tkR','dueDate:tkU'].forEach(x=>{const [k,i]=x.split(':');if(d.test(r[k]||''))v(i).value=r[k];});
           if(n(r.amount))v('tkA').value=n(r.amount);if(n(r.points)!=null)v('tkP').value=n(r.points);file._no=r.ticketNo||'';
           v('tkS').textContent=n(r.points)==null&&r.kind!=='parking'?'מולא. אם יש נקודות על העבירה, הוסף אותן ידנית.':'מולא. בדוק ושמור.';}
-      }catch(e){v('tkS').textContent=aiErr(e,'הסוכן לא הצליח לקרוא. אפשר למלא ידנית.');}busy(sc,false);};}
+      }catch(e){if(sc.isConnected)v('tkS').textContent=aiErr(e,'הסוכן לא הצליח לקרוא. אפשר למלא ידנית.');}busy(sc,false);};}
     const del=v('tkDel');if(del)del.onclick=async()=>{await syncGlobalReminder('tk:'+id,'','');undoDelete('ticket',id,'הדוח נמחק');};
     root.querySelector('#tk').onsubmit=async e=>{e.preventDefault();
       const data={kind:v('tkK').value,description:v('tkD').value.trim(),offenseDate:v('tkO').value,serviceDate:v('tkR').value,amount:n(v('tkA').value),points:n(v('tkP').value)||0,dueDate:v('tkU').value,status:v('tkSt').value,carId:v('tkC')?v('tkC').value:'*'};

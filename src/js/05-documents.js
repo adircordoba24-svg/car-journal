@@ -218,7 +218,7 @@ function driverSheet(){
     let file=null;
     const sc=root.querySelector('#dvScan');if(sc){const f=root.querySelector('#dvF');sc.onclick=()=>f.click();
       f.onchange=async()=>{file=f.files[0];if(!file)return;busy(sc,true,'הסוכן קורא…');
-        try{const raw=await sample.json(dlicPrompt(),{images:[file],modelTier:'default',maxTokens:400,purpose:'scan'});const d=/^\d{4}-\d\d-\d\d$/;
+        try{const raw=await sample.json(dlicPrompt(),{images:[file],modelTier:'default',maxTokens:400,purpose:'scan'});if(!sc.isConnected)return;const d=/^\d{4}-\d\d-\d\d$/;
           if(!raw||raw.isDriverLicense===false){toast('זה לא נראה כמו רישיון נהיגה');}else{if(d.test(raw.expiry||''))root.querySelector('#dvE').value=raw.expiry;if(d.test(raw.firstIssued||''))root.querySelector('#dvI').value=raw.firstIssued;toast('התאריכים מולאו. בדוק ושמור');}
         }catch(e){toast(aiErr(e,'לא הצלחתי לקרוא. אפשר למלא ידנית'));}busy(sc,false);};}
     root.querySelector('#dv').onsubmit=async e=>{e.preventDefault();

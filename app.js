@@ -660,7 +660,7 @@ function fuelForm(id,pre,file){
     const rb=root.querySelector('#fRead');
     if(rb)rb.onclick=async()=>{const st=root.querySelector('#fReadSt');busy(rb,true,'הסוכן קורא…');st.textContent='';
       try{const url=window.__rcptUrlAsync?await window.__rcptUrlAsync(r.receipt.id):'/_blob/'+encodeURIComponent(r.receipt.id);
-        const blob=await (await fetch(url)).blob();const x=await readFuelReceipt(blob);
+        const blob=await (await fetch(url)).blob();const x=await readFuelReceipt(blob);if(!rb.isConnected)return;
         if(!x){st.textContent='זו לא נראית קבלת דלק';return;}
         const put=(sel,v,dec)=>{const el=root.querySelector(sel);if(v!=null&&!n(el.value))el.value=dec!=null?(+v).toFixed(dec):v;};
         put('#fT',x.total,2);put('#fL',x.liters,2);put('#fP',x.pricePerL,3);
@@ -948,6 +948,7 @@ function fuelQuick(){
       reading=true;status('',`<span class="spin"></span>הסוכן קורא את הקבלה…`);
       try{
         const r=await readFuelReceipt(f);
+        if(!root.contains(file))return; // the window was closed while the agent was reading
         if(!r){status('warn','זו לא נראית קבלת דלק. אפשר למלא את הפרטים ידנית.');$r('#qfMore').open=true;return;}
         if(r.total)$r('#qfT').value=r.total.toFixed(2);
         if(r.liters)$r('#qfL').value=+r.liters.toFixed(3);
@@ -957,7 +958,7 @@ function fuelQuick(){
         sum();
         if(r.total)status('ok',`${I('check')}הסוכן מילא: ${esc($r('#qfSum').textContent)}${r.date&&r.date!==today()?` · ${fmtD(r.date)}`:''}`);
         else{status('warn','הסוכן לא מצא את הסכום בקבלה. השלם אותו בפרטים.');$r('#qfMore').open=true;$r('#qfT').focus();}
-      }catch(e){console.warn(e);status('warn',aiErr(e));$r('#qfMore').open=true;}
+      }catch(e){console.warn(e);if(!root.contains(file))return;status('warn',aiErr(e));$r('#qfMore').open=true;}
       finally{reading=false;}
     });
     $r('#qf').onsubmit=async e=>{
@@ -1299,7 +1300,7 @@ function driverSheet(){
     let file=null;
     const sc=root.querySelector('#dvScan');if(sc){const f=root.querySelector('#dvF');sc.onclick=()=>f.click();
       f.onchange=async()=>{file=f.files[0];if(!file)return;busy(sc,true,'הסוכן קורא…');
-        try{const raw=await sample.json(dlicPrompt(),{images:[file],modelTier:'default',maxTokens:400,purpose:'scan'});const d=/^\d{4}-\d\d-\d\d$/;
+        try{const raw=await sample.json(dlicPrompt(),{images:[file],modelTier:'default',maxTokens:400,purpose:'scan'});if(!sc.isConnected)return;const d=/^\d{4}-\d\d-\d\d$/;
           if(!raw||raw.isDriverLicense===false){toast('זה לא נראה כמו רישיון נהיגה');}else{if(d.test(raw.expiry||''))root.querySelector('#dvE').value=raw.expiry;if(d.test(raw.firstIssued||''))root.querySelector('#dvI').value=raw.firstIssued;toast('התאריכים מולאו. בדוק ושמור');}
         }catch(e){toast(aiErr(e,'לא הצלחתי לקרוא. אפשר למלא ידנית'));}busy(sc,false);};}
     root.querySelector('#dv').onsubmit=async e=>{e.preventDefault();
@@ -1438,12 +1439,12 @@ function ticketSheet(id){
     <div class="formacts"><button class="btn primary" type="submit">${I('check')}שמירה</button>${id?`<button class="btn ghost" type="button" id="tkDel" style="color:var(--crit)">${I('trash')}מחיקה</button>`:''}<button class="btn ghost" type="button" data-act="close">ביטול</button></div></form>`,root=>{
     let file=null;const v=k=>root.querySelector('#'+k);
     const sc=v('tkScan');if(sc){sc.onclick=()=>v('tkF').click();v('tkF').onchange=async()=>{file=v('tkF').files[0];if(!file)return;busy(sc,true,'הסוכן קורא את הדוח…');
-      try{const r=await sample.json(ticketPrompt(),{images:[file],modelTier:'default',maxTokens:600,purpose:'scan'});const d=/^\d{4}-\d\d-\d\d$/;
+      try{const r=await sample.json(ticketPrompt(),{images:[file],modelTier:'default',maxTokens:600,purpose:'scan'});if(!sc.isConnected)return;const d=/^\d{4}-\d\d-\d\d$/;
         if(!r||r.isTicket===false){v('tkS').textContent='זה לא נראה כמו דוח. אפשר למלא ידנית.';}
         else{if(TK_KIND[r.kind])v('tkK').value=r.kind;if(r.description)v('tkD').value=r.description;['offenseDate:tkO','serviceDate:tkR','dueDate:tkU'].forEach(x=>{const [k,i]=x.split(':');if(d.test(r[k]||''))v(i).value=r[k];});
           if(n(r.amount))v('tkA').value=n(r.amount);if(n(r.points)!=null)v('tkP').value=n(r.points);file._no=r.ticketNo||'';
           v('tkS').textContent=n(r.points)==null&&r.kind!=='parking'?'מולא. אם יש נקודות על העבירה, הוסף אותן ידנית.':'מולא. בדוק ושמור.';}
-      }catch(e){v('tkS').textContent=aiErr(e,'הסוכן לא הצליח לקרוא. אפשר למלא ידנית.');}busy(sc,false);};}
+      }catch(e){if(sc.isConnected)v('tkS').textContent=aiErr(e,'הסוכן לא הצליח לקרוא. אפשר למלא ידנית.');}busy(sc,false);};}
     const del=v('tkDel');if(del)del.onclick=async()=>{await syncGlobalReminder('tk:'+id,'','');undoDelete('ticket',id,'הדוח נמחק');};
     root.querySelector('#tk').onsubmit=async e=>{e.preventDefault();
       const data={kind:v('tkK').value,description:v('tkD').value.trim(),offenseDate:v('tkO').value,serviceDate:v('tkR').value,amount:n(v('tkA').value),points:n(v('tkP').value)||0,dueDate:v('tkU').value,status:v('tkSt').value,carId:v('tkC')?v('tkC').value:'*'};
