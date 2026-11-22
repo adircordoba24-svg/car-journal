@@ -1,11 +1,31 @@
-"""בונה את index.html מקוד האפליקציה (src/app.html) עם החיבור ל-Supabase."""
-import re, pathlib
+"""Builds the app from its source parts.
+
+src/app.css       -> app.css
+src/js/*.js       -> app.js   (joined in file-name order, inside one private scope, like the original single file)
+src/markup.html   -> the body of index.html
+
+Each file name gets a short content hash in its URL, so phones always load the newest version
+right after an update and keep using the cached copy until then.
+"""
+import hashlib, pathlib, re
+
 root = pathlib.Path(__file__).parent
-app = (root / "src" / "app.html").read_text()
-app = re.sub(r"^<title>.*?</title>\s*", "", app, flags=re.S)
-app = app.replace('<meta name="claude:viewport-fit-sides" content="cover">\n', "")
-app = app.replace("/_blob/e659200739c3afba0768da39720081ed", "icons/emblem.png")
-head = """<!doctype html>
+src = root / "src"
+
+css = (src / "app.css").read_text()
+parts = sorted((src / "js").glob("*.js"))
+js = '(function(){\n"use strict";\n' + "\n".join(
+    f"/* ===== {p.name} ===== */\n" + p.read_text() for p in parts) + "})();\n"
+markup = (src / "markup.html").read_text().replace("/_blob/e659200739c3afba0768da39720081ed", "icons/emblem.png")
+
+def tag(text):
+    return hashlib.sha1(text.encode()).hexdigest()[:10]
+
+(root / "app.css").write_text(css)
+(root / "app.js").write_text(js)
+shim = (root / "supabase-shim.js").read_text()
+
+head = f"""<!doctype html>
 <html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8">
@@ -26,17 +46,20 @@ head = """<!doctype html>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
-<style>:root{padding-top:0;padding-bottom:0}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<style>:root{{padding-top:0;padding-bottom:0}}body{{margin:0}}img{{max-width:100%}}[hidden]{{display:none!important}}</style>
+<link rel="stylesheet" href="app.css?v={tag(css)}">
 <script src="vendor/supabase.js"></script>
 <script src="config.js"></script>
-<script src="supabase-shim.js"></script>
+<script src="supabase-shim.js?v={tag(shim)}"></script>
 </head>
 <body>
 """
-tail = """
-<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){});});}</script>
+tail = f"""
+<script src="app.js?v={tag(js)}"></script>
+<script>if("serviceWorker" in navigator){{window.addEventListener("load",function(){{navigator.serviceWorker.register("sw.js").catch(function(){{}});}});}}</script>
 </body>
 </html>
 """
-(root / "index.html").write_text(head + app + tail)
-print("built index.html", len(head + app + tail))
+html = head + markup + tail
+(root / "index.html").write_text(html)
+print(f"built index.html {len(html)} · app.css {len(css)} · app.js {len(js)} ({len(parts)} parts)")

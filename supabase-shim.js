@@ -362,9 +362,23 @@
     return "";
   };
   window.__rcptUrlAsync = signed;
+  // photos are made smaller before they are stored: faster upload, much less storage (PDFs stay as they are)
+  async function shrink(blob) {
+    try {
+      if (!blob || !/^image\/(jpeg|png|webp|heic|heif)$/i.test(blob.type || "") || blob.size < 350 * 1024) return blob;
+      var bmp = await createImageBitmap(blob), max = 1800;
+      var k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+      var cv = document.createElement("canvas"); cv.width = Math.round(bmp.width * k); cv.height = Math.round(bmp.height * k);
+      var ctx = cv.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height); ctx.drawImage(bmp, 0, 0, cv.width, cv.height);
+      var out = await new Promise(function (res) { cv.toBlob(res, "image/jpeg", 0.82); });
+      if (!out || out.size >= blob.size) return blob;
+      try { return new File([out], String(blob.name || "photo").replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" }); } catch (e) { return out; }
+    } catch (e) { return blob; }
+  }
   var assets = {
     upload: async function (blob) {
       if (navigator.onLine === false) throw { code: "offline", message: "offline" };
+      blob = await shrink(blob);
       var ext = ((blob.type || "").split("/")[1] || "bin").replace("jpeg", "jpg").replace(/[^a-z0-9]/g, "");
       var path = uid + "/" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) + "." + ext;
       var r = await sb.storage.from("receipts").upload(path, blob, { contentType: blob.type || "application/octet-stream" });
@@ -485,6 +499,7 @@
       if (r.error) throw r.error;
       window.cjAccount._quota = r.data; return r.data;
     },
+    isAdmin: async function () { try { var r = await sb.rpc("is_admin"); return r.data === true; } catch (e) { return false; } },
     plan: async function () {
       var r = await sb.rpc("my_plan");
       if (r.error || !r.data) return { plan: "private", maxCars: 2 };

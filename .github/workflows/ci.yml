@@ -1,0 +1,71 @@
+# בדיקה והעלאה: כל עדכון עובר את הבדיקות האוטומטיות, ורק אם הכל עבר הוא עולה לאוויר.
+#   main     → https://adircordoba24-svg.github.io/car-journal/          (האפליקציה של כולם)
+#   staging  → https://adircordoba24-svg.github.io/car-journal/staging/  (סביבת ניסוי)
+name: test-and-deploy
+on:
+  push:
+    branches: [main, staging]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  actions: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Install the test browser
+        run: npm install --no-save playwright@1.63.0 && npx playwright install --with-deps chromium
+      - name: Build, and check the built files were committed
+        run: python3 build.py && git diff --exit-code -- index.html app.js app.css
+      - name: Run the phone tests
+        run: python3 tests/build-test-page.py && node tests/smoke.test.js
+
+  # an update to staging passed the tests: rebuild the site (deploys are only allowed from main)
+  refresh-site:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh workflow run ci.yml --ref main --repo "${{ github.repository }}"
+        env: { GH_TOKEN: "${{ github.token }}" }
+
+  deploy:
+    needs: test
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.pages.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, path: main }
+      - name: Get the staging branch (if there is one)
+        run: git clone --depth 1 --branch staging "https://github.com/${{ github.repository }}.git" staging || mkdir -p staging
+      - name: Put the site together
+        run: |
+          mkdir -p site
+          rsync -a --exclude '.git' --exclude '.github' --exclude 'tests' --exclude 'src' --exclude 'supabase' --exclude '.githooks' main/ site/
+          if [ -f staging/index.html ]; then
+            mkdir -p site/staging
+            rsync -a --exclude '.git' --exclude '.github' --exclude 'tests' --exclude 'src' --exclude 'supabase' --exclude '.githooks' staging/ site/staging/
+            # a visible ribbon so nobody confuses the test environment with the real app
+            sed -i 's#<body>#<body><div style="position:fixed;z-index:9999;top:0;inset-inline:0;background:\#b13f2e;color:\#fff;text-align:center;font:600 12px system-ui;padding:2px">סביבת ניסוי</div>#' site/staging/index.html
+            sed -i 's#<head>#<head><meta name="robots" content="noindex">#' site/staging/index.html
+          fi
+      - uses: actions/configure-pages@v5
+        id: pages
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: site }
+      - uses: actions/deploy-pages@v4

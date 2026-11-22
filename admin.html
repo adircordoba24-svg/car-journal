@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>ניהול · יומן הרכב</title>
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bellefair&family=IBM+Plex+Sans+Hebrew:wght@400;500;600&display=swap">
+<style>
+:root{--bg:#eef0f2;--surface:#fff;--fg:#16191e;--muted:#5d6570;--line:#d9dce1;--accent:#8a6a2f;--accent-soft:rgba(138,106,47,.12);--ok:#277a51;--warn:#8f6208;--crit:#b13f2e;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0c0f13;--surface:#141920;--fg:#ebe7df;--muted:#8d96a2;--line:#29313b;--accent:#cfb284;--accent-soft:rgba(207,178,132,.14);--ok:#5fbf8c;--warn:#e0b04f;--crit:#e5735f;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 "IBM Plex Sans Hebrew",system-ui,sans-serif;-webkit-font-smoothing:antialiased;
+  padding:calc(env(safe-area-inset-top,0px) + 18px) max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 40px) max(16px,env(safe-area-inset-left,0px))}
+.wrap{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header{display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap}
+header .t{display:flex;align-items:center;gap:12px}
+header img{width:42px;height:42px;border-radius:12px}
+h1{font-family:Bellefair,Georgia,serif;font-weight:400;font-size:30px;margin:0;line-height:1.1}
+h2{font-size:17px;margin:0 0 12px;font-weight:600}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;min-width:0}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.tabs button{flex:none;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:8px 14px;font:inherit;cursor:pointer;white-space:nowrap}
+.tabs button.on{border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.kpi .v{font-size:30px;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi .l{color:var(--muted);font-size:13px}
+.muted{color:var(--muted)}.small{font-size:13px}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:14px}
+th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:start;white-space:nowrap;vertical-align:middle}
+th{font-weight:600;color:var(--muted);font-size:12.5px;background:var(--bg)}
+tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:end;font-variant-numeric:tabular-nums}
+select,input{font:inherit;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+input[type=number]{width:70px}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:10px;padding:7px 12px;font:inherit;cursor:pointer;min-height:36px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){.btn.primary{color:#16191e}}
+.list{display:flex;flex-direction:column;gap:10px}
+.item{border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.item .h{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--muted);margin-bottom:6px}
+.tag{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:1px 9px;font-size:12px}
+.tag.bug{color:var(--crit);border-color:var(--crit)}.tag.idea{color:var(--ok);border-color:var(--ok)}.tag.biz{color:var(--accent);border-color:var(--accent)}
+.item p{margin:0;white-space:pre-wrap;word-break:break-word}
+details summary{cursor:pointer;color:var(--muted);font-size:13px;margin-top:6px}
+pre{white-space:pre-wrap;word-break:break-all;font-size:12px;background:var(--bg);padding:8px;border-radius:8px;margin:6px 0 0;max-height:220px;overflow:auto}
+.bars{display:flex;flex-direction:column;gap:8px}
+.bar{display:grid;grid-template-columns:120px 1fr 90px;gap:10px;align-items:center;font-size:14px}
+.bar i{display:block;height:10px;border-radius:6px;background:var(--accent)}
+.login{max-width:360px;margin:12vh auto;display:flex;flex-direction:column;gap:12px}
+.login input{padding:11px 12px;font-size:16px}
+.err{color:var(--crit);min-height:1.3em;font-size:14px}
+.ok{color:var(--ok)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><div class="t"><img src="icons/emblem.png" alt=""><div><h1>ניהול</h1><div class="small muted">יומן הרכב · רק לבעלים</div></div></div>
+    <div><a class="btn" href="./">חזרה לאפליקציה</a> <button class="btn" id="refresh" hidden>רענון</button></div></header>
+  <form class="card login" id="login" hidden>
+    <h2>כניסה</h2>
+    <input type="email" id="em" placeholder="מייל" autocomplete="email" dir="ltr" required>
+    <input type="password" id="pw" placeholder="סיסמה" autocomplete="current-password" dir="ltr" required>
+    <div class="err" id="lerr" role="alert"></div>
+    <button class="btn primary" type="submit">כניסה</button>
+  </form>
+  <div class="card" id="denied" hidden><h2>אין הרשאה</h2><p class="muted">המסך הזה זמין רק למנהל האפליקציה.</p></div>
+  <nav class="tabs" id="tabs" hidden role="tablist">
+    <button data-t="overview" class="on">סקירה</button><button data-t="users">משתמשים</button><button data-t="costs">עלויות AI</button>
+    <button data-t="feedback">משוב</button><button data-t="errors">תקלות</button><button data-t="backups">גיבויים</button>
+  </nav>
+  <main id="main"></main>
+</div>
+<script src="vendor/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+(function(){
+  "use strict";
+  const C=window.CJ_CONFIG, sb=window.supabase.createClient(C.url,C.anonKey,{auth:{persistSession:true,autoRefreshToken:true,storageKey:"cj-auth"}});
+  const $=s=>document.querySelector(s), main=$('#main');
+  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const ILS=3.7; // rough USD→ILS for display
+  const usd=v=>'$'+(+v||0).toFixed(v<1?3:2), ils=v=>'₪'+((+v||0)*ILS).toFixed(2);
+  const dt=s=>s?new Date(s).toLocaleDateString('he-IL',{day:'numeric',month:'short',year:'2-digit'}):'—';
+  const dtt=s=>s?new Date(s).toLocaleString('he-IL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'—';
+  const ago=s=>{if(!s)return 'לא נכנס';const d=Math.floor((Date.now()-new Date(s))/864e5);return d<=0?'היום':d===1?'אתמול':`לפני ${d} ימים`;};
+  const KIND={receipt:'סריקות',chat:'יועץ',analysis:'ניתוחים ומסמכים'};
+  let tab='overview', cache={};
+  async function rpc(n,a){const r=await sb.rpc(n,a||{});if(r.error)throw r.error;return r.data;}
+
+  async function start(){
+    const s=(await sb.auth.getSession()).data.session;
+    if(!s){$('#login').hidden=false;return;}
+    let admin=false;try{admin=await rpc('is_admin');}catch(e){}
+    if(!admin){$('#denied').hidden=false;return;}
+    $('#tabs').hidden=false;$('#refresh').hidden=false;show();
+  }
+  $('#login').onsubmit=async e=>{e.preventDefault();$('#lerr').textContent='';
+    const r=await sb.auth.signInWithPassword({email:$('#em').value.trim(),password:$('#pw').value});
+    if(r.error){$('#lerr').textContent='הכניסה לא הצליחה';return;}$('#login').hidden=true;start();};
+  $('#tabs').onclick=e=>{const b=e.target.closest('button[data-t]');if(!b)return;tab=b.dataset.t;document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('on',x===b));show();};
+  $('#refresh').onclick=()=>{cache={};show();};
+  async function get(k,f){if(!cache[k])cache[k]=await f();return cache[k];}
+
+  async function show(){
+    main.innerHTML='<div class="card muted">טוען…</div>';
+    try{main.innerHTML=await ({overview,users,costs,feedback,errors,backups}[tab])();bind();}
+    catch(e){main.innerHTML=`<div class="card err">שגיאה: ${esc(e.message||e)}</div>`;}
+  }
+  async function overview(){
+    const [u,c,f,er]=await Promise.all([get('users',()=>rpc('admin_users')),get('costs',()=>rpc('admin_costs',{p_days:30})),get('fb',()=>rpc('admin_feedback',{p_limit:100})),get('err',()=>rpc('admin_errors',{p_limit:100}))]);
+    const wk=Date.now()-7*864e5, month=new Date();month.setDate(1);month.setHours(0,0,0,0);
+    const active=u.filter(x=>x.last_sign_in_at&&new Date(x.last_sign_in_at)>wk).length, fresh=u.filter(x=>new Date(x.created_at)>wk).length;
+    const mUsd=c.filter(x=>new Date(x.day)>=month).reduce((s,x)=>s+ +x.usd,0), mCalls=c.filter(x=>new Date(x.day)>=month).reduce((s,x)=>s+ +x.calls,0);
+    const errWk=er.filter(x=>new Date(x.at)>wk).length;
+    const perUser=u.length?mUsd/u.length:0;
+    return `<section class="kpis">
+      ${[['משתמשים',u.length,fresh?`+${fresh} השבוע`:''],['פעילים ב־7 ימים',active,''],['עלות AI החודש',ils(mUsd),usd(mUsd)+` · ${mCalls} פעולות`],['ממוצע למשתמש',ils(perUser),'החודש'],['משוב',f.length,''],['תקלות ב־7 ימים',errWk,'']].map(([l,v,s])=>`<div class="card kpi"><div class="l">${l}</div><div class="v">${v}</div>${s?`<div class="small muted">${esc(s)}</div>`:''}</div>`).join('')}
+    </section>
+    <section class="card"><h2>משוב אחרון</h2>${f.length?`<div class="list">${f.slice(0,4).map(fbItem).join('')}</div>`:'<p class="muted">עוד אין משוב.</p>'}</section>
+    <section class="card"><h2>תקלות אחרונות</h2>${er.length?`<div class="list">${er.slice(0,4).map(errItem).join('')}</div>`:'<p class="muted">אין תקלות. 👏</p>'}</section>`;
+  }
+  async function users(){
+    const u=await get('users',()=>rpc('admin_users'));
+    return `<section class="card"><h2>משתמשים (${u.length})</h2><div class="tw"><table><thead><tr>
+      <th>מייל</th><th>הצטרף</th><th>נכנס לאחרונה</th><th class="num">רכבים</th><th class="num">רישומים</th><th class="num">AI החודש</th><th class="num">תקלות</th><th>תוכנית</th><th class="num">מקס׳ רכבים</th><th></th></tr></thead><tbody>
+      ${u.map(x=>`<tr data-u="${esc(x.id)}"><td dir="ltr" style="text-align:end">${esc(x.email)}</td><td>${dt(x.created_at)}</td><td>${ago(x.last_sign_in_at)}</td><td class="num">${x.cars}</td><td class="num">${x.records}</td>
+        <td class="num">${x.ai_calls_month} · ${ils(x.ai_usd_month)}</td><td class="num">${x.errors_week||''}</td>
+        <td><select class="pl"><option value="private" ${x.plan==='private'?'selected':''}>פרטי</option><option value="business" ${x.plan==='business'?'selected':''}>עסקי</option></select></td>
+        <td class="num"><input type="number" class="mx" min="1" max="200" value="${x.max_cars}"></td><td><button class="btn sv">שמירה</button></td></tr>`).join('')}
+      </tbody></table></div><p class="small muted">חשבון עסקי: בוחרים "עסקי" ומספר רכבים, ושומרים. השינוי נכנס לתוקף בכניסה הבאה של המשתמש לאפליקציה.</p></section>`;
+  }
+  async function costs(){
+    const c=await get('costs',()=>rpc('admin_costs',{p_days:30}));
+    const byKind={};c.forEach(x=>{const k=byKind[x.kind]||(byKind[x.kind]={calls:0,usd:0});k.calls+= +x.calls;k.usd+= +x.usd;});
+    const tot=Object.values(byKind).reduce((s,x)=>s+x.usd,0), max=Math.max(0.0001,...Object.values(byKind).map(x=>x.usd));
+    const days={};c.forEach(x=>{days[x.day]=(days[x.day]||0)+ +x.usd;});
+    return `<section class="card"><h2>30 הימים האחרונים: ${ils(tot)} (${usd(tot)})</h2>
+      ${Object.keys(byKind).length?`<div class="bars">${Object.entries(byKind).sort((a,b)=>b[1].usd-a[1].usd).map(([k,v])=>`<div class="bar"><span>${KIND[k]||esc(k)}</span><i style="width:${Math.max(2,v.usd/max*100)}%"></i><span class="small" style="text-align:end">${ils(v.usd)} · ${v.calls}</span></div>`).join('')}</div>
+      <p class="small muted">ממוצע לפעולה: ${Object.entries(byKind).map(([k,v])=>`${KIND[k]||k} ${ils(v.usd/v.calls)}`).join(' · ')}</p>`:'<p class="muted">עוד אין פעולות סוכן שנרשמו.</p>'}
+      <p class="small muted">שקלים לפי שער משוער של ${ILS} ₪ לדולר.</p></section>
+      <section class="card"><h2>לפי יום</h2><div class="tw"><table style="min-width:420px"><thead><tr><th>יום</th><th>סוג</th><th class="num">פעולות</th><th class="num">טוקנים (קלט/פלט)</th><th class="num">עלות</th></tr></thead><tbody>
+      ${c.map(x=>`<tr><td>${dt(x.day)}</td><td>${KIND[x.kind]||esc(x.kind)}</td><td class="num">${x.calls}</td><td class="num">${(+x.tokens_in).toLocaleString()} / ${(+x.tokens_out).toLocaleString()}</td><td class="num">${ils(x.usd)}</td></tr>`).join('')||'<tr><td colspan="5" class="muted">אין נתונים</td></tr>'}
+      </tbody></table></div></section>`;
+  }
+  const fbItem=x=>{const biz=/חשבון עסקי/.test(x.body||'');return `<div class="item"><div class="h"><span class="tag ${biz?'biz':x.kind}">${biz?'חשבון עסקי':x.kind==='bug'?'תקלה':x.kind==='idea'?'רעיון':'אחר'}</span><span dir="ltr">${esc(x.email||'')}</span><span>${dtt(x.at)}</span>${x.ver?`<span>גרסה ${esc(x.ver)}</span>`:''}</div><p>${esc(x.body)}</p></div>`;};
+  const errItem=x=>`<div class="item"><div class="h"><span dir="ltr">${esc(x.email||'')}</span><span>${dtt(x.at)}</span>${x.src?`<span dir="ltr">${esc(String(x.src).slice(0,60))}</span>`:''}</div><p dir="ltr" style="text-align:end">${esc(x.msg)}</p>${x.stack?`<details><summary>פרטים טכניים</summary><pre dir="ltr">${esc(x.stack)}</pre><div class="small muted" dir="ltr">${esc(x.ua||'')}</div></details>`:''}</div>`;
+  async function feedback(){const f=await get('fb',()=>rpc('admin_feedback',{p_limit:200}));return `<section class="card"><h2>משוב (${f.length})</h2>${f.length?`<div class="list">${f.map(fbItem).join('')}</div>`:'<p class="muted">עוד אין משוב.</p>'}</section>`;}
+  async function errors(){const e=await get('err',()=>rpc('admin_errors',{p_limit:200}));return `<section class="card"><h2>תקלות (${e.length})</h2>${e.length?`<div class="list">${e.map(errItem).join('')}</div>`:'<p class="muted">אין תקלות. 👏</p>'}</section>`;}
+  async function backups(){
+    const b=await rpc('admin_backups');
+    return `<section class="card"><h2>גיבויים</h2><p class="small muted">כל לילה בשעה 02:15 נשמר גיבוי של כל מסד הנתונים (14 הימים האחרונים). קבצי הקבלות עצמם נשמרים בנפרד ולא נכללים כאן.</p>
+      <p><button class="btn primary" id="bkNow">גיבוי עכשיו</button> <span id="bkSt" class="small" role="status"></span></p>
+      <div class="tw"><table style="min-width:420px"><thead><tr><th>קובץ</th><th>נוצר</th><th class="num">גודל</th><th></th></tr></thead><tbody>
+      ${b.map(x=>`<tr><td dir="ltr" style="text-align:end">${esc(x.name)}</td><td>${dtt(x.created_at)}</td><td class="num">${(x.size/1024).toFixed(1)} KB</td><td><button class="btn dl" data-n="${esc(x.name)}">הורדה</button></td></tr>`).join('')||'<tr><td colspan="4" class="muted">עוד אין גיבויים</td></tr>'}
+      </tbody></table></div></section>`;
+  }
+  function bind(){
+    main.querySelectorAll('tr[data-u] .sv').forEach(b=>b.onclick=async()=>{const tr=b.closest('tr');b.disabled=true;
+      try{await rpc('admin_set_plan',{p_user:tr.dataset.u,p_plan:tr.querySelector('.pl').value,p_max:+tr.querySelector('.mx').value||2});b.textContent='נשמר ✓';delete cache.users;}catch(e){b.textContent='שגיאה';}setTimeout(()=>{b.disabled=false;b.textContent='שמירה';},1800);});
+    main.querySelectorAll('.dl').forEach(b=>b.onclick=async()=>{const r=await sb.storage.from('backups').createSignedUrl(b.dataset.n,300,{download:true});if(r.data)location.href=r.data.signedUrl;});
+    const bk=$('#bkNow');if(bk)bk.onclick=async()=>{bk.disabled=true;$('#bkSt').textContent='מגבה…';
+      const r=await sb.functions.invoke('backup',{body:{}});$('#bkSt').textContent=r.error?'הגיבוי נכשל':'נשמר ✓';$('#bkSt').className='small '+(r.error?'err':'ok');setTimeout(show,800);};
+  }
+  start();
+})();
+</script>
+</body>
+</html>
