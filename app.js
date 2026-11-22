@@ -2021,48 +2021,111 @@ function voicePrompt(text){
 fuel = תדלוק. service = טיפול, תיקון או עבודה במוסך (title = תיאור קצר בעברית). expense = כל הוצאה אחרת: ביטוח, טסט, צמיגים, חניה, כביש 6, שטיפה, חלפים. odo = רק עדכון קילומטראז׳. none = לא קשור לרכב או לא ברור.
 "אתמול", "ביום ראשון" וכו׳ הופכים לתאריך. "15 אלף" בהקשר של טיפול או קילומטראז׳ = 15000. "מלא" או "פול" בתדלוק = full:true. מספרים כמספרי JSON, בלי ₪ ובלי פסיקים. אם לא נאמר תאריך, date = null.`;
 }
+const iosApp=()=>/iPad|iPhone|iPod/.test(navigator.userAgent)&&(navigator.standalone===true||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches));
+const canRecord=()=>!!(window.MediaRecorder&&navigator.mediaDevices&&navigator.mediaDevices.getUserMedia);
+function recMime(){for(const t of ['audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus'])try{if(MediaRecorder.isTypeSupported(t))return t;}catch(e){}return '';}
+// joins speech results; iPhone Safari repeats earlier phrases inside later results, so drop a phrase the next one already contains
+function joinResults(results){
+  const parts=[];for(let i=0;i<results.length;i++)parts.push(String(results[i][0].transcript||'').trim());
+  const out=[];for(let i=0;i<parts.length;i++){if(!parts[i])continue;if(i+1<parts.length&&parts[i+1].startsWith(parts[i]))continue;if(out.length&&parts[i].startsWith(out[out.length-1])){out[out.length-1]=parts[i];continue;}out.push(parts[i]);}
+  return out.join(' ').replace(/\s+/g,' ').trim();
+}
 function voiceSheet(){
   if(!sample){toast('הסוכן לא זמין כרגע');return;}
+  const IDLE='לוחצים על המיקרופון ואומרים במשפט אחד מה היה';
   openModal('רישום בקול',`<div class="vbox">
-    ${SpeechRec?`<button type="button" class="vmic" id="vMic" aria-label="התחלת הקלטה">${I('mic')}</button>`:''}
-    <div class="vstate" id="vSt" role="status">${SpeechRec?'לוחצים ואומרים במשפט אחד מה היה':'לוחצים על המיקרופון במקלדת ואומרים במשפט אחד מה היה'}</div>
+    <button type="button" class="vmic" id="vMic" aria-label="התחלת הקלטה">${I('mic')}</button>
+    <div class="vstate" id="vSt" role="status">${IDLE}</div>
     <textarea id="vTxt" rows="2" placeholder="מה שתגיד יופיע כאן" aria-label="מה אמרת"></textarea>
     <div class="vex" id="vEx"><span class="small muted">למשל:</span>${VOICE_EX.map(x=>`<button type="button">״${esc(x)}״</button>`).join('')}</div>
     <div class="formacts" style="width:100%"><button class="btn primary" id="vGo" disabled>${I('spark')}מילוי הטופס</button><button class="btn ghost" data-act="close">ביטול</button></div></div>`,root=>{
     const mic=root.querySelector('#vMic'),st=root.querySelector('#vSt'),ta=root.querySelector('#vTxt'),goB=root.querySelector('#vGo');
-    let rec=null,listening=false,heard=false;
+    const alive=()=>root.contains(ta);
     const sync=()=>{goB.disabled=!ta.value.trim();};
     ta.oninput=sync;
     root.querySelectorAll('#vEx button').forEach(b=>b.onclick=()=>{ta.value=b.textContent.replace(/[״"]/g,'');sync();});
-    const stop=()=>{try{rec&&rec.stop();}catch(e){}};
-    const fallback=msg=>{if(mic)mic.hidden=true;st.textContent=msg||'הזיהוי הקולי לא זמין כאן. לוחצים על המיקרופון במקלדת ואומרים מה היה.';ta.focus();};
-    if(mic)mic.onclick=()=>{
-      if(listening){stop();return;}
-      try{
-        rec=new SpeechRec();rec.lang='he-IL';rec.interimResults=true;rec.continuous=false;rec.maxAlternatives=1;
-        const base=ta.value.trim();heard=false;
-        rec.onstart=()=>{listening=true;mic.classList.add('on');mic.setAttribute('aria-label','עצירת ההקלטה');st.textContent='מקשיב…';};
-        rec.onresult=ev=>{let t='';for(let i=0;i<ev.results.length;i++)t+=ev.results[i][0].transcript;ta.value=(base?base+' ':'')+t.trim();heard=true;sync();};
-        rec.onerror=ev=>{const c=ev&&ev.error;if(c==='not-allowed'||c==='service-not-allowed')fallback('אין הרשאה למיקרופון. אפשר לאשר בהגדרות, או ללחוץ על המיקרופון במקלדת.');else if(c==='no-speech')st.textContent='לא שמעתי. לוחצים ומנסים שוב.';else if(c!=='aborted')fallback();};
-        rec.onend=()=>{listening=false;if(!root.contains(ta))return;mic.classList.remove('on');mic.setAttribute('aria-label','התחלת הקלטה');
-          if(heard&&ta.value.trim()){st.textContent='הבנתי. ממלא את הטופס…';run();}else if(!mic.hidden&&st.textContent==='מקשיב…')st.textContent='לוחצים ואומרים במשפט אחד מה היה';};
-        rec.start();
-      }catch(e){fallback();}
+    const say=t=>{if(alive())st.textContent=t;};
+    const onMic=on=>{mic.classList.toggle('on',on);mic.setAttribute('aria-label',on?'עצירת ההקלטה':'התחלת הקלטה');};
+    const keyboard=msg=>{mic.hidden=true;say(msg||'כאן אפשר לדבר דרך המקלדת: לוחצים בתיבה, ואז על המיקרופון שבמקלדת.');ta.focus();};
+    // which way to listen: the server (most reliable, also in the installed iPhone app), the browser, or the keyboard's own mic
+    let mode=null;const modeP=(async()=>{
+      const srv=canRecord()&&window.cjSTT?await window.cjSTT.ready().catch(()=>false):false;
+      mode=srv?'server':SpeechRec&&!iosApp()?'browser':'keyboard';
+      if(mode==='keyboard'&&alive())keyboard();
+      return mode;})();
+    let stopNow=null,busyRec=false;
+    const cleanup=()=>{try{stopNow&&stopNow(true);}catch(e){}};
+
+    async function recordServer(){
+      let stream;
+      try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});}
+      catch(e){keyboard('אין הרשאה למיקרופון. אפשר לאשר בהגדרות הטלפון, או לדבר דרך המיקרופון שבמקלדת.');return;}
+      const mime=recMime();const mr=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);const chunks=[];
+      let ac=null,raf=0,started=Date.now(),lastVoice=0,spoke=false,cancelled=false;
+      mr.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
+      const finish=new Promise(r=>{mr.onstop=r;});
+      stopNow=(cancel)=>{cancelled=!!cancel;stopNow=null;cancelAnimationFrame(raf);try{if(mr.state!=='inactive')mr.stop();}catch(e){}stream.getTracks().forEach(t=>t.stop());try{ac&&ac.close();}catch(e){}};
+      // stop by itself after a short silence once you've spoken
+      try{const AC=window.AudioContext||window.webkitAudioContext;ac=new AC();const src=ac.createMediaStreamSource(stream);const an=ac.createAnalyser();an.fftSize=1024;src.connect(an);const buf=new Uint8Array(an.fftSize);
+        let floor=0.01;
+        const tick=()=>{an.getByteTimeDomainData(buf);let sum=0;for(const v of buf){const x=(v-128)/128;sum+=x*x;}const rms=Math.sqrt(sum/buf.length);const now=Date.now();
+          if(now-started<400)floor=Math.max(floor,rms*1.2);
+          if(rms>Math.max(0.02,floor*2.2)){lastVoice=now;spoke=true;}
+          if(spoke&&now-lastVoice>1500)return stopNow&&stopNow();
+          if(!spoke&&now-started>8000)return stopNow&&stopNow();
+          if(now-started>20000)return stopNow&&stopNow();
+          raf=requestAnimationFrame(tick);};
+        if(ac.state==='suspended')ac.resume().catch(()=>{});tick();}catch(e){setTimeout(()=>stopNow&&stopNow(),12000);}
+      mr.start(250);onMic(true);say('מקשיב… כשתסיים, פשוט תשתוק או תלחץ שוב');
+      await finish;onMic(false);
+      if(cancelled||!alive())return;
+      const blob=new Blob(chunks,{type:(mr.mimeType||mime||'audio/webm').split(';')[0]});
+      const secs=(Date.now()-started)/1000;
+      if(blob.size<1500||secs<0.6){say('לא שמעתי כלום. לוחצים ומנסים שוב, קרוב יותר לטלפון.');return;}
+      say('מתמלל…');busy(goB,true,'מתמלל…');
+      try{const text=await window.cjSTT.transcribe(blob,secs);if(!alive())return;busy(goB,false);
+        if(!text){say('לא הצלחתי להבין את ההקלטה. אפשר לנסות שוב.');return;}
+        ta.value=text;sync();say('הבנתי. ממלא את הטופס…');run();
+      }catch(e){if(!alive())return;busy(goB,false);
+        if(e&&e.code==='missing_key'){mode=SpeechRec&&!iosApp()?'browser':'keyboard';if(mode==='keyboard')keyboard();else say('נסה שוב.');}
+        else say(aiErr(e,'התמלול נכשל. אפשר לנסות שוב, או לדבר דרך המיקרופון שבמקלדת.'));}
+    }
+
+    function recordBrowser(){
+      let rec;try{rec=new SpeechRec();}catch(e){keyboard();return;}
+      rec.lang='he-IL';rec.interimResults=true;rec.continuous=true;rec.maxAlternatives=1;
+      const base=ta.value.trim();let heard='',silence=0,cancelled=false;
+      const startT=setTimeout(()=>{if(!heard)try{rec.stop();}catch(e){}},8000);
+      stopNow=(cancel)=>{cancelled=!!cancel;stopNow=null;clearTimeout(silence);clearTimeout(startT);try{rec.stop();}catch(e){}};
+      rec.onstart=()=>{onMic(true);say('מקשיב… כשתסיים, פשוט תשתוק או תלחץ שוב');};
+      rec.onresult=ev=>{heard=joinResults(ev.results);ta.value=(base?base+' ':'')+heard;sync();clearTimeout(silence);silence=setTimeout(()=>{try{rec.stop();}catch(e){}},1600);};
+      rec.onerror=ev=>{const c=ev&&ev.error;if(c==='not-allowed'||c==='service-not-allowed')keyboard('הדפדפן לא מאפשר זיהוי דיבור כאן. לוחצים בתיבה ואז על המיקרופון שבמקלדת.');else if(c==='network')keyboard('זיהוי הדיבור של הדפדפן צריך אינטרנט. אפשר לדבר דרך המיקרופון שבמקלדת.');else if(c==='language-not-supported')keyboard('הדפדפן לא מזהה עברית. לוחצים בתיבה ואז על המיקרופון שבמקלדת.');};
+      rec.onend=()=>{stopNow=null;clearTimeout(silence);clearTimeout(startT);if(!alive())return;onMic(false);if(cancelled)return;
+        if(heard){say('הבנתי. ממלא את הטופס…');run();}
+        else if(!mic.hidden)say('לא שמעתי. אפשר לנסות שוב, או לדבר דרך המיקרופון שבמקלדת.');};
+      try{rec.start();}catch(e){keyboard();}
+    }
+
+    mic.onclick=async()=>{
+      if(stopNow){stopNow();return;}
+      if(busyRec)return;busyRec=true;
+      try{const m=mode||await modeP;if(!alive())return;
+        if(m==='server')await recordServer();else if(m==='browser')recordBrowser();else keyboard();}
+      finally{busyRec=false;}
     };
     let running=false;
     const run=async()=>{
       const text=ta.value.trim();if(!text||running)return;running=true;busy(goB,true,'הסוכן מבין…');
       try{
         const r=await sample.json(voicePrompt(text),{maxTokens:400,modelTier:'default'});
-        if(!root.contains(ta))return;
-        if(!r||!r.type||r.type==='none'){busy(goB,false);running=false;st.textContent='לא הבנתי מה לרשום. אפשר לנסח שוב, למשל ״תדלקתי ב־250 שקל״.';return;}
+        if(!alive())return;
+        if(!r||!r.type||r.type==='none'){busy(goB,false);running=false;say('לא הבנתי מה לרשום. אפשר לנסח שוב, למשל ״תדלקתי ב־250 שקל״.');return;}
         if(r.car&&r.car!==CAR&&S.cars.some(c=>c.id===r.car)){CAR=r.car;try{localStorage.setItem('cj-car',r.car);}catch(e){}chatLog.length=0;applyCar();if(isBiz())setFleetView(false);render();}
         closeModal();openVoiceResult(r,text);
-      }catch(e){if(!root.contains(ta))return;busy(goB,false);running=false;st.textContent=aiErr(e,'הסוכן לא הצליח להבין. אפשר לנסות שוב.');}
+      }catch(e){if(!alive())return;busy(goB,false);running=false;say(aiErr(e,'הסוכן לא הצליח להבין. אפשר לנסות שוב.'));}
     };
     goB.onclick=run;
-    const obs=new MutationObserver(()=>{if(!root.contains(ta)){stop();obs.disconnect();}});obs.observe(root,{childList:true});
-    if(!mic)setTimeout(()=>ta.focus(),80);
+    const obs=new MutationObserver(()=>{if(!alive()){cleanup();obs.disconnect();}});obs.observe(root,{childList:true});
   });
 }
 function openVoiceResult(r,text){

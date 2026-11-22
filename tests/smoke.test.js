@@ -12,7 +12,7 @@ let failed = 0, passed = 0;
 const ok = (cond, name, extra) => { if (cond) { passed++; console.log("  ✓ " + name); } else { failed++; console.log("  ✗ " + name + (extra !== undefined ? "  → " + JSON.stringify(extra) : "")); } };
 
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"] });
   const errors = [];
   async function page(hash = "#q", opts = {}) {
     const ctx = await browser.newContext({ ...devices["iPhone 13"], deviceScaleFactor: 1, colorScheme: opts.scheme || "dark", acceptDownloads: true });
@@ -165,6 +165,16 @@ const ok = (cond, name, extra) => { if (cond) { passed++; console.log("  ✓ " +
   await p.click("[data-act=quick]"); await p.waitForTimeout(300); await p.click(".qbtn[data-act=voice]"); await p.waitForTimeout(300);
   await p.fill("#vTxt", "החלפתי צמיגים ב־1600 שקל"); await p.click("#vGo");
   ok(await until(p, () => document.querySelector("#eA") && document.querySelector("#eA").value === "1600"), "spoken expense fills the expense form");
+  await p.context().close();
+
+  console.log("voice: recording and server transcription");
+  p = await page("#q", { init: "window.__stt=true" });
+  await p.click(".m-act[data-act=voice]"); await p.waitForTimeout(500);
+  await p.click("#vMic");
+  ok(await until(p, () => document.querySelector("#vMic.on")), "recording starts");
+  await p.waitForTimeout(1500); await p.click("#vMic");
+  ok(await until(p, () => document.querySelector("#fT") && document.querySelector("#fT").value === "270" && document.querySelector("#fOdo").value === "31200"), "recorded speech is transcribed and fills the fuel form");
+  ok(await p.evaluate(() => __calls.some((c) => c[0] === "stt" && c[2])), "audio was sent for transcription");
   await p.context().close();
 
   console.log("admin screen");

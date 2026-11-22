@@ -415,6 +415,27 @@
       return [{ media_type: blob.type || "image/jpeg", data: b64 }];
     }
   }
+  /* ---------- speech to text (server, works in the installed iPhone app too) ---------- */
+  var sttReady = null;
+  window.cjSTT = {
+    ready: function () {
+      if (!sttReady) sttReady = sb.functions.invoke("stt", { body: { ping: true } }).then(function (r) { return !r.error && r.data && r.data.ready === true; }).catch(function () { sttReady = null; return false; });
+      return sttReady;
+    },
+    transcribe: async function (blob, seconds) {
+      var b64 = await new Promise(function (res, rej) { var fr = new FileReader(); fr.onload = function () { res(String(fr.result).split(",")[1] || ""); }; fr.onerror = rej; fr.readAsDataURL(blob); });
+      var r = await sb.functions.invoke("stt", { body: { audio: b64, type: blob.type || "audio/webm", seconds: seconds || 0 } });
+      if (r.error) {
+        var code = "error";
+        try { var j = r.error.context && r.error.context.json ? await r.error.context.json() : null; if (j && j.error === "quota_exceeded") throw { code: "quota_exceeded", message: "chat", kind: "chat" }; if (j && j.error) code = j.error; } catch (e) { if (e && e.code) throw e; }
+        throw { code: code, message: code };
+      }
+      if (r.data && r.data.error) throw { code: r.data.error, message: r.data.error };
+      if (window.cjAccount) window.cjAccount._quota = null;
+      return (r.data && r.data.text) || "";
+    }
+  };
+
   async function callClaude(tier, messages, extra) {
     var r = await sb.functions.invoke("claude", { body: Object.assign({ tier: tier, messages: messages }, extra) });
     if (r.error) {

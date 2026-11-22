@@ -89,7 +89,7 @@ pre{white-space:pre-wrap;word-break:break-all;font-size:12px;background:var(--bg
   const dt=s=>s?new Date(s).toLocaleDateString('he-IL',{day:'numeric',month:'short',year:'2-digit'}):'—';
   const dtt=s=>s?new Date(s).toLocaleString('he-IL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'—';
   const ago=s=>{if(!s)return 'לא נכנס';const d=Math.floor((Date.now()-new Date(s))/864e5);return d<=0?'היום':d===1?'אתמול':`לפני ${d} ימים`;};
-  const KIND={receipt:'סריקות',chat:'יועץ',analysis:'ניתוחים ומסמכים'};
+  const KIND={receipt:'סריקות',chat:'יועץ',analysis:'ניתוחים ומסמכים',voice:'תמלול קול'};
   let tab='overview', cache={};
   async function rpc(n,a){const r=await sb.rpc(n,a||{});if(r.error)throw r.error;return r.data;}
 
