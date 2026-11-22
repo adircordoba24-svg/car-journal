@@ -102,6 +102,16 @@ async function runDaily() {
     const sentRows = await (await rest(`push_sent?user_id=eq.${uid}&select=rem_key,sent_on`)).json();
     const sent = new Map(sentRows.map((r: any) => [r.rem_key, r.sent_on]));
     const cars = docs.filter((d: any) => d.collection === "garage" && !d.data.example);
+    // reminders shared by all cars: driver license, refresher course, ticket payments
+    const global = docs.filter((d: any) => d.collection === "reminder" && d.data.carId === "*").map((d: any) => ({ id: d.id, ...d.data }));
+    if (global.length && cars.length) {
+      const items = dueItems(cars[0].data, { fuel: [], service: [], reminder: global })
+        .filter((x) => { const last = sent.get(x.key) as string | undefined; return !last || daysBetween(last, t) >= 3; });
+      if (items.length) {
+        const n = await sendTo(uid, { title: items.length === 1 ? "יומן הרכב: תזכורת" : `יומן הרכב: ${items.length} תזכורות`, body: items.slice(0, 4).map((x) => x.line).join("\n"), url: APP_URL + "#reminder", tag: "rem-global" });
+        if (n) { notified++; await rest("push_sent", { method: "POST", headers: { Prefer: "resolution=merge-duplicates" }, body: JSON.stringify(items.map((x) => ({ user_id: uid, rem_key: x.key, sent_on: t }))) }); }
+      }
+    }
     for (const c of cars) {
       const mine = (col: string) => docs.filter((d: any) => d.collection === col && (d.data.carId || "car") === c.id).map((d: any) => ({ id: d.id, ...d.data }));
       const items = dueItems(c.data, { fuel: mine("fuel"), service: mine("service"), reminder: mine("reminder") })

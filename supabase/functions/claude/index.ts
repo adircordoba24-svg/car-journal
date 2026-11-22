@@ -17,7 +17,8 @@ function serviceKey(): string {
 function kindOf(body: any): string {
   const msgs = Array.isArray(body.messages) ? body.messages : [];
   const has = (t: string) => msgs.some((m: any) => Array.isArray(m.content) && m.content.some((p: any) => p && p.type === t));
-  if (has("document") || body.purpose === "document") return "analysis"; // insurance policy / vehicle license
+  if (body.purpose === "scan") return "receipt"; // quick scans: tickets, licenses
+  if (has("document") || body.purpose === "document") return "analysis"; // insurance policy, points report
   if (has("image")) return "receipt";
   if (Array.isArray(body.tools) && body.tools.length) return "chat";
   if (body.tier === "opus") return "analysis";

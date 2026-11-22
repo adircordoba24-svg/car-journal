@@ -173,7 +173,7 @@
      מספר הרישוי וכל ההערות נשמרים מוצפנים (AES-256-GCM). המפתח נמצא רק בשרת, בפונקציה vault.
      ערך ישן שלא הוצפן נקרא כרגיל ומוצפן בשמירה הבאה. אם vault לא זמין, לא נשמר כלום בטקסט גלוי. */
   var ENC = "enc:v1:";
-  var SENSITIVE = { garage: ["plate", "note"], paper: ["plate", "policyNo", "note"] };
+  var SENSITIVE = { garage: ["plate", "note"], paper: ["plate", "policyNo", "note"], ticket: ["ticketNo", "note"] };
   function fieldsOf(c) { return SENSITIVE[c] || ["note"]; }
   async function vault(op, items) {
     if (!items.length) return [];
@@ -425,6 +425,11 @@
       var r = await sb.rpc("ai_quota");
       if (r.error) throw r.error;
       window.cjAccount._quota = r.data; return r.data;
+    },
+    plan: async function () {
+      var r = await sb.rpc("my_plan");
+      if (r.error || !r.data) return { plan: "private", maxCars: 2 };
+      return { plan: r.data.plan, maxCars: r.data.max_cars };
     },
     exportData: async function () {
       var r = await sb.from("docs").select("collection,id,data,updated_at");

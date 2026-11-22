@@ -433,7 +433,12 @@ textarea{resize:vertical;min-height:70px}
 .acct-list>:first-child{border-top:0}
 .acct-list .danger{color:var(--crit)}
 .sub-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
-.agtabs{margin:0 0 18px}.agtabs button{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--fg);font:inherit;cursor:pointer;min-height:46px}
+.ptsbar{position:relative;height:10px;border-radius:10px;background:var(--line);margin:18px 0 22px}
+.ptsbar i{position:absolute;inset-block:0;inset-inline-start:0;border-radius:10px;background:linear-gradient(90deg,var(--ok),var(--warn) 50%,var(--crit))}
+.ptsbar span{position:absolute;top:14px;font-size:11px;color:var(--muted);transform:translateX(50%)}
+.tkst{display:block;font-size:12.5px;font-weight:600;margin-bottom:2px}.dstat .tkst{color:var(--muted)}.dstat.ok .tkst{color:var(--ok)}.dstat.warn .tkst{color:var(--warn)}.dstat.crit .tkst{color:var(--crit)}
+.tline{height:6px;border-radius:6px;background:var(--line);overflow:hidden}.tline i{display:block;height:100%;background:var(--accent);border-radius:6px}
+.agtabs{margin:0 0 18px}.agtabs button{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px 6px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--fg);font:inherit;cursor:pointer;min-height:46px}
 .agtabs button.on{border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
 .agtabs button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .docs-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:16px}
@@ -478,6 +483,7 @@ textarea{resize:vertical;min-height:70px}
 .seg input:checked+span{border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
 .seg input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
 .beta{background:none;cursor:pointer;font-family:var(--f-body,inherit);font-size:11px;letter-spacing:.06em;color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:0 5px;vertical-align:middle;margin-inline-start:6px;position:relative;top:-3px}
+.linkbtn{background:none;border:0;padding:0;color:var(--accent);font:inherit;text-decoration:underline;cursor:pointer}
 .carpill{border:1px solid var(--line);background:transparent;color:var(--accent);border-radius:999px;padding:2px 10px;font:inherit;font-size:12px;line-height:1.6;cursor:pointer;white-space:nowrap}
 .carpill:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .carlist{display:flex;flex-direction:column;gap:10px}
@@ -591,6 +597,8 @@ const P={
  chat:"M4 5h16v11H9l-5 4z",
  car:"M5 17h14v-5l-2-5H7l-2 5zM5 12h14M7 17v2M17 17v2M8 14.5h.01M16 14.5h.01",
  bug:"M8 9h8v6a4 4 0 0 1-8 0zM12 9v10M8 12H4M20 12h-4M5 7l3 2M19 7l-3 2M9 5l1 2M15 5l-1 2",
+ ticket:"M4 5h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4zM10 5v12",
+ id:"M3 6h18v12H3zM7 10h4M7 14h6M15 10h3v4h-3z",
 };
 const I=(n,cls)=>`<svg class="i ${cls||''}" viewBox="0 0 24 24" aria-hidden="true"><path d="${P[n]||P.list}"/></svg>`;
 
@@ -635,16 +643,17 @@ function iconFor(title,kind){
 }
 
 /* ---------- state ---------- */
-const COLS=['garage','fuel','service','expense','reminder','paper'];
-const S={car:null,cars:[],fuel:[],service:[],expense:[],reminder:[],paper:[],ready:new Set(),offline:false};
-const RAW={garage:[],fuel:[],service:[],expense:[],reminder:[],paper:[]};
-const MAX_CARS=2;
+const COLS=['garage','fuel','service','expense','reminder','paper','ticket','person'];
+const S={car:null,cars:[],fuel:[],service:[],expense:[],reminder:[],paper:[],ticket:[],person:null,ready:new Set(),offline:false};
+const RAW={garage:[],fuel:[],service:[],expense:[],reminder:[],paper:[],ticket:[],person:[]};
+let MAX_CARS=2,PLAN='private';
 let CAR='car';try{CAR=localStorage.getItem('cj-car')||'car';}catch(e){}
 function applyCar(){
   const cars=[...RAW.garage].sort((a,b)=>a.id==='car'?-1:b.id==='car'?1:(a.createdAt||0)-(b.createdAt||0));
   if(cars.length&&!cars.some(c=>c.id===CAR))CAR=cars[0].id;
   S.cars=cars;S.car=cars.find(c=>c.id===CAR)||null;
-  for(const c of ['fuel','service','expense','reminder','paper'])S[c]=RAW[c].filter(r=>(r.carId||'car')===CAR);
+  for(const c of ['fuel','service','expense','reminder','paper'])S[c]=RAW[c].filter(r=>(r.carId||'car')===CAR||r.carId==='*');
+  S.ticket=RAW.ticket;S.person=RAW.person.find(x=>x.id==='me')||null;
 }
 function switchCar(id){if(id===CAR)return;CAR=id;try{localStorage.setItem('cj-car',id);}catch(e){}chatLog.length=0;applyCar();render();toast('עברת ל'+carName(S.car));}
 function carName(c){c=c||{};return c.nickname||[c.make,c.model].filter(Boolean).join(' ')||'הרכב';}
@@ -721,7 +730,8 @@ function sortedReminders(filter){
 /* ---------- db ---------- */
 async function boot(){
   renderNav();
-  if(window.cjAccount){const ab=$('#acctBtn');if(ab)ab.hidden=false;const bt=$('#betaTag');if(bt)bt.hidden=false;}
+  if(window.cjAccount){const ab=$('#acctBtn');if(ab)ab.hidden=false;const bt=$('#betaTag');if(bt)bt.hidden=false;
+    if(window.cjAccount.plan)window.cjAccount.plan().then(pl=>{if(pl&&pl.maxCars){MAX_CARS=pl.maxCars;PLAN=pl.plan||'private';render();}}).catch(()=>{});}
   try{const qp=new URLSearchParams(location.search);const qc=qp.get('car');if(qc){CAR=qc;try{localStorage.setItem('cj-car',qc);}catch(e){}history.replaceState(null,'',location.pathname+location.hash);}}catch(e){}
   if(navigator.serviceWorker)navigator.serviceWorker.addEventListener('message',e=>{const d=e.data||{};if(d.type==='cj-open'){if(d.car&&d.car!==CAR&&S.cars.some(c=>c.id===d.car))switchCar(d.car);go('reminder');}});
   const timer=setTimeout(()=>{if(S.ready.size<COLS.length){S.offline=true;render();}},10000);
@@ -894,7 +904,7 @@ function renderNow(){
   if(S.noDb){v.innerHTML=`<div class="card empty"><b>היומן לא מצליח להתחבר למאגר הנתונים</b>פתח את הדף מחשבון Claude מחובר כדי לשמור ולקרוא את הנתונים של הרכב.</div>`;return;}
   if(S.ready.size<COLS.length&&!S.offline){return;}
   const car=S.car;
-  {const sl=$('#subline');sl.textContent=car?[car.make,car.model,car.year].filter(Boolean).join(' · '):'המוסך הפרטי שלך';const cb=$('#carBtn');if(cb){cb.hidden=!(window.cjAccount&&car&&!car.example);cb.textContent=S.cars.length>1?'החלפת רכב':'+ רכב';cb.setAttribute('aria-label',S.cars.length>1?'החלפת רכב':'הוספת רכב שני');}}
+  {const sl=$('#subline');sl.textContent=car?[car.make,car.model,car.year].filter(Boolean).join(' · '):'המוסך הפרטי שלך';const cb=$('#carBtn');if(cb){cb.hidden=!(window.cjAccount&&car&&!car.example);cb.textContent=S.cars.length>1?(PLAN==='business'?'הצי ('+S.cars.length+')':'החלפת רכב'):'+ רכב';cb.setAttribute('aria-label',S.cars.length>1?'החלפת רכב':'הוספת רכב');}}
   {const sp=$('#spSub');if(sp&&car&&car.make)sp.textContent=[car.make,car.model,car.year].filter(Boolean).join(' · ');}
   if(view==='agents'&&chatBusy) return;
   if(view==='home'&&insightBusy) return;
@@ -1099,12 +1109,12 @@ function vReminder(){
 }
 
 let lastInsight='',insightBusy=false;
-let agTab='agents';try{if(location.hash==='#docs')agTab='docs';}catch(e){}
-function agTabs(){return `<div class="seg agtabs" role="tablist" aria-label="סוכנים ומסמכים">
-  <button type="button" role="tab" aria-selected="${agTab==='agents'}" class="${agTab==='agents'?'on':''}" data-act="agtab" data-id="agents">${I('spark')}סוכנים</button>
-  <button type="button" role="tab" aria-selected="${agTab==='docs'}" class="${agTab==='docs'?'on':''}" data-act="agtab" data-id="docs">${I('shield')}הביטוח והמסמכים</button></div>`;}
+let agTab='agents';try{if(location.hash==='#docs')agTab='docs';if(location.hash==='#tickets')agTab='tickets';}catch(e){}
+function agTabs(){const t=(id,ic,l)=>`<button type="button" role="tab" aria-selected="${agTab===id}" class="${agTab===id?'on':''}" data-act="agtab" data-id="${id}">${I(ic)}${l}</button>`;
+  return `<div class="seg agtabs" role="tablist" aria-label="סוכנים, מסמכים ודוחות">${t('agents','spark','סוכנים')}${t('docs','shield','מסמכים')}${t('tickets','ticket','דוחות')}</div>`;}
 function vAgents(){
   if(agTab==='docs')return agTabs()+vDocs();
+  if(agTab==='tickets')return agTabs()+vTickets();
   const off=!sample;
   return agTabs()+`<div class="sec-title"><h2>סוכנים</h2><span class="small muted">עוזרים חכמים שעובדים על הנתונים של הרכב שלך</span></div>
   ${off?`<div class="banner warn">הסוכנים זמינים כשהדף פתוח ב־Claude עם חשבון מחובר.</div>`:''}
@@ -1331,6 +1341,15 @@ function checksSheet(){
 }
 async function markDone(id,atKm,atDate,silent){
   const r=S.reminder.find(x=>x.id===id); if(!r) return false;
+  if(r.once){ // one-off deadline: done means it is gone
+    const k=r.docKey||'';
+    if(k.startsWith('tk:')){await ticketPaid(k.slice(3));return true;}
+    await delRec('reminder',id);
+    if(k==='refresher'){const p=S.person||{};await setRec('person','me',Object.assign({},(({id,...o})=>o)(p),{refresherDone:true}));}
+    if(k==='dlic'){toast('מעולה! עדכן את התוקף החדש של הרישיון');setTimeout(driverSheet,300);}
+    else if(!silent)toast(`״${r.title}״ סומן כבוצע`);
+    return true;
+  }
   const hist=Array.isArray(r.history)?r.history.slice(-19):[];
   hist.push({date:atDate||today(),km:atKm||odo()});
   await updRec('reminder',id,{lastKm:atKm||odo(),lastDate:atDate||today(),history:hist});
@@ -1561,16 +1580,16 @@ function pushInstallSheet(){
 }
 
 /* ---------- beta feedback ---------- */
-function feedbackSheet(){
+function feedbackSheet(pre){
   if(!window.cjFeedback)return;
   openModal('משוב',`<form id="fb" class="stack" style="gap:14px">
     <p class="small muted" style="margin:0">היומן בגרסת בטא. כל הערה עוזרת: מה לא עבד, מה חסר, מה היה מבלבל.</p>
     <div class="seg" role="radiogroup" aria-label="סוג">
-      <label><input type="radio" name="k" value="bug" checked><span>תקלה</span></label>
-      <label><input type="radio" name="k" value="idea"><span>רעיון</span></label>
+      <label><input type="radio" name="k" value="bug" ${pre==='biz'?'':'checked'}><span>תקלה</span></label>
+      <label><input type="radio" name="k" value="idea" ${pre==='biz'?'checked':''}><span>רעיון</span></label>
       <label><input type="radio" name="k" value="other"><span>אחר</span></label>
     </div>
-    <div class="field"><label for="fbT">מה תרצה לספר?</label><textarea id="fbT" rows="5" maxlength="3000" required></textarea></div>
+    <div class="field"><label for="fbT">מה תרצה לספר?</label><textarea id="fbT" rows="5" maxlength="3000" required>${pre==='biz'?'מעוניין בחשבון עסקי. כמה רכבים: ':''}</textarea></div>
     <div class="formacts"><button class="btn primary" type="submit">${I('send')}שליחה</button><button class="btn ghost" type="button" data-act="close">ביטול</button></div>
     <p class="small muted" style="margin:0">גרסה ${esc(window.cjVersion||'')}</p></form>`,root=>{
     root.querySelector('#fb').onsubmit=async e=>{e.preventDefault();const t=root.querySelector('#fbT').value.trim();if(!t)return;
@@ -1602,7 +1621,7 @@ function vDocs(){
   const pols=S.paper.filter(p=>p.type==='insurance').sort((a,b)=>(a.end||'').localeCompare(b.end||''));
   const lic=S.paper.find(p=>p.type==='license');
   const upBtns=`<div class="docs-up"><button class="btn primary" data-act="docUp" data-type="insurance">${I('shield')}העלאת פוליסת ביטוח</button><button class="btn ghost" data-act="docUp" data-type="license">${I('doc')}העלאת רישיון רכב</button></div>`;
-  if(!pols.length&&!lic)return `<div class="sec-title"><h2>הביטוח והמסמכים</h2><span class="small muted">${esc(carName(S.car))}</span></div>
+  if(!pols.length&&!lic)return `<div class="sec-title"><h2>הביטוח והמסמכים</h2><span class="small muted">${esc(carName(S.car))}</span></div>${driverCard()}
     <div class="card docs-empty"><div class="dstat" style="border:0;padding:0"><div class="ic">${I('shield')}</div></div>
       <b style="font-size:18px">כל הביטוח במקום אחד, בשפה פשוטה</b>
       <p>מעלים את פוליסת הביטוח (PDF או צילומים) ואת רישיון הרכב. הסוכן קורא אותם, מסביר בשפה פשוטה מה מכוסה ומה לא, ומזכיר לך לפני שהביטוח או הטסט נגמרים.</p>
@@ -1613,6 +1632,7 @@ function vDocs(){
   <div class="docs-strip">${strip}</div>
   ${pols.map(polCard).join('')}
   ${lic?licCard(lic):''}
+  ${driverCard()}
   <div class="card" style="margin-bottom:16px">${upBtns}<p class="small muted" style="text-align:center;margin:12px 0 0">אפשר להעלות כמה פוליסות, למשל חובה ומקיף בנפרד. העלאה של רישיון חדש מחליפה את הקודם.</p></div>`;
 }
 function polCard(p){
@@ -1675,7 +1695,8 @@ const policyPrompt=()=>`אלה עמודים של פוליסת ביטוח רכב 
 - notCovered: חריגים חשובים במשפטים פשוטים ("נהג מתחת לגיל 24 לא מכוסה", "נזק כשנוהגים בלי רישיון בתוקף").
 - בלי מונחים משפטיים כשאפשר להגיד פשוט. בלי לנחש: מה שלא מופיע הוא null או רשימה ריקה. סכומים בשקלים כמו שמופיעים. היום ${today()}.`;
 const licensePrompt=()=>`זה רישיון רכב ישראלי (צילום או PDF). החזר JSON בלבד:
-{"isLicense":boolean,"plate":string|null,"make":string|null,"model":string|null,"year":number|null,"validUntil":"YYYY-MM-DD"|null,"ownership":string|null,"color":string|null}
+{"isLicense":boolean,"plate":string|null,"make":string|null,"model":string|null,"year":number|null,"validUntil":"YYYY-MM-DD"|null,"ownership":string|null,"color":string|null,"fuel":string|null}
+fuel הוא "סוג דלק" כמו שכתוב ברישיון (בנזין, דיזל, היברידי, חשמל). make ו־model בעברית כמו ברישיון, בלי קודים.
 validUntil הוא תאריך "תוקף הרישיון" / "בתוקף עד" (זה מועד הטסט). אל תנחש; מה שלא מופיע הוא null. היום ${today()}.`;
 function docUploadSheet(type){
   const ins=type==='insurance';
@@ -1704,7 +1725,7 @@ async function readDoc(id,blobs,type){
   const ins=type==='insurance';
   openModal(ins?'קורא את הפוליסה':'קורא את הרישיון',`<div class="docread"><span class="spin" style="width:28px;height:28px"></span><b>${ins?'הסוכן קורא את הפוליסה ומסביר אותה בשפה פשוטה':'הסוכן קורא את הרישיון'}</b><span class="small muted">${ins?'זה יכול לקחת עד דקה.':'כמה שניות.'}</span></div>`);
   try{
-    const ask=imgs=>sample.json(ins?policyPrompt():licensePrompt(),{images:imgs,modelTier:'default',maxTokens:ins?6000:800,purpose:'document'});
+    const ask=imgs=>sample.json(ins?policyPrompt():licensePrompt(),{images:imgs,modelTier:'default',maxTokens:ins?6000:800,purpose:ins?'document':'scan'});
     let raw;
     try{raw=await ask(blobs);}
     catch(e1){
@@ -1776,18 +1797,197 @@ function docDeleteSheet(id){
   });
 }
 
+/* ---------- driver: license renewal and refresher course ---------- */
+function driverInfo(){const p=S.person||{};const newEnd=p.firstIssued?addDays(p.firstIssued,730):'';
+  return {p,exp:p.licenseExpiry||'',newEnd,refresherDue:!!(newEnd&&!p.refresherDone),files:p.files||[]};}
+function driverCard(){
+  const d=driverInfo(),w=docWhen(d.exp),nw=d.newEnd?docWhen(d.newEnd):null;
+  if(!d.exp&&!d.p.firstIssued)return `<section class="card pol"><div class="pol-head"><div><div class="eyebrow">רישיון הנהיגה שלי</div><h2>חידוש ורענון</h2></div></div>
+    <p class="lead2 small muted" style="margin:0">נזכיר לך לפני שרישיון הנהיגה פג, ובסוף תקופת נהג חדש נזכיר על קורס הרענון. מספר הזהות לא נשמר.</p>
+    <div class="pol-acts"><button class="btn sm primary" data-act="drvEdit">${I('id')}הוספת רישיון נהיגה</button></div></section>`;
+  return `<section class="card pol"><div class="pol-head"><div><div class="eyebrow">רישיון הנהיגה שלי</div><h2>חידוש ורענון</h2></div></div>
+    <div class="docs-strip" style="margin:0">
+      <div class="dstat ${w.cls}"><div class="ic">${I('id')}</div><div style="min-width:0"><b>חידוש רישיון נהיגה</b><span>${d.exp?'בתוקף עד '+fmtD(d.exp):'אין תאריך'}</span></div><div class="when">${w.txt}</div></div>
+      ${d.p.firstIssued?`<div class="dstat ${d.p.refresherDone?'ok':nw.cls}"><div class="ic">${I('check')}</div><div style="min-width:0"><b>רענון נהיגה</b><span>${d.p.refresherDone?'בוצע':'בסוף שנתיים של נהג חדש'}</span></div><div class="when">${d.p.refresherDone?'✓':daysBetween(today(),d.newEnd)>0?'עוד '+daysBetween(today(),d.newEnd)+' ימים':'הגיע הזמן'}</div></div>`:''}
+    </div>
+    <div class="pol-acts">${d.files.map((f,i)=>`<button class="btn sm ghost" data-act="drvFile" data-i="${i}">${I('doc')}הקובץ</button>`).join('')}<button class="btn sm ghost" data-act="drvEdit">${I('edit')}עריכה</button></div>
+  </section>`;
+}
+const dlicPrompt=()=>`זה רישיון נהיגה ישראלי (צילום או PDF). החזר JSON בלבד: {"isDriverLicense":boolean,"expiry":"YYYY-MM-DD"|null,"firstIssued":"YYYY-MM-DD"|null,"categories":string|null}
+expiry הוא "בתוקף עד" של הרישיון. firstIssued: התאריך הכי מוקדם שבו הוצא רישיון לדרגה כלשהי (אם מופיע). תאריכים בישראל כתובים יום.חודש.שנה. אסור להחזיר מספר זהות, שם, כתובת או תאריך לידה. אל תנחש; מה שלא מופיע הוא null. היום ${today()}.`;
+function driverSheet(){
+  const p=S.person||{};
+  openModal('רישיון הנהיגה שלי',`<form id="dv" class="stack" style="gap:14px">
+    ${sample?`<button type="button" class="btn ghost block" id="dvScan">${I('cam')}צילום רישיון הנהיגה (הסוכן ממלא את התאריכים)</button><input type="file" id="dvF" accept="image/*,application/pdf" hidden>`:''}
+    <div class="fgrid">
+      <div class="field"><label for="dvE">רישיון הנהיגה בתוקף עד</label><input type="date" id="dvE" value="${esc(p.licenseExpiry||'')}"></div>
+      <div class="field"><label for="dvI">קיבלתי רישיון לראשונה ב־</label><input type="date" id="dvI" max="${today()}" value="${esc(p.firstIssued||'')}"></div>
+      <label class="field full" style="display:flex;gap:10px;align-items:center;flex-direction:row"><input type="checkbox" id="dvR" ${p.refresherDone?'checked':''} style="width:20px;height:20px;accent-color:var(--accent)">עשיתי כבר את קורס רענון הנהיגה</label>
+    </div>
+    <p class="small muted" style="margin:0">רענון נהיגה: קורס קצר שמקבלים בסוף שנתיים של נהג חדש. התוקף של רישיון הנהיגה משתנה לפי גיל ולפי מועד ההנפקה, לכן כדאי להעתיק אותו מהרישיון עצמו.</p>
+    <div class="formacts"><button class="btn primary" type="submit">${I('check')}שמירה</button><button class="btn ghost" type="button" data-act="close">ביטול</button></div></form>`,root=>{
+    let file=null;
+    const sc=root.querySelector('#dvScan');if(sc){const f=root.querySelector('#dvF');sc.onclick=()=>f.click();
+      f.onchange=async()=>{file=f.files[0];if(!file)return;busy(sc,true,'הסוכן קורא…');
+        try{const raw=await sample.json(dlicPrompt(),{images:[file],modelTier:'default',maxTokens:400,purpose:'scan'});const d=/^\d{4}-\d\d-\d\d$/;
+          if(!raw||raw.isDriverLicense===false){toast('זה לא נראה כמו רישיון נהיגה');}else{if(d.test(raw.expiry||''))root.querySelector('#dvE').value=raw.expiry;if(d.test(raw.firstIssued||''))root.querySelector('#dvI').value=raw.firstIssued;toast('התאריכים מולאו. בדוק ושמור');}
+        }catch(e){toast(aiErr(e,'לא הצלחתי לקרוא. אפשר למלא ידנית'));}busy(sc,false);};}
+    root.querySelector('#dv').onsubmit=async e=>{e.preventDefault();
+      const data={licenseExpiry:root.querySelector('#dvE').value,firstIssued:root.querySelector('#dvI').value,refresherDone:root.querySelector('#dvR').checked};
+      const b=e.submitter||root.querySelector('button[type=submit]');busy(b,true);
+      try{
+        if(file&&assets){const a=await assets.upload(file);for(const f of (p.files||[]))Promise.resolve(assets.delete(f.id)).catch(()=>{});data.files=[{id:a.id,type:file.type||'',name:(file.name||'').slice(0,120)}];}
+        await setRec('person','me',Object.assign({},(({id,...o})=>o)(p),data));
+        await syncGlobalReminder('dlic',`חידוש רישיון נהיגה`,data.licenseExpiry);
+        const ne=data.firstIssued?addDays(data.firstIssued,730):'';
+        await syncGlobalReminder('refresher','רענון נהיגה (סוף תקופת נהג חדש)',!data.refresherDone&&ne&&daysBetween(today(),ne)>-365?ne:'');
+        closeModal();toast('נשמר. נזכיר לך בזמן');
+      }catch(x){busy(b,false);toast('השמירה נכשלה');}};
+  });
+}
+// one-off deadlines shared by all cars (license, refresher, ticket payment)
+async function syncGlobalReminder(key,title,date){
+  const r=RAW.reminder.find(x=>x.docKey===key);
+  if(!date){if(r)await delRec('reminder',r.id);return;}
+  const data={title,kind:'doc',intervalKm:null,intervalDays:60,lastDate:addDays(date,-60),docKey:key,carId:'*',once:true};
+  if(r)await updRec('reminder',r.id,data);else await addRec('reminder',Object.assign({note:'',history:[],lastKm:null},data));
+}
+
+/* ---------- traffic tickets and points ---------- */
+const TK_KIND={traffic:'דוח תנועה',camera:'מצלמה',parking:'חניה',other:'אחר'};
+function tkDue(t){return t.dueDate||(t.serviceDate||t.offenseDate?addDays(t.serviceDate||t.offenseDate,90):'');}
+function pointsState(){
+  const t0=today();const pts=S.ticket.filter(t=>n(t.points)>0&&t.status!=='cancelled'&&t.offenseDate).sort((a,b)=>a.offenseDate.localeCompare(b.offenseDate));
+  const in2=pts.filter(t=>daysBetween(t.offenseDate,t0)<730);
+  const sum2=in2.reduce((s,t)=>s+n(t.points),0);
+  const years=sum2>=22?4:2;
+  const valid=pts.filter(t=>daysBetween(t.offenseDate,t0)<years*365);
+  const total=valid.reduce((s,t)=>s+n(t.points),0);
+  const last=S.ticket.filter(t=>t.offenseDate&&t.status!=='cancelled').map(t=>t.offenseDate).sort().pop()||'';
+  const lastPts=valid.length?valid[valid.length-1].offenseDate:'';
+  const reset=lastPts?addDays(lastPts,years*365):'';
+  return {total,years,last,reset,valid};
+}
+function vTickets(){
+  const ps=pointsState();const open=S.ticket.filter(t=>t.status==='open').sort((a,b)=>tkDue(a).localeCompare(tkDue(b)));
+  const rest=S.ticket.filter(t=>t.status!=='open').sort((a,b)=>(b.offenseDate||'').localeCompare(a.offenseDate||''));
+  const lvl=ps.total>=36?{c:'crit',t:'36 נקודות ומעלה: פסילה של 3 חודשים'}:ps.total>=24?{c:'crit',t:'24 ומעלה: קורס נהיגה מתקדם'}:ps.total>=12?{c:'warn',t:'12 ומעלה: קורס נהיגה נכונה'}:{c:'ok',t:'מתחת לסף של 12 נקודות'};
+  const pct=Math.min(100,ps.total/36*100);
+  const since=ps.last?daysBetween(ps.last,today()):null;
+  const tl=ps.reset&&ps.valid.length?(()=>{const start=ps.valid[ps.valid.length-1].offenseDate;const all=daysBetween(start,ps.reset),gone=Math.max(0,Math.min(all,daysBetween(start,today())));return {pct:all?gone/all*100:100,left:Math.max(0,all-gone),start};})():null;
+  const up=`<div class="docs-up"><button class="btn primary" data-act="tkAdd">${I('cam')}דוח חדש</button><button class="btn ghost" data-act="tkImport">${I('doc')}ייבוא תדפיס נקודות</button></div>`;
+  return `<div class="sec-title"><h2>דוחות ונקודות</h2><span class="small muted">של הנהג, לכל הרכבים</span></div>
+  <section class="card pol">
+    <div class="pol-head"><div><div class="eyebrow">הנקודות שלי כרגע</div><h2 class="num" style="font-size:44px;line-height:1">${ps.total}<small style="font-size:16px;color:var(--muted);font-weight:400"> נקודות</small></h2></div>
+      <span class="chip" style="${lvl.c==='crit'?'color:var(--crit);border-color:var(--crit)':lvl.c==='warn'?'color:var(--warn);border-color:var(--warn)':'color:var(--ok);border-color:var(--ok)'}">${lvl.t}</span></div>
+    <div class="ptsbar" role="img" aria-label="${ps.total} מתוך 36 נקודות"><i style="width:${pct}%"></i><span style="inset-inline-start:33.3%">12</span><span style="inset-inline-start:66.6%">24</span><span style="inset-inline-start:calc(100% - 14px)">36</span></div>
+    <div class="docs-strip" style="margin:0">
+      <div class="dstat"><div class="ic">${I('cal')}</div><div><b>${since===null?'אין דוחות':since+' ימים'}</b><span>${since===null?'עוד לא נרשם דוח':'מאז הדוח האחרון ('+fmtD(ps.last)+')'}</span></div></div>
+      <div class="dstat ${ps.total?'':'ok'}"><div class="ic">${I('check')}</div><div><b>${ps.total?(tl?tl.left+' ימים':''):'אין נקודות'}</b><span>${ps.total?'עד שכל הנקודות מתאפסות ('+fmtD(ps.reset)+')':'אין נקודות בתוקף'}</span></div></div>
+    </div>
+    ${tl?`<div><div class="tline"><i style="width:${tl.pct}%"></i></div><div class="small muted" style="display:flex;justify-content:space-between;margin-top:6px"><span>הדוח האחרון עם נקודות · ${fmtD(tl.start)}</span><span>איפוס · ${fmtD(ps.reset)}</span></div></div>`:''}
+    <p class="small muted" style="margin:0">נקודות נספרות ${ps.years===4?'4 שנים (צברת 22 ומעלה בתוך שנתיים)':'שנתיים'} מתאריך העבירה. החישוב לפי הדוחות שרשמת; הנתון הרשמי בתדפיס הנקודות של משרד התחבורה.</p>
+  </section>
+  <section class="card" style="margin-bottom:16px">
+    <div class="card-head"><h2>לתשלום</h2><span class="small muted">תזכורת שבוע לפני המועד האחרון</span></div>
+    ${open.length?`<div class="stack" style="gap:10px">${open.map(tkRow).join('')}</div>`:`<p class="small muted" style="margin:0">אין דוחות פתוחים. 👏</p>`}
+    <div style="margin-top:14px">${up}</div>
+  </section>
+  ${rest.length?`<section class="card" style="margin-bottom:16px"><div class="card-head"><h2>היסטוריה</h2></div><div class="stack" style="gap:10px">${rest.map(tkRow).join('')}</div></section>`:''}`;
+}
+function tkRow(t){
+  const due=tkDue(t),dl=due?daysBetween(today(),due):null;
+  const st=t.status==='paid'?{c:'ok',x:'שולם'}:t.status==='cancelled'?{c:'',x:'בוטל'}:t.status==='court'?{c:'',x:'ביקשתי להישפט'}:dl===null?{c:'',x:'פתוח'}:dl<0?{c:'crit',x:`באיחור ${-dl} ימים · +50% פיגורים`}:{c:dl<=7?'crit':dl<=21?'warn':'ok',x:`עוד ${dl} ימים לשלם`};
+  const car=t.carId&&t.carId!=='*'?S.cars.find(c=>c.id===t.carId):null;
+  return `<div class="dstat ${st.c}" style="align-items:flex-start"><div class="ic">${I('ticket')}</div><div style="min-width:0;flex:1"><span class="tkst">${st.x}</span><b>${esc(t.description||TK_KIND[t.kind]||'דוח')}</b>
+    <span>${[TK_KIND[t.kind],t.offenseDate&&fmtD(t.offenseDate),n(t.amount)?money(t.amount):'',n(t.points)?t.points+' נק׳':'',car&&carName(car)].filter(Boolean).join(' · ')}</span>
+    <div class="pol-acts" style="margin-top:8px">${t.status==='open'?`<button class="btn sm primary" data-act="tkPaid" data-id="${t.id}">${I('check')}שילמתי</button>`:''}<button class="btn sm ghost" data-act="tkEdit" data-id="${t.id}">${I('edit')}עריכה</button>${(t.files||[]).length?`<button class="btn sm ghost" data-act="tkFile" data-id="${t.id}">${I('doc')}הדוח</button>`:''}</div></div>
+    </div></div>`;
+}
+const ticketPrompt=()=>`זה דוח תנועה, דוח מצלמה או דוח חניה בישראל (צילום או PDF). החזר JSON בלבד:
+{"isTicket":boolean,"kind":"traffic"|"camera"|"parking"|"other","offenseDate":"YYYY-MM-DD"|null,"serviceDate":"YYYY-MM-DD"|null,"dueDate":"YYYY-MM-DD"|null,"amount":number|null,"points":number|null,"description":string|null,"ticketNo":string|null,"plate":string|null,"authority":string|null}
+- offenseDate: תאריך העבירה. serviceDate: תאריך מסירת הדוח/המצאה אם מופיע. dueDate: "לתשלום עד" / מועד אחרון אם כתוב במפורש.
+- description: תיאור העבירה בעברית פשוטה ובקצרה ("מהירות 20 קמ״ש מעל המותר", "חניה באדום־לבן").
+- points: רק אם מספר הנקודות כתוב בדוח. אל תנחש.
+- authority: מי הוציא (משטרת ישראל, עיריית תל אביב...). תאריכים יום/חודש/שנה. אל תעתיק מספר זהות, שם או כתובת. היום ${today()}.`;
+function ticketSheet(id){
+  const t=id?S.ticket.find(x=>x.id===id)||{}:{kind:'traffic',status:'open'};
+  openModal(id?'עריכת דוח':'דוח חדש',`<form id="tk" class="stack" style="gap:14px">
+    ${sample&&!id?`<button type="button" class="btn primary block" id="tkScan">${I('cam')}צילום הדוח (הסוכן ממלא)</button><input type="file" id="tkF" accept="image/*,application/pdf" hidden><div class="small muted" id="tkS" style="text-align:center;min-height:1.2em"></div>`:''}
+    <div class="fgrid">
+      <div class="field"><label for="tkK">סוג</label><select id="tkK">${Object.entries(TK_KIND).map(([k,v])=>`<option value="${k}" ${t.kind===k?'selected':''}>${v}</option>`).join('')}</select></div>
+      <div class="field"><label for="tkD">תיאור</label><input type="text" id="tkD" value="${esc(t.description||'')}" placeholder="מהירות, רמזור, חניה…"></div>
+      <div class="field"><label for="tkO">תאריך העבירה *</label><input type="date" id="tkO" max="${today()}" value="${esc(t.offenseDate||'')}"></div>
+      <div class="field"><label for="tkR">קיבלתי את הדוח ב־</label><input type="date" id="tkR" max="${today()}" value="${esc(t.serviceDate||'')}"></div>
+      <div class="field"><label for="tkA">סכום (₪)</label><input type="number" inputmode="decimal" id="tkA" value="${esc(t.amount??'')}"></div>
+      <div class="field"><label for="tkP">נקודות</label><input type="number" inputmode="numeric" id="tkP" min="0" max="20" value="${esc(t.points??'')}"></div>
+      <div class="field"><label for="tkU">לשלם עד</label><input type="date" id="tkU" value="${esc(t.dueDate||'')}"><span class="small muted">ריק = 90 יום מקבלת הדוח</span></div>
+      <div class="field"><label for="tkSt">מצב</label><select id="tkSt">${[['open','פתוח'],['paid','שולם'],['court','ביקשתי להישפט'],['cancelled','בוטל']].map(([k,v])=>`<option value="${k}" ${t.status===k?'selected':''}>${v}</option>`).join('')}</select></div>
+      ${S.cars.length>1?`<div class="field full"><label for="tkC">רכב</label><select id="tkC"><option value="*">לא משנה</option>${S.cars.map(c=>`<option value="${esc(c.id)}" ${t.carId===c.id?'selected':''}>${esc(carName(c))}</option>`).join('')}</select></div>`:''}
+    </div>
+    <div class="formacts"><button class="btn primary" type="submit">${I('check')}שמירה</button>${id?`<button class="btn ghost" type="button" id="tkDel" style="color:var(--crit)">${I('trash')}מחיקה</button>`:''}<button class="btn ghost" type="button" data-act="close">ביטול</button></div></form>`,root=>{
+    let file=null;const v=k=>root.querySelector('#'+k);
+    const sc=v('tkScan');if(sc){sc.onclick=()=>v('tkF').click();v('tkF').onchange=async()=>{file=v('tkF').files[0];if(!file)return;busy(sc,true,'הסוכן קורא את הדוח…');
+      try{const r=await sample.json(ticketPrompt(),{images:[file],modelTier:'default',maxTokens:600,purpose:'scan'});const d=/^\d{4}-\d\d-\d\d$/;
+        if(!r||r.isTicket===false){v('tkS').textContent='זה לא נראה כמו דוח. אפשר למלא ידנית.';}
+        else{if(TK_KIND[r.kind])v('tkK').value=r.kind;if(r.description)v('tkD').value=r.description;['offenseDate:tkO','serviceDate:tkR','dueDate:tkU'].forEach(x=>{const [k,i]=x.split(':');if(d.test(r[k]||''))v(i).value=r[k];});
+          if(n(r.amount))v('tkA').value=n(r.amount);if(n(r.points)!=null)v('tkP').value=n(r.points);file._no=r.ticketNo||'';
+          v('tkS').textContent=n(r.points)==null&&r.kind!=='parking'?'מולא. אם יש נקודות על העבירה, הוסף אותן ידנית.':'מולא. בדוק ושמור.';}
+      }catch(e){v('tkS').textContent=aiErr(e,'הסוכן לא הצליח לקרוא. אפשר למלא ידנית.');}busy(sc,false);};}
+    const del=v('tkDel');if(del)del.onclick=async()=>{try{await delRec('ticket',id);await syncGlobalReminder('tk:'+id,'','');for(const f of t.files||[])Promise.resolve(assets&&assets.delete(f.id)).catch(()=>{});closeModal();toast('נמחק');}catch(e){toast('המחיקה נכשלה');}};
+    root.querySelector('#tk').onsubmit=async e=>{e.preventDefault();
+      const data={kind:v('tkK').value,description:v('tkD').value.trim(),offenseDate:v('tkO').value,serviceDate:v('tkR').value,amount:n(v('tkA').value),points:n(v('tkP').value)||0,dueDate:v('tkU').value,status:v('tkSt').value,carId:v('tkC')?v('tkC').value:'*'};
+      if(!data.offenseDate){toast('צריך תאריך עבירה');return;}
+      if(data.status==='paid'&&t.status!=='paid')data.paidAt=today();
+      const b=root.querySelector('button[type=submit]');busy(b,true);
+      try{
+        if(file&&assets){const a=await assets.upload(file);data.files=[{id:a.id,type:file.type||'',name:(file.name||'').slice(0,120)}];if(file._no)data.ticketNo=file._no;}
+        let tid=id;if(id)await updRec('ticket',id,data);else{const ref=await addRec('ticket',Object.assign({createdAt:Date.now()},data));tid=ref.id;}
+        const due=tkDue(data);await syncGlobalReminder('tk:'+tid,`תשלום ${TK_KIND[data.kind]||'דוח'}${n(data.amount)?' '+money(data.amount):''}`,data.status==='open'?due:'');
+        closeModal();toast(data.status==='open'&&due?`נשמר. נזכיר לך לפני ${fmtD(due)}`:'נשמר');
+      }catch(x){console.error(x);busy(b,false);toast('השמירה נכשלה');}};
+  });
+}
+async function ticketPaid(id){const t=S.ticket.find(x=>x.id===id);if(!t)return;try{await updRec('ticket',id,{status:'paid',paidAt:today()});await syncGlobalReminder('tk:'+id,'','');toast('סומן כשולם');}catch(e){toast('העדכון נכשל');}}
+const pointsPrompt=()=>`זה תדפיס נקודות / רישום תעבורתי ממשרד התחבורה בישראל. החזר JSON בלבד: {"isPointsReport":boolean,"totalPoints":number|null,"offenses":[{"offenseDate":"YYYY-MM-DD","points":number,"description":string}]}
+כל עבירה עם תאריך העבירה, מספר הנקודות ותיאור קצר בעברית פשוטה. תאריכים יום/חודש/שנה. אל תעתיק מספר זהות, שם או כתובת. היום ${today()}.`;
+function pointsImportSheet(){
+  if(!sample){toast('הסוכן לא זמין כרגע');return;}
+  openModal('ייבוא תדפיס נקודות',`<div class="stack" style="gap:14px">
+    <p style="margin:0">מורידים את <b>תדפיס הנקודות</b> מאתר משרד התחבורה (שירות חינמי עם הזדהות), ומעלים אותו כאן. הסוכן יוסיף את כל העבירות עם הנקודות, כדי שהספירה תהיה מדויקת.</p>
+    <a class="btn ghost" href="https://www.gov.il/he/service/driver_penalty_point_check" target="_blank" rel="noopener">${I('send')}לאתר משרד התחבורה</a>
+    <div class="drop" id="ptBox"><input type="file" id="ptF" accept="image/*,application/pdf"><span>${I('doc')} בחירת התדפיס (PDF או צילום)</span></div>
+    <div class="small muted" id="ptS" role="status"></div></div>`,root=>{
+    root.querySelector('#ptF').onchange=async e=>{const f=e.target.files[0];if(!f)return;const st=root.querySelector('#ptS');st.innerHTML='<span class="spin"></span> הסוכן קורא את התדפיס…';
+      try{const r=await sample.json(pointsPrompt(),{images:[f],modelTier:'default',maxTokens:2500,purpose:'document'});
+        if(!r||r.isPointsReport===false||!Array.isArray(r.offenses)){st.textContent='זה לא נראה כמו תדפיס נקודות.';return;}
+        const d=/^\d{4}-\d\d-\d\d$/;let added=0;
+        for(const o of r.offenses.slice(0,60)){if(!d.test(o.offenseDate||''))continue;const pts=n(o.points)||0;
+          if(S.ticket.some(t=>t.offenseDate===o.offenseDate&&(n(t.points)||0)===pts))continue;
+          await addRec('ticket',{kind:'traffic',description:String(o.description||'').slice(0,120),offenseDate:o.offenseDate,points:pts,status:'paid',source:'mot',carId:'*',createdAt:Date.now()});added++;}
+        closeModal();toast(added?`נוספו ${added} עבירות מהתדפיס`:'כל העבירות מהתדפיס כבר רשומות');
+      }catch(x){st.textContent=aiErr(x,'הסוכן לא הצליח לקרוא את התדפיס.');}};
+  });
+}
+
 /* ---------- cars (up to MAX_CARS per account) ---------- */
+// next thing due for any car (computed by briefly viewing that car)
+function carNext(id){const keep=CAR;CAR=id;applyCar();let out=null;
+  try{const it=sortedReminders(r=>r.carId!=='*')[0];if(it)out={title:it.r.title,st:it.st};}finally{CAR=keep;applyCar();}return out;}
 function carSheet(){
-  const list=S.cars.map(c=>{const on=c.id===CAR;const cnt=['fuel','service','expense'].reduce((t,k)=>t+RAW[k].filter(r=>(r.carId||'car')===c.id).length,0);
-    return `<button type="button" class="caropt ${on?'on':''}" data-car="${esc(c.id)}"><div class="ic">${I('car')}</div><div style="min-width:0"><b>${esc(carName(c))}</b><span>${esc([c.year,c.plate].filter(Boolean).join(' · '))}${cnt?` · ${cnt} רישומים`:''}</span></div>${on?`<span class="chk">${I('check')}</span>`:''}</button>`;}).join('');
+  const fleet=S.cars.map(c=>({c,nx:carNext(c.id)})).sort((a,b)=>(a.nx?RANK[a.nx.st.status]:3)-(b.nx?RANK[b.nx.st.status]:3));
+  const list=fleet.map(({c,nx})=>{const on=c.id===CAR;
+    const tag=nx?`<span class="chip" style="${nx.st.status==='over'?'color:var(--crit);border-color:var(--crit)':nx.st.status==='soon'?'color:var(--warn);border-color:var(--warn)':''}">${esc(nx.title)} · ${esc(nx.st.label)}</span>`:'';
+    return `<button type="button" class="caropt ${on?'on':''}" data-car="${esc(c.id)}"><div class="ic">${I('car')}</div><div style="min-width:0;flex:1"><b>${esc(carName(c))}</b><span>${esc([c.year,c.plate,n(c.odometer)?km(c.odometer)+' ק״מ':''].filter(Boolean).join(' · '))}</span>${tag?`<div style="margin-top:6px">${tag}</div>`:''}</div>${on?`<span class="chk">${I('check')}</span>`:''}</button>`;}).join('');
   const canAdd=S.cars.length<MAX_CARS;
-  openModal('הרכבים שלי',`<div class="stack" style="gap:16px">
+  openModal(PLAN==='business'?'הצי שלי':'הרכבים שלי',`<div class="stack" style="gap:16px">
+    ${S.cars.length>2?`<p class="small muted" style="margin:0">${S.cars.length} רכבים, מסודרים לפי מה שהכי דחוף.</p>`:''}
     <div class="carlist">${list}</div>
-    ${canAdd?`<button type="button" class="btn primary block" id="carAdd">${I('plus')}הוספת רכב שני</button>`:`<p class="small muted" style="margin:0">אפשר לנהל עד ${MAX_CARS} רכבים בחשבון.</p>`}
+    ${canAdd?`<button type="button" class="btn primary block" id="carAdd">${I('plus')}הוספת רכב${PLAN==='business'?'':' שני'}</button>`:`<p class="small muted" style="margin:0">${PLAN==='business'?`החשבון העסקי שלך כולל עד ${MAX_CARS} רכבים.`:`חשבון פרטי כולל עד ${MAX_CARS} רכבים. מנהל יותר רכבים, לעסק או למשפחה? <button type="button" class="linkbtn" data-act="bizAsk">חשבון עסקי</button>`}</p>`}
     ${S.cars.length>1&&S.car?`<button type="button" class="btn ghost block" id="carDel" style="color:var(--crit)">${I('trash')}מחיקת ${esc(carName(S.car))} וכל הרישומים שלו</button>`:''}
   </div>`,root=>{
     root.querySelectorAll('[data-car]').forEach(b=>b.onclick=()=>{closeModal();switchCar(b.dataset.car);});
-    const a=root.querySelector('#carAdd');if(a)a.onclick=()=>{closeModal();const id=S.cars.some(c=>c.id==='car')?'car2':'car';onboarding(2,{carId:id});};
+    const a=root.querySelector('#carAdd');if(a)a.onclick=()=>{closeModal();let id='car';for(let i=2;S.cars.some(c=>c.id===id);i++)id='car'+i;onboarding(2,{carId:id});};
     const d=root.querySelector('#carDel');if(d)d.onclick=()=>deleteCarSheet();
   });
 }
@@ -1861,7 +2061,8 @@ function onboarding(step,st){
   }
   if(step===2){
     el.innerHTML=`<div class="onb-in">${dots}
-      <h1>${st.carId?'הרכב השני':'הרכב שלך'}</h1><p class="lead">רק השדות המסומנים חובה. את השאר אפשר להשלים אחר כך.</p>
+      <h1>${st.carId==='car2'?'הרכב השני':st.carId?'רכב נוסף':'הרכב שלך'}</h1><p class="lead">${sample?'הכי מהיר: מצלמים את רישיון הרכב והסוכן ממלא הכל. אפשר גם למלא ידנית.':'רק השדות המסומנים חובה. את השאר אפשר להשלים אחר כך.'}</p>
+      ${sample?`<div class="scanlic"><button type="button" class="btn ${st.lic?'ghost':'primary'} block" id="oScan">${I('cam')}${st.lic?'רישיון הרכב נקרא ✓ לצלם שוב':'צילום רישיון הרכב'}</button><input type="file" id="oScanF" accept="image/*,application/pdf" hidden><div class="small muted" id="oScanS" role="status" style="text-align:center;min-height:1.3em;margin-top:6px"></div></div>`:''}
       <form id="onbCar" class="fgrid" novalidate>
         <div class="field"><label for="oMk">יצרן *</label><input type="text" id="oMk" value="${esc(st.make||'')}" placeholder="טויוטה, קיה, שברולט…" autocomplete="off"></div>
         <div class="field"><label for="oMd">דגם *</label><input type="text" id="oMd" value="${esc(st.model||'')}" placeholder="קורולה, פיקנטו…" autocomplete="off"></div>
@@ -1873,6 +2074,19 @@ function onboarding(step,st){
         <div class="onb-acts full"><button class="btn primary block" type="submit">המשך</button><button class="onb-skip" type="button" id="onbBack">חזרה</button></div>
       </form></div>`;
     el.querySelector('#onbBack').onclick=()=>st.carId?close(false):onboarding(1,st);
+    const sb=el.querySelector('#oScan'),sf=el.querySelector('#oScanF'),ss=el.querySelector('#oScanS');
+    if(sb){sb.onclick=()=>sf.click();
+      sf.onchange=async()=>{const f=sf.files[0];if(!f)return;busy(sb,true,'הסוכן קורא את הרישיון…');ss.textContent='';
+        try{const raw=await sample.json(licensePrompt(),{images:[f],modelTier:'default',maxTokens:800,purpose:'scan'});
+          if(!raw||raw.isLicense===false){ss.textContent='זה לא נראה כמו רישיון רכב. אפשר לנסות שוב או למלא ידנית.';busy(sb,false);return;}
+          const d=/^\d{4}-\d\d-\d\d$/;const fuel=String(raw.fuel||'');
+          st.lic={plate:raw.plate||'',make:raw.make||'',model:raw.model||'',year:n(raw.year),validUntil:d.test(raw.validUntil||'')?raw.validUntil:'',ownership:raw.ownership||'',color:raw.color||''};st.licFile=f;
+          const set=(id,v)=>{const x=el.querySelector('#'+id);if(x&&v)x.value=v;};
+          set('oMk',st.lic.make);set('oMd',st.lic.model);set('oY',st.lic.year);set('oP',st.lic.plate);
+          const fsel=el.querySelector('#oF');const fm=/דיזל|סולר/.test(fuel)?'סולר':/פלאג|plug/i.test(fuel)?'פלאג־אין':/היבריד|hybrid/i.test(fuel)?'היברידי':/חשמל|electric/i.test(fuel)?'חשמלי':/בנזין|petrol|gas/i.test(fuel)?'95':'';if(fsel&&fm)fsel.value=fm;
+          busy(sb,false);sb.className='btn ghost block';sb.innerHTML=`${I('check')}רישיון הרכב נקרא. לצלם שוב`;
+          ss.textContent='מילאנו את הפרטים. נשאר רק להוסיף את הקילומטראז׳ הנוכחי.';const o=el.querySelector('#oO');if(o)o.focus();
+        }catch(e){busy(sb,false);ss.textContent=aiErr(e,'הסוכן לא הצליח לקרוא. אפשר לנסות צילום ברור יותר או למלא ידנית.');}};}
     el.querySelector('#onbCar').onsubmit=e=>{e.preventDefault();const g=id=>el.querySelector('#'+id).value.trim();
       Object.assign(st,{make:g('oMk'),model:g('oMd'),year:n(g('oY')),fuelType:g('oF'),plate:g('oP'),odometer:n(g('oO'))});
       if(!st.make||!st.model||!st.odometer){el.querySelector('#onbErr').textContent='צריך יצרן, דגם וקילומטראז׳';return;}
@@ -1887,7 +2101,7 @@ function onboarding(step,st){
       <label class="onb-choice"><input type="radio" name="plan" value="basic" ${aiOk?'':'checked'}><div><b>תזכורות בסיסיות</b><span>טיפול שנתי, טסט, ובדיקות של שמן, מים, אוויר ונוזל שמשות.</span></div></label>
       <div class="fgrid">
         <div class="field"><label for="oLs">הטיפול האחרון היה ב־</label><input type="date" id="oLs" max="${today()}"></div>
-        <div class="field"><label for="oT">הטסט הבא בתאריך</label><input type="date" id="oT" min="${today()}"></div>
+        <div class="field"><label for="oT">הטסט הבא בתאריך${st.lic&&st.lic.validUntil?' (מהרישיון)':''}</label><input type="date" id="oT" min="${today()}" value="${esc(st.lic&&st.lic.validUntil||'')}"></div>
       </div>
       <div class="onb-acts"><button class="btn primary block" id="onbDone">${I('check')}סיום</button><button class="onb-skip" id="onbBack">חזרה</button></div></div>`;
     el.querySelector('#onbBack').onclick=()=>onboarding(2,st);
@@ -1905,7 +2119,10 @@ function onboarding(step,st){
         if(testDue)base.push({title:'טסט שנתי',kind:'doc',intervalKm:null,intervalDays:365,lastKm:st.odometer,lastDate:addDays(testDue,-365)});
         if(mode==='basic')base.push({title:'טיפול תקופתי (שמן ומסנן)',kind:'service',intervalKm:15000,intervalDays:365,lastKm:st.odometer,lastDate:lastSvc});
         for(const x of base)await addRec('reminder',Object.assign({note:'',history:[]},x));
-        close(false);toast(st.carId?'הרכב השני נוסף':'הרכב נוסף. ברוך הבא!');go('home');
+        if(st.licFile&&assets){try{const a=await assets.upload(st.licFile);const old=RAW.paper.filter(p=>p.type==='license'&&(p.carId||'car')===cid);for(const o of old)await delRec('paper',o.id);
+          const pl=Object.assign({type:'license',files:[{id:a.id,type:st.licFile.type||'',name:(st.licFile.name||'').slice(0,120)}],readAt:Date.now(),createdAt:Date.now()},st.lic);
+          const ref=await addRec('paper',pl);if(st.lic.validUntil)await syncDocReminder(Object.assign({id:ref.id},pl));}catch(e){console.warn(e);}}
+        close(false);toast(st.carId==='car2'?'הרכב השני נוסף':st.carId?'הרכב נוסף':'הרכב נוסף. ברוך הבא!');go('home');
         if(mode==='ai')setTimeout(()=>runPlan(null),400);
       }catch(err){console.error(err);busy(btn,false);toast('השמירה נכשלה. בדוק את החיבור ונסה שוב');}};
   }
@@ -1945,6 +2162,8 @@ const chatTools=[
   execute:({type,limit})=>[...(S[type]||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,Math.min(+limit||30,100)).map(r=>{const o=Object.assign({},r);delete o.receipt;delete o.history;return o;})},
  {name:'get_insurance',description:'The car insurance policies and the vehicle license read from the documents the user uploaded: insurer, type, dates, who may drive, deductibles, every coverage in plain Hebrew, what is not covered, and phone numbers. Use it for any question about insurance, coverage, claims or the annual test.',inputSchema:{type:'object',properties:{}},
   execute:()=>S.paper.map(p=>{const o=Object.assign({},p);delete o.files;return o;})},
+ {name:'get_tickets_and_license',description:'Traffic tickets (date, points, amount, payment due date, status), the current valid points total and reset date, and the driver license expiry and new-driver refresher status.',inputSchema:{type:'object',properties:{}},
+  execute:()=>({points:(({total,years,last,reset})=>({total,years,last,reset}))(pointsState()),tickets:S.ticket.map(t=>{const o=Object.assign({},t);delete o.files;delete o.ticketNo;o.payBy=tkDue(t);return o;}),driver:(({exp,newEnd,refresherDue})=>({licenseExpiry:exp,newDriverEnds:newEnd,refresherDue}))(driverInfo())})},
  {name:'mark_reminder_done',description:'Mark a reminder as done today at the current odometer. Use only when the user says they did it.',inputSchema:{type:'object',properties:{id:{type:'string'}},required:['id']},
   execute:async({id})=>{const ok=await markDone(id,odo(),today(),true);if(!ok)throw new Error('unknown reminder id');appendMsg('note','✓ התזכורת עודכנה');return {ok:true};}},
  {name:'add_reminder',description:'Create a new reminder counted from today and the current odometer.',inputSchema:{type:'object',properties:{title:{type:'string'},kind:{type:'string',enum:['service','check','doc']},intervalKm:{type:['number','null']},intervalDays:{type:['number','null']}},required:['title','kind']},
@@ -1986,6 +2205,7 @@ document.addEventListener('click',e=>{
     case 'account':accountSheet();break;
     case 'cars':carSheet();break;
     case 'feedback':feedbackSheet();break;
+    case 'bizAsk':feedbackSheet('biz');break;
     case 'installHint':pushInstallSheet();break;
     case 'installHintX':try{localStorage.setItem('cj-install-hint','1');}catch(x){}render();break;
     case 'onboard':onbShown=true;onboarding(1);break;
@@ -1998,6 +2218,13 @@ document.addEventListener('click',e=>{
     case 'docFile':{const pp=S.paper.find(x=>x.id===id);const f=pp&&(pp.files||[])[+(b.dataset.i||0)];if(f)receiptView(f.id,f.type||'',pp.type==='license'?'רישיון הרכב':'פוליסת הביטוח');break;}
     case 'docEdit':docEditSheet(id);break;
     case 'docDel':docDeleteSheet(id);break;
+    case 'drvEdit':driverSheet();break;
+    case 'drvFile':{const f=(S.person&&S.person.files||[])[+(b.dataset.i||0)];if(f)receiptView(f.id,f.type||'','רישיון הנהיגה');break;}
+    case 'tkAdd':ticketSheet();break;
+    case 'tkEdit':ticketSheet(id);break;
+    case 'tkPaid':ticketPaid(id);break;
+    case 'tkImport':pointsImportSheet();break;
+    case 'tkFile':{const t=S.ticket.find(x=>x.id===id);const f=t&&(t.files||[])[0];if(f)receiptView(f.id,f.type||'','הדוח');break;}
     case 'docAsk':agTab='agents';render();setTimeout(()=>{const i=$('#chatIn');if(i){i.value='לפי הביטוח שלי, ';i.focus();}},60);break;
     case 'cal':addToCalendar(id,b);break;
     case 'rcpt':receiptView(id,b.dataset.type||'');break;

@@ -1,0 +1,6 @@
+-- Applied via migration account_plans_car_limit.
+-- account_plans: user_id, plan ('private'|'business'), max_cars (default 2). Users read only their own row.
+-- my_plan() returns {plan, max_cars}; trigger car_limit on docs blocks a new garage row past max_cars.
+-- To give someone a business account (run as admin):
+--   insert into public.account_plans(user_id, plan, max_cars) values ('<user id>', 'business', 10)
+--   on conflict (user_id) do update set plan = excluded.plan, max_cars = excluded.max_cars, updated_at = now();
