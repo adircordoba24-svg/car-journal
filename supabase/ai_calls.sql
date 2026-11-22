@@ -1,0 +1,7 @@
+-- Applied via migration ai_calls_cost_log. Every agent call is logged by the claude edge function:
+-- kind (receipt / chat / analysis), model, input/output tokens and the cost in USD (from the official price list).
+-- Average and total cost per kind:
+--   select * from public.ai_cost_summary;
+-- Cost per user this month:
+--   select user_id, count(*), round(sum(cost_usd),3) usd from public.ai_calls
+--   where at >= date_trunc('month', now()) group by 1 order by 3 desc;

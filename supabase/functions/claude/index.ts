@@ -1,6 +1,8 @@
 // Car Journal: holds the API key and calls Claude, with a monthly quota per user.
 // Sonnet 5.5 for receipts and chat, Opus 5.5 for planning, analysis and reading insurance documents.
 const MODELS: Record<string, string> = { sonnet: "claude-sonnet-5-5", opus: "claude-opus-5-5" };
+// USD per million tokens (input, output, cache read): platform.claude.com/docs/en/about-claude/pricing
+const PRICE: Record<string, [number, number, number]> = { "claude-sonnet-5-5": [2, 10, 0.1], "claude-opus-5-5": [4, 20, 0.2] };
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -61,12 +63,29 @@ Deno.serve(async (req) => {
   const payload: Record<string, unknown> = { model, max_tokens: Math.min(Number(body.max_tokens) || 1500, body.tier === "opus" ? 8000 : 3000), messages: body.messages };
   if (typeof body.system === "string") payload.system = body.system;
   if (Array.isArray(body.tools) && body.tools.length) payload.tools = body.tools.slice(0, 12);
-  const r = await fetch("https://api.anthropic.com/v1/messages", {
+  // quick scans (receipts, tickets, licenses) just copy fields: no up-front thinking, low effort = faster and cheaper
+  const lean = kind === "receipt" && model === MODELS.sonnet && !payload.tools;
+  if (lean) { payload.thinking = { type: "between_tools" }; payload.output_config = { effort: "low" }; }
+  const call = (p: unknown) => fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(p),
   });
-  const text = await r.text();
+  let r = await call(payload);
+  let text = await r.text();
+  if (lean && r.status === 400 && /thinking|output_config|effort/i.test(text)) {
+    delete payload.thinking; delete payload.output_config;   // the lean settings were refused: plain request
+    r = await call(payload); text = await r.text();
+  }
+  // what this action really cost (admin-only table ai_calls)
+  try {
+    const u = r.ok ? (JSON.parse(text).usage || {}) : {};
+    const [pi, po, pc] = PRICE[model] || [0, 0, 0];
+    const inTok = (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0), outTok = u.output_tokens || 0, cr = u.cache_read_input_tokens || 0;
+    const cost = (inTok * pi + outTok * po + cr * pc) / 1e6;
+    await fetch(`${url}/rest/v1/ai_calls`, { method: "POST", headers: { apikey: sk, Authorization: `Bearer ${sk}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({ user_id: user.id, kind, model, input_tokens: inTok, output_tokens: outTok, cache_read_tokens: cr, cost_usd: cost, status: r.status }) });
+  } catch (_) { /* logging never blocks the answer */ }
   return new Response(text, {
     status: r.status,
     headers: { ...CORS, "Content-Type": "application/json", "X-Quota-Kind": kind, "X-Quota-Remaining": String(remaining ?? "") },

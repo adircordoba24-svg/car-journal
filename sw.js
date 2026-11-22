@@ -1,5 +1,5 @@
 // יומן הרכב: מטמון לקבצי האפליקציה, כדי שתיפתח מהר גם בקליטה חלשה.
-const CACHE = "cj-v11";
+const CACHE = "cj-v12";
 const SHELL = ["./", "index.html", "privacy.html", "terms.html", "manifest.webmanifest", "config.js", "supabase-shim.js", "vendor/supabase.js", "icons/emblem.png", "icons/apple-touch-icon.png"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener("activate", (e) => {

@@ -289,6 +289,10 @@ textarea{resize:vertical;min-height:70px}
 .qbtn{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 8px;border-radius:14px;border:1px solid var(--line-soft);background:var(--raised);font-size:13.5px}
 .qbtn svg.i{width:24px;height:24px;color:var(--accent)}
 .qbtn:hover{border-color:var(--accent)}
+.snz{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.toast.has-act{display:flex;align-items:center;gap:12px;padding:8px 8px 8px 18px;border-radius:16px}
+.toast-act{display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid currentColor;color:inherit;border-radius:999px;padding:6px 12px;font:inherit;font-weight:600;cursor:pointer;white-space:nowrap}
+.toast-act .i{width:16px;height:16px}
 .toast{position:fixed;z-index:60;left:50%;transform:translateX(-50%);bottom:calc(140px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 18px;border-radius:999px;font-size:14px;box-shadow:var(--shadow);max-width:calc(100% - 32px)}
 .spin{width:16px;height:16px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:sp .8s linear infinite;display:inline-block}
 @keyframes sp{to{transform:rotate(360deg)}}
@@ -573,6 +577,8 @@ const P={
  car:"M5 17h14v-5l-2-5H7l-2 5zM5 12h14M7 17v2M17 17v2M8 14.5h.01M16 14.5h.01",
  bug:"M8 9h8v6a4 4 0 0 1-8 0zM12 9v10M8 12H4M20 12h-4M5 7l3 2M19 7l-3 2M9 5l1 2M15 5l-1 2",
  ticket:"M4 5h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4zM10 5v12",
+ clock:"M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2",
+ undo:"M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3",
  id:"M3 6h18v12H3zM7 10h4M7 14h6M15 10h3v4h-3z",
 };
 const I=(n,cls)=>`<svg class="i ${cls||''}" viewBox="0 0 24 24" aria-hidden="true"><path d="${P[n]||P.list}"/></svg>`;
@@ -694,6 +700,8 @@ function remState(r){
   if(kmBinding){label=kmLeft<=0?`באיחור ${km(-kmLeft)} ק״מ`:`עוד ${km(kmLeft)} ק״מ`;}
   else if(daysLeft!==null){label=daysLeft<0?`באיחור ${-daysLeft} ימים`:daysLeft===0?'היום':daysLeft===1?'מחר':`עוד ${daysLeft} ימים`;}
   else label='ללא מועד';
+  const snz=(r.snoozeDate&&t<r.snoozeDate)||(n(r.snoozeKm)&&o<n(r.snoozeKm));
+  if(snz&&(over||soon))return {kmLeft,daysLeft,pct,dueDate,status:'ok',label:r.snoozeDate&&t<r.snoozeDate?`נדחה עד ${fmtD(r.snoozeDate)}`:`נדחה עד ${km(r.snoozeKm)} ק״מ`,kmBinding,snoozed:true};
   return {kmLeft,daysLeft,pct,dueDate,status:over?'over':soon?'soon':'ok',label,kmBinding};
 }
 const RANK={over:0,soon:1,ok:2};
@@ -705,6 +713,7 @@ function sortedReminders(filter){
 /* ---------- db ---------- */
 async function boot(){
   renderNav();
+  try{PENDING=window.cjPending?window.cjPending():0;}catch(e){}
   if(window.cjAccount){const ab=$('#acctBtn');if(ab)ab.hidden=false;const bt=$('#betaTag');if(bt)bt.hidden=false;
     if(window.cjAccount.plan)window.cjAccount.plan().then(pl=>{if(pl&&pl.maxCars){MAX_CARS=pl.maxCars;PLAN=pl.plan||'private';render();}}).catch(()=>{});}
   try{const qp=new URLSearchParams(location.search);const qc=qp.get('car');if(qc){CAR=qc;try{localStorage.setItem('cj-car',qc);}catch(e){}history.replaceState(null,'',location.pathname+location.hash);}}catch(e){}
@@ -737,7 +746,14 @@ async function bumpOdo(v){
 
 /* ---------- ui infra ---------- */
 let toastT;
-function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2600);}
+function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;t.classList.remove('has-act');clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2600);}
+// short message with an action button (used for undo); onExpire runs if the action was not used
+function toastAct(msg,label,onAct,onExpire,ms){const t=$('#toast');let used=false;
+  t.innerHTML=`<span>${esc(msg)}</span><button type="button" class="toast-act">${I('undo')}${esc(label)}</button>`;t.hidden=false;t.classList.add('has-act');
+  clearTimeout(toastT);const prevExp=t._exp;if(prevExp){t._exp=null;prevExp();}
+  t._exp=onExpire||null;
+  t.querySelector('.toast-act').onclick=()=>{used=true;t._exp=null;clearTimeout(toastT);t.hidden=true;onAct();};
+  toastT=setTimeout(()=>{t.hidden=true;const ex=t._exp;t._exp=null;if(!used&&ex)ex();},ms||6000);}
 function openModal(title,html,mount){document.body.style.overflow='hidden';$('#mtitle').textContent=title;$('#mbody').innerHTML=html;$('#ov').hidden=false;if(mount)mount($('#mbody'));const f=$('#mbody').querySelector('input,select,textarea,button');if(f&&window.innerWidth>700)f.focus();}
 function closeModal(){document.body.style.overflow='';$('#ov').hidden=true;$('#mbody').innerHTML='';}
 $('#ov').addEventListener('click',e=>{if(e.target.id==='ov')closeModal();});
@@ -855,6 +871,7 @@ function remRow(x,compact){
       <div class="bar"><i style="width:${Math.round(st.pct*100)}%"></i></div></div>
     <div class="racts">
       <button class="btn sm" data-act="done" data-id="${r.id}">${I('check')}בוצע</button>
+      ${st.status!=='ok'||st.snoozed?`<button class="mini" data-act="snooze" data-id="${r.id}" aria-label="דחייה">${I('clock')}</button>`:''}
       ${compact?'':`<button class="mini" data-act="cal" data-id="${r.id}" title="הוספה ליומן Google" aria-label="הוספה ליומן">${I('cal')}</button><button class="mini" data-act="editRem" data-id="${r.id}" aria-label="עריכה">${I('edit')}</button>`}
     </div></div>`;
 }
@@ -890,8 +907,10 @@ function renderNow(){
   if(view==='agents'&&agTab==='agents') fillAgentQuota();
 }
 const APP_URL='https://adircordoba24-svg.github.io/car-journal/';
+let PENDING=0;window.addEventListener('cj-queue',e=>{const was=PENDING;PENDING=e.detail||0;if(was&&!PENDING)toast('כל השינויים נשלחו');render();});
 function renderBanner(){
   const b=$('#banner');
+  if(window.cjSB&&PENDING>0){b.innerHTML=`<div class="banner warn"><span><b>אין קליטה.</b> ${PENDING===1?'שינוי אחד נשמר':PENDING+' שינויים נשמרו'} בטלפון ${PENDING===1?'ויישלח':'ויישלחו'} אוטומטית כשהחיבור יחזור.</span></div>`;return;}
   if(!window.cjSB&&!S.noDb){b.innerHTML=`<div class="banner"><span><b>היומן עבר לאפליקציה העצמאית.</b> כל הנתונים נמצאים שם, והגרסה הזאת לא מתעדכנת יותר.</span><a class="btn primary sm" href="${APP_URL}" target="_blank" rel="noopener">${I('home')}פתיחת האפליקציה</a></div>`;return;}
   if(S.offline&&!S.noDb){b.innerHTML=`<div class="banner warn">המאגר לא עונה כרגע, ייתכן שהנתונים שמוצגים לא מעודכנים. השינויים יישמרו כשהחיבור יחזור.</div>`;return;}
   if(S.car?.example){b.innerHTML=`<div class="banner"><span><b>אלה נתוני דוגמה</b> כדי שתראה איך היומן עובד. כשתגדיר את הרכב שלך, הדוגמאות יימחקו.</span><button class="btn primary sm" data-act="setup">${I('edit')}הגדרת הרכב שלי</button></div>`;return;}
@@ -988,7 +1007,7 @@ function vHome(){
       <div class="gauge-info">
         <div class="eyebrow">הטיפול הקרוב</div>
         ${top?`<h3>${esc(top.r.title)}</h3><div class="when">${esc(top.st.label)}${top.st.dueDate?` · משוער ל־${fmtD(top.st.dueDate)}`:''}</div>
-        <div class="acts"><button class="btn primary sm" data-act="done" data-id="${top.r.id}">${I('check')}סימון כבוצע</button><button class="btn sm" data-act="cal" data-id="${top.r.id}">${I('cal')}${mcp?'ליומן Google':'ליומן'}</button></div>`
+        <div class="acts"><button class="btn primary sm" data-act="done" data-id="${top.r.id}">${I('check')}סימון כבוצע</button><button class="btn sm" data-act="snooze" data-id="${top.r.id}">${I('clock')}דחייה</button><button class="btn sm" data-act="cal" data-id="${top.r.id}">${I('cal')}${mcp?'ליומן Google':'ליומן'}</button></div>`
         :`<h3>הכול מסודר</h3><div class="when">הוסף תזכורת או בקש מהסוכן לבנות תוכנית טיפולים</div><div class="acts"><button class="btn sm" data-nav="agents">${I('spark')}תוכנית טיפולים</button></div>`}
       </div>
     </div>
@@ -1121,8 +1140,8 @@ function wireFile(root,id,preset){
 async function uploadReceipt(file){
   if(!file) return null;
   if(!assets) {toast('לא ניתן לשמור קבלות בתצוגה הזו');return null;}
-  const r=await assets.upload(file);
-  return {id:r.id,type:r.contentType||file.type||'',name:file.name||''};
+  try{const r=await assets.upload(file);return {id:r.id,type:r.contentType||file.type||'',name:file.name||''};}
+  catch(e){if(e&&e.code==='offline'||navigator.onLine===false){toast('אין קליטה: הרישום נשמר בלי הקבלה. אפשר לצרף אותה אחר כך בעריכה');return null;}throw e;}
 }
 function busy(btn,on,label){if(!btn)return;btn.disabled=on;if(on){btn._l=btn.innerHTML;btn.innerHTML=`<span class="spin"></span>${label||'שומר…'}`;}else if(btn._l)btn.innerHTML=btn._l;}
 function fv(root,id){const e=root.querySelector('#'+id);return e?(e.type==='checkbox'?e.checked:e.value.trim()):'';}
@@ -1327,7 +1346,7 @@ async function markDone(id,atKm,atDate,silent){
   }
   const hist=Array.isArray(r.history)?r.history.slice(-19):[];
   hist.push({date:atDate||today(),km:atKm||odo()});
-  await updRec('reminder',id,{lastKm:atKm||odo(),lastDate:atDate||today(),history:hist});
+  await updRec('reminder',id,{lastKm:atKm||odo(),lastDate:atDate||today(),history:hist,snoozeDate:'',snoozeKm:null});
   if(!silent) toast(`״${r.title}״ סומן כבוצע`);
   return true;
 }
@@ -1359,10 +1378,20 @@ async function addToCalendar(id,btn){
 }
 function cleanupReceipt(rid,exceptId){
   if(!rid||!assets||!assets.delete)return;
-  const used=['fuel','service','expense'].some(c=>(S[c]||[]).some(x=>x.id!==exceptId&&x.receipt&&x.receipt.id===rid));
+  const used=['fuel','service','expense','paper','ticket'].some(c=>(RAW[c]||[]).some(x=>x.id!==exceptId&&((x.receipt&&x.receipt.id===rid)||(x.files||[]).some(f=>f.id===rid))));
   if(!used)Promise.resolve(assets.delete(rid)).catch(()=>{});
 }
-function confirmDelete(colName,id){
+function confirmDelete(colName,id){ undoDelete(colName,id); }
+function undoDelete(colName,id,label){
+  const rec=(RAW[colName]||[]).find(x=>x.id===id);if(!rec)return;
+  const data=(({id,...o})=>o)(rec);const files=[rec.receipt,...(rec.files||[])].filter(f=>f&&f.id);
+  closeModal();
+  delRec(colName,id).then(()=>{
+    toastAct(label||'נמחק','ביטול',async()=>{try{await setRec(colName,id,data);toast('שוחזר');}catch(e){toast('השחזור נכשל');}},
+      ()=>{for(const f of files)cleanupReceipt(f.id,id);});
+  }).catch(()=>toast('המחיקה נכשלה'));
+}
+function confirmDeleteOld(colName,id){
   openModal('מחיקה',`<p>למחוק את הרישום הזה? אי אפשר לשחזר אחר כך.</p><div class="formacts"><button class="btn primary" id="yes" style="background:var(--crit);border-color:var(--crit)">${I('trash')}מחיקה</button><button class="btn ghost" data-act="close">ביטול</button></div>`,root=>{
     root.querySelector('#yes').onclick=async()=>{const rid=((S[colName]||[]).find(x=>x.id===id)||{}).receipt?.id;try{await delRec(colName,id);cleanupReceipt(rid,id);closeModal();toast('נמחק');}catch(e){toast('המחיקה נכשלה');}};
   });
@@ -1513,7 +1542,8 @@ async function accountSheet(){
       <button type="button" data-act="cars">${I('car')}הרכבים שלי (${S.cars.length} מתוך ${MAX_CARS})</button>
       <button type="button" id="acPush">${I('bell')}<span id="acPushTxt">התראות לטלפון</span><span class="acct-state" id="acPushState"></span></button>
       <button type="button" data-act="feedback">${I('chat')}משוב ודיווח על תקלה</button>
-      <button type="button" id="acExport">${I('doc')}ייצוא כל הנתונים (קובץ JSON)</button>
+      <button type="button" id="acExport">${I('doc')}ייצוא כל הנתונים (קובץ גיבוי)</button>
+      <button type="button" data-act="restore">${I('undo')}שחזור מגיבוי</button>
       <a href="privacy.html" target="_blank" rel="noopener">${I('shield')}מדיניות פרטיות</a>
       <a href="terms.html" target="_blank" rel="noopener">${I('list')}תנאי שימוש</a>
       <button type="button" id="acOut">${I('send')}התנתקות</button>
@@ -1767,6 +1797,7 @@ function docEditSheet(id){
 }
 function docDeleteSheet(id){
   const p=S.paper.find(x=>x.id===id);if(!p)return;
+  return undoDelete('paper',id,p.type==='license'?'רישיון הרכב נמחק':'הפוליסה נמחקה');
   openModal('מחיקת מסמך',`<p style="margin-top:0">למחוק את ${p.type==='license'?'רישיון הרכב':'הפוליסה'} ואת הקובץ? התזכורת שנוצרה ממנו תישאר.</p><div class="formacts"><button class="btn primary" id="ddY" style="background:var(--crit);border-color:var(--crit)">${I('trash')}מחיקה</button><button class="btn ghost" data-act="close">ביטול</button></div>`,root=>{
     root.querySelector('#ddY').onclick=async()=>{try{await delRec('paper',id);for(const f of p.files||[])Promise.resolve(assets&&assets.delete&&assets.delete(f.id)).catch(()=>{});closeModal();toast('נמחק');}catch(e){toast('המחיקה נכשלה');}};
   });
@@ -1826,6 +1857,45 @@ async function syncGlobalReminder(key,title,date){
   if(!date){if(r)await delRec('reminder',r.id);return;}
   const data={title,kind:'doc',intervalKm:null,intervalDays:60,lastDate:addDays(date,-60),docKey:key,carId:'*',once:true};
   if(r)await updRec('reminder',r.id,data);else await addRec('reminder',Object.assign({note:'',history:[],lastKm:null},data));
+}
+
+/* ---------- snooze a reminder ---------- */
+function snoozeSheet(id){
+  const r=S.reminder.find(x=>x.id===id);if(!r)return;const st=remState(r);const o=odo();
+  const opts=[['d',7,'שבוע'],['d',14,'שבועיים'],['d',30,'חודש']];
+  if(n(r.intervalKm)&&!r.once)opts.push(['k',500,'עוד 500 ק״מ'],['k',1000,'עוד 1,000 ק״מ']);
+  openModal('דחיית תזכורת',`<p style="margin-top:0"><b>${esc(r.title)}</b> · ${esc(st.label)}</p>
+    <div class="snz">${opts.map(([t,v,l])=>`<button type="button" class="btn ghost" data-t="${t}" data-v="${v}">${l}</button>`).join('')}</div>
+    ${st.snoozed?`<button type="button" class="btn ghost block" id="snzOff" style="margin-top:10px">ביטול הדחייה</button>`:''}
+    <p class="small muted" style="margin:12px 0 0">בזמן הדחייה לא נשלחות התראות על התזכורת הזאת.</p>`,root=>{
+    root.querySelectorAll('[data-t]').forEach(b=>b.onclick=async()=>{const t=b.dataset.t,v=+b.dataset.v;
+      const data=t==='d'?{snoozeDate:addDays(today(),v),snoozeKm:null}:{snoozeKm:o+v,snoozeDate:''};
+      try{await updRec('reminder',id,data);closeModal();toast(t==='d'?`נזכיר שוב ב־${fmtD(data.snoozeDate)}`:`נזכיר שוב ב־${km(data.snoozeKm)} ק״מ`);}catch(e){toast('הדחייה נכשלה');}});
+    const off=root.querySelector('#snzOff');if(off)off.onclick=async()=>{try{await updRec('reminder',id,{snoozeDate:'',snoozeKm:null});closeModal();toast('הדחייה בוטלה');}catch(e){toast('העדכון נכשל');}};
+  });
+}
+
+/* ---------- restore an exported backup ---------- */
+function restoreSheet(){
+  const A=window.cjAccount;if(!A||!A.restoreData)return;
+  openModal('שחזור מגיבוי',`<div class="stack" style="gap:14px">
+    <p style="margin:0">בוחרים קובץ גיבוי שייצאת מ״החשבון שלי״ (קובץ JSON). הרישומים מהקובץ יתווספו לחשבון, ורישום שכבר קיים יעודכן לגרסה שבקובץ. שום דבר לא נמחק.</p>
+    <div class="drop" id="rsBox"><input type="file" id="rsF" accept="application/json,.json"><span id="rsT">${I('doc')} בחירת קובץ הגיבוי</span></div>
+    <div id="rsSum" class="small" role="status"></div>
+    <div class="formacts"><button class="btn primary" id="rsGo" disabled>${I('undo')}שחזור</button><button class="btn ghost" data-act="close">ביטול</button></div></div>`,root=>{
+    let data=null;const go=root.querySelector('#rsGo'),sum=root.querySelector('#rsSum');
+    root.querySelector('#rsF').onchange=async e=>{const f=e.target.files[0];if(!f)return;data=null;go.disabled=true;
+      try{const j=JSON.parse(await f.text());if(!j||!j.records||typeof j.records!=='object')throw 0;data=j.records;
+        const L={garage:'רכבים',fuel:'תדלוקים',service:'טיפולים',expense:'הוצאות',reminder:'תזכורות',paper:'מסמכים',ticket:'דוחות',person:'פרטי נהג'};
+        const parts=Object.keys(L).filter(k=>Array.isArray(data[k])&&data[k].length).map(k=>`${data[k].length} ${L[k]}`);
+        sum.innerHTML=parts.length?`בקובץ: ${parts.join(' · ')}${j.exportedAt?`<br><span class="muted">גובה ב־${fmtD(String(j.exportedAt).slice(0,10))}</span>`:''}`:'הקובץ ריק.';
+        root.querySelector('#rsT').textContent=f.name;go.disabled=!parts.length;
+      }catch(x){sum.textContent='זה לא נראה כמו קובץ גיבוי של יומן הרכב.';}};
+    go.onclick=async()=>{if(!data)return;busy(go,true,'משחזר…');
+      try{const r=await A.restoreData(data,k=>{sum.textContent=`משחזר… ${k}`;});
+        closeModal();toast(`שוחזרו ${r.done} רישומים`+(r.limit?` · ${r.limit} רכבים מעבר למגבלה לא נוספו`:'')+(r.failed?` · ${r.failed} נכשלו`:''));
+      }catch(x){busy(go,false);toast('השחזור נכשל');}};
+  });
 }
 
 /* ---------- traffic tickets and points ---------- */
@@ -1909,7 +1979,7 @@ function ticketSheet(id){
           if(n(r.amount))v('tkA').value=n(r.amount);if(n(r.points)!=null)v('tkP').value=n(r.points);file._no=r.ticketNo||'';
           v('tkS').textContent=n(r.points)==null&&r.kind!=='parking'?'מולא. אם יש נקודות על העבירה, הוסף אותן ידנית.':'מולא. בדוק ושמור.';}
       }catch(e){v('tkS').textContent=aiErr(e,'הסוכן לא הצליח לקרוא. אפשר למלא ידנית.');}busy(sc,false);};}
-    const del=v('tkDel');if(del)del.onclick=async()=>{try{await delRec('ticket',id);await syncGlobalReminder('tk:'+id,'','');for(const f of t.files||[])Promise.resolve(assets&&assets.delete(f.id)).catch(()=>{});closeModal();toast('נמחק');}catch(e){toast('המחיקה נכשלה');}};
+    const del=v('tkDel');if(del)del.onclick=async()=>{await syncGlobalReminder('tk:'+id,'','');undoDelete('ticket',id,'הדוח נמחק');};
     root.querySelector('#tk').onsubmit=async e=>{e.preventDefault();
       const data={kind:v('tkK').value,description:v('tkD').value.trim(),offenseDate:v('tkO').value,serviceDate:v('tkR').value,amount:n(v('tkA').value),points:n(v('tkP').value)||0,dueDate:v('tkU').value,status:v('tkSt').value,carId:v('tkC')?v('tkC').value:'*'};
       if(!data.offenseDate){toast('צריך תאריך עבירה');return;}
@@ -2204,6 +2274,8 @@ document.addEventListener('click',e=>{
     case 'cal':addToCalendar(id,b);break;
     case 'rcpt':receiptView(id,b.dataset.type||'');break;
     case 'ask':sendChat(b.dataset.q);break;
+    case 'snooze':snoozeSheet(id);break;
+    case 'restore':restoreSheet();break;
     case 'done':{const r=S.reminder.find(x=>x.id===id);if(!r)break;
       if(r.kind==='service'){serviceForm(null,{title:r.title,remId:r.id});}
       else markDone(id).catch(()=>toast('העדכון נכשל'));break;}

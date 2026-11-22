@@ -79,6 +79,7 @@ function dueItems(car: any, recs: any) {
     if (num(r.intervalKm)) kmLeft = (num(r.lastKm) || 0) + num(r.intervalKm)! - odo;
     if (num(r.intervalDays) && r.lastDate) daysLeft = daysBetween(t, addDays(r.lastDate, num(r.intervalDays)!));
     if (kmLeft === null && daysLeft === null) continue;
+    if ((r.snoozeDate && t < r.snoozeDate) || (num(r.snoozeKm) && odo < num(r.snoozeKm)!)) continue; // snoozed by the user
     const over = (kmLeft !== null && kmLeft <= 0) || (daysLeft !== null && daysLeft < 0);
     const isCheck = r.kind === "check";
     const due = over || (daysLeft !== null && daysLeft <= (isCheck ? 0 : 7)) || (!isCheck && kmLeft !== null && kmLeft <= 500);

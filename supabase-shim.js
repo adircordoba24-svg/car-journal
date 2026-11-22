@@ -207,13 +207,65 @@
     refs.forEach(function (ref, i) { ref[0][ref[1]] = res[i]; });
     return legacy;
   }
+  /* ---------- offline: last data kept on the phone, changes queued until there is signal ---------- */
+  function isNetErr(e) {
+    if (typeof navigator !== "undefined" && navigator.onLine === false) return true;
+    var m = String((e && (e.message || e.code)) || e || "");
+    return e instanceof TypeError || /Failed to fetch|NetworkError|Load failed|network|fetch|vault_unavailable|timeout|ERR_INTERNET/i.test(m);
+  }
+  function qKey() { return "cj-q-" + uid; }
+  function cKey(c) { return "cj-c-" + uid + "-" + c; }
+  function qGet() { try { return JSON.parse(localStorage.getItem(qKey()) || "[]"); } catch (e) { return []; } }
+  function qSet(q) { try { localStorage.setItem(qKey(), JSON.stringify(q)); } catch (e) {} try { window.dispatchEvent(new CustomEvent("cj-queue", { detail: q.length })); } catch (e) {} }
+  function enqueue(op) { var q = qGet().filter(function (x) { return !(x.c === op.c && x.id === op.id); }); q.push(op); qSet(q); }
+  function applyQueue(c, rows) {
+    qGet().forEach(function (op) {
+      if (op.c !== c) return;
+      rows = rows.filter(function (x) { return x.id !== op.id; });
+      if (op.op === "set") rows.push({ id: op.id, data: op.d });
+    });
+    return rows;
+  }
+  function saveCache(c, rows) { try { localStorage.setItem(cKey(c), JSON.stringify(rows)); } catch (e) {} }
+  var flushing = false;
+  async function flush() {
+    if (flushing || !uid) return; var q = qGet(); if (!q.length) return;
+    flushing = true;
+    try {
+      while (q.length) {
+        var op = q[0];
+        try {
+          if (op.op === "set") await upsert(op.c, op.id, op.d);
+          else { var r = await sb.from("docs").delete().eq("collection", op.c).eq("id", op.id); if (r.error) throw r.error; }
+        } catch (e) {
+          if (isNetErr(e)) break;                 // still no signal: try again later
+          if (window.cjReport) window.cjReport("queue-drop: " + (e && e.message || e), "offline");
+        }
+        q.shift(); qSet(q);
+      }
+    } finally { flushing = false; }
+  }
+  window.addEventListener("online", function () { flush(); });
+  setInterval(function () { if (qGet().length) flush(); }, 20000);
+  function clearLocal() { try { Object.keys(localStorage).forEach(function (k) { if (k.indexOf("cj-c-" + uid) === 0 || k.indexOf("cj-q-" + uid) === 0) localStorage.removeItem(k); }); } catch (e) {} }
+  window.cjPending = function () { return uid ? qGet().length : 0; };
   async function load(c) {
-    var r = await sb.from("docs").select("id,data").eq("collection", c);
-    if (r.error) throw r.error;
-    var rows = r.data.map(function (x) { return { id: x.id, data: x.data }; });
+    var r, rows;
+    try {
+      r = await sb.from("docs").select("id,data").eq("collection", c);
+      if (r.error) throw r.error;
+    } catch (e) {
+      if (!isNetErr(e)) throw e;
+      var cached = null; try { cached = JSON.parse(localStorage.getItem(cKey(c)) || "null"); } catch (x) {}
+      if (!cached) throw e;
+      cache[c] = applyQueue(c, cached); emit(c); return;      // offline: show the last data we had
+    }
+    rows = r.data.map(function (x) { return { id: x.id, data: x.data }; });
     var legacy = await decryptRows(c, rows);
-    cache[c] = rows;
+    saveCache(c, rows.map(function (x) { return { id: x.id, data: x.data }; }));
+    cache[c] = applyQueue(c, rows);
     emit(c);
+    flush();
     for (var i = 0; i < legacy.length; i++) {
       try { await upsert(c, legacy[i].id, legacy[i].data); } catch (e) { /* retried on next load */ }
     }
@@ -230,6 +282,10 @@
       { id: id, collection: c, data: stored, user_id: uid, updated_at: new Date().toISOString() },
       { onConflict: "user_id,collection,id" });
     if (r.error) throw r.error;
+  }
+  async function saveOrQueue(c, id, v) {
+    try { await upsert(c, id, v); }
+    catch (e) { if (isNetErr(e)) { enqueue({ op: "set", c: c, id: id, d: v }); return; } throw e; }
   }
   function merge(a, b) {
     var o = Object.assign({}, a);
@@ -248,16 +304,18 @@
         var r = (cache[c] || []).find(function (x) { return x.id === id; });
         return { id: id, exists: !!r, data: function () { return r && r.data; }, metadata: {} };
       },
-      set: async function (d) { var v = plain(d); setLocal(c, id, v); await upsert(c, id, v); },
+      set: async function (d) { var v = plain(d); setLocal(c, id, v); await saveOrQueue(c, id, v); },
       update: async function (d) {
         var cur = (cache[c] || []).find(function (x) { return x.id === id; });
         if (!cur) throw { code: "invalid_argument", message: "missing document" };
-        var v = merge(cur.data, plain(d)); setLocal(c, id, v); await upsert(c, id, v);
+        var v = merge(cur.data, plain(d)); setLocal(c, id, v); await saveOrQueue(c, id, v);
       },
       delete: async function () {
         cache[c] = (cache[c] || []).filter(function (x) { return x.id !== id; }); emit(c);
-        var r = await sb.from("docs").delete().eq("collection", c).eq("id", id);
-        if (r.error) throw r.error;
+        try {
+          var r = await sb.from("docs").delete().eq("collection", c).eq("id", id);
+          if (r.error) throw r.error;
+        } catch (e) { if (isNetErr(e)) { enqueue({ op: "del", c: c, id: id }); return; } throw e; }
       },
       onSnapshot: function () { return function () {}; }
     };
@@ -306,6 +364,7 @@
   window.__rcptUrlAsync = signed;
   var assets = {
     upload: async function (blob) {
+      if (navigator.onLine === false) throw { code: "offline", message: "offline" };
       var ext = ((blob.type || "").split("/")[1] || "bin").replace("jpeg", "jpg").replace(/[^a-z0-9]/g, "");
       var path = uid + "/" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) + "." + ext;
       var r = await sb.storage.from("receipts").upload(path, blob, { contentType: blob.type || "application/octet-stream" });
@@ -446,14 +505,30 @@
       setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
       return r.data.length;
     },
+    // put an exported backup file back into the account (adds and updates; never deletes)
+    restoreData: async function (records, onStep) {
+      var allowed = ["garage", "fuel", "service", "expense", "reminder", "paper", "ticket", "person"], done = 0, failed = 0, limit = 0;
+      for (var ci = 0; ci < allowed.length; ci++) {
+        var c = allowed[ci], arr = Array.isArray(records[c]) ? records[c] : [];
+        for (var i = 0; i < arr.length; i++) {
+          var x = Object.assign({}, arr[i]), id = String(x.id || "").slice(0, 80); delete x.id; delete x.updated_at;
+          if (!id) { failed++; continue; }
+          try { var v = plain(x); setLocal(c, id, v); await upsert(c, id, v); done++; }
+          catch (e) { if (/car_limit/.test(String(e && e.message))) limit++; else failed++; }
+          if (onStep) onStep(done + failed + limit);
+        }
+      }
+      return { done: done, failed: failed, limit: limit };
+    },
     deleteAccount: async function () {
       var r = await sb.functions.invoke("delete-account", { body: { confirm: "DELETE" } });
       if (r.error) throw r.error;
       try { await sb.auth.signOut(); } catch (e) {}
+      clearLocal();
       try { localStorage.removeItem("cj-auth"); } catch (e) {}
       location.reload();
     },
-    signOut: function () { sb.auth.signOut(); }
+    signOut: function () { clearLocal(); sb.auth.signOut(); }
   };
   sb.auth.getSession().then(function (r) { var s = r.data && r.data.session; if (s) window.cjAccount._email = s.user.email; });
   sb.auth.onAuthStateChange(function (ev, s) { if (s) window.cjAccount._email = s.user.email; });
