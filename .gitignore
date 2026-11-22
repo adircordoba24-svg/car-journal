@@ -17,3 +17,5 @@ Thumbs.db
 tests/app.html
 tests/admin.html
 node_modules/
+tests/vendor
+tests/shots/

@@ -192,8 +192,8 @@ function carForm(){
   });
 }
 function quickSheet(){
-  const items=[['fuelQuick','תדלוק','fuel'],['serviceForm','טיפול','wrench'],['expenseForm','הוצאה','receipt'],['checks','בדיקה שוטפת','oil'],['scan','סריקת קבלה','cam'],['odo','מד אוץ','gauge']];
-  openModal('רישום חדש',`<div class="qgrid">${items.map(([a,l,i])=>`<button class="qbtn" data-act="${a}" ${a==='scan'&&(!sample||!imgOK)?'disabled':''}>${I(i)}${l}</button>`).join('')}</div>`);
+  const items=[['fuelQuick','תדלוק','fuel'],['serviceForm','טיפול','wrench'],['expenseForm','הוצאה','receipt'],['checks','בדיקה שוטפת','oil'],['scan','סריקת קבלה','cam'],['voice','רישום בקול','mic'],['odo','מד אוץ','gauge']];
+  openModal('רישום חדש',`<div class="qgrid">${items.map(([a,l,i])=>`<button class="qbtn" data-act="${a}" ${(a==='scan'&&(!sample||!imgOK))||(a==='voice'&&!sample)?'disabled':''}>${I(i)}${l}</button>`).join('')}</div>`);
 }
 function checksSheet(){
   const list=sortedReminders(r=>r.kind==='check');

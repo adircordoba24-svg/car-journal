@@ -10,6 +10,7 @@ function carSheet(){
   const canAdd=S.cars.length<MAX_CARS;
   openModal(PLAN==='business'?'הצי שלי':'הרכבים שלי',`<div class="stack" style="gap:16px">
     ${S.cars.length>2?`<p class="small muted" style="margin:0">${S.cars.length} רכבים, מסודרים לפי מה שהכי דחוף.</p>`:''}
+    ${isBiz()&&S.cars.length>1?`<button type="button" class="btn block" id="carFleet">${I('grid')}כל הצי במסך אחד</button>`:''}
     <div class="carlist">${list}</div>
     ${canAdd?`<button type="button" class="btn primary block" id="carAdd">${I('plus')}הוספת רכב${PLAN==='business'?'':' שני'}</button>`:`<p class="small muted" style="margin:0">${PLAN==='business'?`החשבון העסקי שלך כולל עד ${MAX_CARS} רכבים.`:`חשבון פרטי כולל עד ${MAX_CARS} רכבים. מנהל יותר רכבים, לעסק או למשפחה? <button type="button" class="linkbtn" data-act="bizAsk">חשבון עסקי</button>`}</p>`}
     ${S.cars.length>1&&S.car?`<button type="button" class="btn ghost block" id="carDel" style="color:var(--crit)">${I('trash')}מחיקת ${esc(carName(S.car))} וכל הרישומים שלו</button>`:''}
@@ -17,6 +18,7 @@ function carSheet(){
     root.querySelectorAll('[data-car]').forEach(b=>b.onclick=()=>{closeModal();switchCar(b.dataset.car);});
     const a=root.querySelector('#carAdd');if(a)a.onclick=()=>{closeModal();let id='car';for(let i=2;S.cars.some(c=>c.id===id);i++)id='car'+i;onboarding(2,{carId:id});};
     const d=root.querySelector('#carDel');if(d)d.onclick=()=>deleteCarSheet();
+    const fl=root.querySelector('#carFleet');if(fl)fl.onclick=()=>{closeModal();setFleetView(true);if(view!=='home')go('home');else render();};
   });
 }
 function deleteCarSheet(){
@@ -150,7 +152,7 @@ function onboarding(step,st){
         if(st.licFile&&assets){try{const a=await assets.upload(st.licFile);const old=RAW.paper.filter(p=>p.type==='license'&&(p.carId||'car')===cid);for(const o of old)await delRec('paper',o.id);
           const pl=Object.assign({type:'license',files:[{id:a.id,type:st.licFile.type||'',name:(st.licFile.name||'').slice(0,120)}],readAt:Date.now(),createdAt:Date.now()},st.lic);
           const ref=await addRec('paper',pl);if(st.lic.validUntil)await syncDocReminder(Object.assign({id:ref.id},pl));}catch(e){console.warn(e);}}
-        close(false);toast(st.carId==='car2'?'הרכב השני נוסף':st.carId?'הרכב נוסף':'הרכב נוסף. ברוך הבא!');go('home');
+        close(false);toast(st.carId==='car2'&&PLAN!=='business'?'הרכב השני נוסף':st.carId?'הרכב נוסף':'הרכב נוסף. ברוך הבא!');go('home');
         if(mode==='ai')setTimeout(()=>runPlan(null),400);
       }catch(err){console.error(err);busy(btn,false);toast('השמירה נכשלה. בדוק את החיבור ונסה שוב');}};
   }

@@ -114,6 +114,59 @@ const ok = (cond, name, extra) => { if (cond) { passed++; console.log("  ✓ " +
   ok((await p.textContent("#carBtn")).includes("3"), "fleet of 3 cars");
   await p.context().close();
 
+  console.log("fleet dashboard");
+  p = await page("#q", { init: "window.__fleet=true" });
+  ok(await until(p, () => document.querySelectorAll(".fl-table tbody tr").length === 4), "fleet table shows every car");
+  const att = await p.evaluate(() => [...document.querySelectorAll(".fl-item")].map((x) => x.innerText));
+  ok(att.some((x) => x.includes("קיה") && x.includes("טסט")) && att.findIndex((x) => x.includes("עוד")) > att.findIndex((x) => x.includes("קיה")), "overdue items from all cars come first", att);
+  ok((await p.evaluate(() => document.querySelector(".fl-kpis").innerText)).includes("4"), "fleet numbers");
+  ok(!(await overflow(p)), "no sideways scroll: fleet");
+  const dlx = p.waitForEvent("download"); await p.click("[data-act=flExport]"); const xf = await dlx;
+  ok(/^fleet-.*\.xlsx$/.test(xf.suggestedFilename()) && require("fs").statSync(await xf.path()).size > 2000, "fleet export to Excel", xf.suggestedFilename());
+  await p.click(".fl-item:nth-child(2)"); await p.waitForTimeout(400);
+  ok((await p.textContent("#subline")).includes("קיה") && !(await p.$(".fl-kpis")), "tapping an item opens that car");
+  await p.click("#carBtn"); await p.waitForTimeout(300); await p.click("#carFleet"); await p.waitForTimeout(400);
+  ok(!!(await p.$(".fl-kpis")), "back to the whole fleet");
+
+  console.log("import from Excel");
+  const csv = "﻿מספר רישוי,יצרן,דגם,שנה,ק״מ,טסט עד,ביטוח עד,נהג\n5678901,יונדאי,i20,2021,40000,15/03/2027,2027-01-31,רונית\n23-456-78,קיה,פיקנטו,2020,61000,,,\n,פיג׳ו,208,2019,90000,01/12/2026,,\n";
+  await p.click("[data-act=flImport]"); await p.waitForTimeout(300);
+  await p.setInputFiles("#imF", { name: "cars.csv", mimeType: "text/csv", buffer: Buffer.from(csv) });
+  ok(await until(p, () => /נמצאו 3 רכבים/.test(document.querySelector("#imOut").innerText)), "CSV: cars and columns found");
+  ok((await p.textContent("#imGo")).includes("2"), "car already in the fleet is skipped");
+  await p.click("#imGo");
+  ok(await until(p, () => __rows.filter((r) => r.collection === "garage").length === 6), "imported cars are saved");
+  const imp = await p.evaluate(() => { const g = __rows.find((r) => r.collection === "garage" && r.data.make === "יונדאי"); const rs = __rows.filter((r) => r.collection === "reminder" && r.data.carId === g.id); return { plate: String(g.data.plate).startsWith("enc:v1:") ? atob(g.data.plate.slice(7)) : g.data.plate, driver: g.data.driver, rem: rs.map((r) => r.data.docKey || r.data.kind).sort().join(","), test: (rs.find((r) => r.data.docKey === "test") || { data: {} }).data.lastDate }; });
+  ok(imp.plate === "56-789-01" && imp.driver === "רונית" && imp.rem === "ins:import,service,test" && imp.test === "2026-03-15", "imported plate, driver, test and insurance", imp);
+  // an .xlsx with real date cells, made with the same library the app uses
+  const xb64 = await p.evaluate(async () => {
+    await new Promise((r) => { const s = document.createElement("script"); s.src = "../vendor/write-excel-file.min.js"; s.onload = r; document.head.appendChild(s); });
+    const blob = await writeXlsxFile([["רכב", "מס׳ רכב", "ק\"מ", "תוקף רישיון"], ["טויוטה יאריס", "1112223", 12000, { value: new Date(Date.UTC(2027, 4, 9)), type: Date, format: "dd/mm/yyyy" }]]).toBlob();
+    const b = new Uint8Array(await blob.arrayBuffer()); let s = ""; b.forEach((x) => (s += String.fromCharCode(x))); return btoa(s);
+  });
+  await p.click("[data-act=flImport]"); await p.waitForTimeout(300);
+  await p.setInputFiles("#imF", { name: "fleet.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buffer: Buffer.from(xb64, "base64") });
+  ok(await until(p, () => /נמצאו 1 רכבים/.test(document.querySelector("#imOut").innerText)), "xlsx file is read");
+  const row = await p.evaluate(() => document.querySelector(".im-row").innerText);
+  ok(row.includes("טויוטה יאריס") && row.includes("11-122-23") && /טסט/.test(row), "xlsx columns and dates", row);
+  await p.keyboard.press("Escape");
+  // headers the app doesn't know: the agent maps the columns
+  await p.click("[data-act=flImport]"); await p.waitForTimeout(300);
+  await p.setInputFiles("#imF", { name: "x.csv", mimeType: "text/csv", buffer: Buffer.from("A,B,C,D,E\n7778889,רנו,קליאו,30000,2027-02-02\n") });
+  ok(await until(p, () => /נמצאו 1 רכבים/.test(document.querySelector("#imOut").innerText) && document.querySelector(".im-row").innerText.includes("רנו")), "agent maps unknown columns");
+  await p.keyboard.press("Escape");
+
+  console.log("voice entry");
+  await p.click('[data-act=flView][data-id="0"]'); await p.waitForTimeout(300);
+  await p.click(".m-act[data-act=voice]"); await p.waitForTimeout(300);
+  await p.click("#vEx button"); await p.click("#vGo");
+  ok(await until(p, () => document.querySelector("#fT") && document.querySelector("#fT").value === "270" && document.querySelector("#fL").value === "38" && document.querySelector("#fOdo").value === "31200"), "spoken fuel fills the fuel form");
+  await p.keyboard.press("Escape");
+  await p.click("[data-act=quick]"); await p.waitForTimeout(300); await p.click(".qbtn[data-act=voice]"); await p.waitForTimeout(300);
+  await p.fill("#vTxt", "החלפתי צמיגים ב־1600 שקל"); await p.click("#vGo");
+  ok(await until(p, () => document.querySelector("#eA") && document.querySelector("#eA").value === "1600"), "spoken expense fills the expense form");
+  await p.context().close();
+
   console.log("admin screen");
   p = await page("#q", { url: ADMIN, wait: 1500 });
   ok((await p.evaluate(() => document.querySelectorAll(".kpi").length)) >= 4, "admin overview");

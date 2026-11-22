@@ -584,7 +584,7 @@
   };
 
   /* ---------- error monitoring: what breaks for users lands in client_errors ---------- */
-  var VER = "2026.11.21", sentErr = 0, seen = {};
+  var VER = "2026.11.23", sentErr = 0, seen = {};
   function report(msg, src, stack) {
     try {
       msg = String(msg || "").slice(0, 2000);

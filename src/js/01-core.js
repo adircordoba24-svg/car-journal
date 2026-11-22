@@ -1,6 +1,11 @@
 try{document.documentElement.dir="rtl";document.documentElement.lang="he";}catch(e){}
 /* ---------- icons ---------- */
 const P={
+ mic:"M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3M9 21h6",
+ grid:"M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z",
+ sheet:"M4 4h16v16H4zM4 9h16M4 14h16M10 4v16",
+ upload:"M12 16V4M7 9l5-5 5 5M4 20h16",
+ download:"M12 4v12M7 11l5 5 5-5M4 20h16",
  home:"M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z",
  fuel:"M4 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16M3 21h13M6 9h7M15 8l3 3v7a1.5 1.5 0 0 0 3 0V9l-3-3",
  wrench:"M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z",

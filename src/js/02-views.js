@@ -21,7 +21,9 @@ function renderNow(){
   {const sp=$('#spSub');if(sp&&car&&car.make)sp.textContent=[car.make,car.model,car.year].filter(Boolean).join(' · ');}
   if(view==='agents'&&chatBusy) return;
   if(view==='home'&&insightBusy) return;
-  const fn={home:vHome,fuel:vFuel,service:vService,expense:vExpense,reminder:vReminder,agents:vAgents}[view]||vHome;
+  const biz=isBiz(),fleet=biz&&view==='home'&&FLEET_VIEW;
+  try{document.body.dataset.fleet=fleet?'1':'';}catch(e){}
+  const fn=fleet?vFleet:biz&&view==='home'?()=>fleetToggle()+vHome():{home:vHome,fuel:vFuel,service:vService,expense:vExpense,reminder:vReminder,agents:vAgents}[view]||vHome;
   const keepChat=view==='agents'?captureChat():null;
   v.innerHTML=fn();
   if(keepChat) restoreChat(keepChat);
@@ -76,9 +78,10 @@ function vHomeMobile(){
       ${ck?`<div class="m-tile" data-s="${ck.st.status}">${miniRing(ck.st)}<span class="m-tile-txt"><span class="eyebrow">בדיקה הבאה</span><b>${esc(ck.r.title)}</b><button class="btn sm" data-act="done" data-id="${ck.r.id}">${I('check')}בדקתי</button></span></div>`:''}
     </div>
   </section>
-  <section class="m m-actions">
+  <section class="m m-actions four">
     <button class="m-act primary" data-act="fuelQuick">${I('fuel')}<span>תדלוק</span></button>
     <button class="m-act" data-act="checks">${I('oil')}<span>בדיקה</span></button>
+    <button class="m-act" data-act="voice" ${sample?'':'disabled'}>${I('mic')}<span>בקול</span></button>
     <button class="m-act" data-act="quick">${I('plus')}<span>רישום</span></button>
   </section>
   ${noKmBanner('m')}
