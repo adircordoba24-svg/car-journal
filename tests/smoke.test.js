@@ -24,6 +24,8 @@ const ok = (cond, name, extra) => { if (cond) { passed++; console.log("  ✓ " +
     await p.waitForTimeout(opts.wait || 4300);
     return p;
   }
+  // wait (up to 5 s) until a condition in the page is true; returns false instead of throwing
+  const until = (p, fn, arg) => p.waitForFunction(fn, arg, { timeout: 5000 }).then(() => true, () => false);
   const overflow = (p) => p.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1);
 
   console.log("login");
@@ -53,8 +55,8 @@ const ok = (cond, name, extra) => { if (cond) { passed++; console.log("  ✓ " +
   await p.click('[data-nav="home"]'); await p.waitForTimeout(300);
   await p.click(".m-act.primary"); await p.waitForTimeout(300);
   await p.fill("#qfOdo", "30900"); await p.evaluate(() => (document.querySelector("#qfMore").open = true)); await p.fill("#qfT", "240"); await p.fill("#qfL", "30");
-  await p.click("#qfSave"); await p.waitForTimeout(800);
-  ok(await p.evaluate(() => __rows.some((r) => r.collection === "fuel" && r.data.odo === 30900)), "quick fuel saves");
+  await p.click("#qfSave");
+  ok(await until(p, () => __rows.some((r) => r.collection === "fuel" && r.data.odo === 30900)), "quick fuel saves");
 
   console.log("offline");
   await p.evaluate(() => { window.__offline = true; }); await p.context().setOffline(true);
@@ -62,20 +64,20 @@ const ok = (cond, name, extra) => { if (cond) { passed++; console.log("  ✓ " +
   await p.fill("#qfOdo", "31200"); await p.evaluate(() => (document.querySelector("#qfMore").open = true)); await p.fill("#qfT", "200"); await p.fill("#qfL", "25");
   await p.click("#qfSave"); await p.waitForTimeout(900);
   ok((await p.evaluate(() => document.querySelector("#banner").innerText)).includes("אין קליטה"), "offline banner");
-  await p.evaluate(() => { window.__offline = false; }); await p.context().setOffline(false); await p.evaluate(() => window.dispatchEvent(new Event("online"))); await p.waitForTimeout(1300);
-  ok(await p.evaluate(() => __rows.some((r) => r.collection === "fuel" && r.data.odo === 31200)), "queued change is sent when back online");
+  await p.evaluate(() => { window.__offline = false; }); await p.context().setOffline(false); await p.evaluate(() => window.dispatchEvent(new Event("online")));
+  ok(await until(p, () => __rows.some((r) => r.collection === "fuel" && r.data.odo === 31200)), "queued change is sent when back online");
 
   console.log("undo and snooze");
   await p.click('[data-nav="fuel"]'); await p.waitForTimeout(400);
   const before = await p.evaluate(() => document.querySelectorAll("[data-act=del][data-col=fuel]").length);
-  await p.evaluate(() => document.querySelector("[data-act=del][data-col=fuel]").click()); await p.waitForTimeout(400);
-  ok((await p.evaluate(() => document.querySelectorAll("[data-act=del][data-col=fuel]").length)) === before - 1, "delete is immediate");
-  await p.click(".toast-act"); await p.waitForTimeout(500);
-  ok((await p.evaluate(() => document.querySelectorAll("[data-act=del][data-col=fuel]").length)) === before, "undo brings it back");
+  await p.evaluate(() => document.querySelector("[data-act=del][data-col=fuel]").click());
+  ok(await until(p, (n) => document.querySelectorAll("[data-act=del][data-col=fuel]").length === n - 1, before), "delete is immediate");
+  await p.click(".toast-act");
+  ok(await until(p, (n) => document.querySelectorAll("[data-act=del][data-col=fuel]").length === n, before), "undo brings it back");
   await p.click('[data-nav="reminder"]'); await p.waitForTimeout(400);
   await p.evaluate(() => document.querySelector("[data-act=snooze]").click()); await p.waitForTimeout(300);
-  await p.click('.snz button[data-v="7"]'); await p.waitForTimeout(500);
-  ok((await p.evaluate(() => document.querySelector("#view").innerText)).includes("נדחה עד"), "snooze shows on the reminder");
+  await p.click('.snz button[data-v="7"]');
+  ok(await until(p, () => document.querySelector("#view").innerText.includes("נדחה עד")), "snooze shows on the reminder");
 
   console.log("tickets and documents");
   await p.click('[data-nav="agents"]'); await p.waitForTimeout(300); await p.click("[data-act=agtab][data-id=tickets]"); await p.waitForTimeout(300);
@@ -93,8 +95,8 @@ const ok = (cond, name, extra) => { if (cond) { passed++; console.log("  ✓ " +
   await p.keyboard.press("Escape");
   await p.evaluate(() => { window.__rows = window.__rows.filter((r) => r.collection !== "expense"); });
   await p.click("#acctBtn"); await p.waitForTimeout(300); await p.click("[data-act=restore]"); await p.waitForTimeout(300);
-  await p.setInputFiles("#rsF", fp); await p.waitForTimeout(300); await p.click("#rsGo"); await p.waitForTimeout(1200);
-  ok(await p.evaluate(() => __rows.some((r) => r.collection === "expense")), "restore puts records back");
+  await p.setInputFiles("#rsF", fp); await until(p, () => !document.querySelector("#rsGo").disabled); await p.click("#rsGo");
+  ok(await until(p, () => __rows.some((r) => r.collection === "expense")), "restore puts records back");
   await p.context().close();
 
   console.log("business account");
