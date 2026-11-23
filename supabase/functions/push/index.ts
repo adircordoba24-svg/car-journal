@@ -2,6 +2,7 @@
 //   action "key"  (signed-in user)  -> the public VAPID key; the key pair is created here on first use
 //   action "test" (signed-in user)  -> a test notification to the caller's devices
 //   action "run"  (daily cron, x-cron-token) -> reminders that are due or overdue, one notification per car
+//   action "evening" (evening cron, x-cron-token) -> tickets waiting to be checked: the evening they were added, and 5 and 1 days before the last day to ask for cancellation
 import webpush from "npm:web-push@3.6.7";
 
 const APP_URL = "https://adircordoba24-svg.github.io/car-journal/";
@@ -131,6 +132,37 @@ async function runDaily() {
   return { users: users.length, notified };
 }
 
+async function runEvening() {
+  const subs = await (await rest("push_subs?select=user_id")).json();
+  const users = [...new Set(subs.map((s: any) => s.user_id))] as string[];
+  const t = todayIL();
+  let notified = 0;
+  const fmt = (s: string) => { const [y, m, d] = s.split("-"); return `${+d}/${+m}`; };
+  for (const uid of users) {
+    const tickets = await (await rest(`docs?user_id=eq.${uid}&collection=eq.ticket&select=id,data`)).json();
+    const sentRows = await (await rest(`push_sent?user_id=eq.${uid}&rem_key=like.tkeve*&select=rem_key,sent_on`)).json();
+    const sent = new Map(sentRows.map((r: any) => [r.rem_key, r.sent_on]));
+    const due = tickets.filter((x: any) => {
+      const d = x.data || {};
+      if (d.status && d.status !== "open") return false;
+      if (d.reviewed) return false;
+      if (sent.get("tkeve:" + x.id) === t) return false;
+      const added = d.createdAt ? new Date(Number(d.createdAt) + 2 * 3600e3).toISOString().slice(0, 10) : "";
+      const left = d.cancelBy ? daysBetween(t, d.cancelBy) : null;
+      return added === t || left === 5 || left === 1;
+    });
+    if (!due.length) continue;
+    const lines = due.slice(0, 3).map((x: any) => {
+      const d = x.data, what = d.description || "הדוח";
+      const found = d.checkBad ? `נמצאו ${d.checkBad === 1 ? "פגם אפשרי" : d.checkBad + " פגמים אפשריים"}` : d.checkWarn ? "יש כמה דברים לבדוק" : d.checkS === "ok" ? "נראה תקין, כדאי לאשר" : "מחכה לבדיקה";
+      return `${what}: ${found}${d.cancelBy ? `. בקשה לביטול עד ${fmt(d.cancelBy)}` : ""}`;
+    });
+    const n = await sendTo(uid, { title: due.length === 1 ? "יומן הרכב: לבדוק את הדוח" : `יומן הרכב: ${due.length} דוחות לבדיקה`, body: lines.join("\n"), url: APP_URL + "#tickets", tag: "tkcheck" });
+    if (n) { notified++; await rest("push_sent", { method: "POST", headers: { Prefer: "resolution=merge-duplicates" }, body: JSON.stringify(due.map((x: any) => ({ user_id: uid, rem_key: "tkeve:" + x.id, sent_on: t }))) }); }
+  }
+  return { users: users.length, notified };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
@@ -139,6 +171,10 @@ Deno.serve(async (req) => {
   if (body.action === "run") {
     if (!cfg.cron_token || req.headers.get("x-cron-token") !== cfg.cron_token) return json({ error: "unauthorized" }, 401);
     return json(await runDaily());
+  }
+  if (body.action === "evening") {
+    if (!cfg.cron_token || req.headers.get("x-cron-token") !== cfg.cron_token) return json({ error: "unauthorized" }, 401);
+    return json(await runEvening());
   }
   const user = await userFrom(req);
   if (!user) return json({ error: "unauthorized" }, 401);

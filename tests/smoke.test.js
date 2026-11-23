@@ -89,6 +89,17 @@ const ok = (cond, name, extra) => { if (cond) { passed++; console.log("  ✓ " +
   await p.click("[data-act=tkAdd]"); await p.waitForTimeout(300); await p.setInputFiles("#tkF", IMG); await p.waitForTimeout(1200);
   await p.click("#tk button[type=submit]"); await p.waitForTimeout(900);
   ok((await p.evaluate(() => document.querySelector(".pol h2").innerText)).startsWith("8"), "ticket points are counted");
+  ok(await until(p, () => document.querySelector(".tkc-v") && /מספר הרכב בדוח תואם/.test(document.querySelector(".tkc-list").innerText)), "ticket check opens after saving");
+  await p.click("#tkcOk"); await p.waitForTimeout(400);
+  ok(await p.evaluate(() => __rows.some((r) => r.collection === "ticket" && r.data.reviewed === true && r.data.scanned)), "ticket marked as checked");
+  await p.evaluate(() => { window.__badTicket = true; });
+  await p.click("[data-act=tkAdd]"); await p.waitForTimeout(300); await p.setInputFiles("#tkF", IMG); await p.waitForTimeout(1200);
+  await p.click("#tk button[type=submit]");
+  ok(await until(p, () => document.querySelector(".tkc-v[data-s=bad]")), "flawed ticket is flagged");
+  const bad = await p.evaluate(() => [...document.querySelectorAll(".tkc-i[data-s=bad]")].map((x) => x.innerText).join(" | "));
+  ok(/לא תואם/.test(bad) && /סוג הרכב/.test(bad) && /התיישנה/.test(bad), "wrong plate, wrong make and late delivery are found", bad);
+  ok(await p.evaluate(() => { const t = __rows.find((r) => r.collection === "ticket" && r.data.offenseDate === "2026-03-01"); return t && t.data.checkBad === 3 && t.data.cancelBy === "2026-10-20" && String(t.data.plateOnTicket).startsWith("enc:"); }), "check summary saved, plate on the ticket encrypted");
+  await p.keyboard.press("Escape"); await p.evaluate(() => { window.__badTicket = false; });
   await p.click("[data-act=agtab][data-id=docs]"); await p.waitForTimeout(300);
   await p.click("[data-act=docUp][data-type=insurance]"); await p.waitForTimeout(300); await p.setInputFiles("#duFile", PDF); await p.click("#duGo"); await p.waitForTimeout(2200);
   ok((await p.evaluate(() => document.querySelectorAll(".cov").length)) >= 3, "policy coverages are shown");

@@ -81,6 +81,13 @@ const SCREENS = [
   ["agents", "#q", async (p) => p.click('[data-nav="agents"]')],
   ["documents", "#q", async (p) => { await p.click('[data-nav="agents"]'); await p.waitForTimeout(300); await p.click("[data-act=agtab][data-id=docs]"); }],
   ["tickets", "#q", async (p) => { await p.click('[data-nav="agents"]'); await p.waitForTimeout(300); await p.click("[data-act=agtab][data-id=tickets]"); }],
+  ["ticket-check", "#q", async (p) => {
+    await p.click('[data-nav="agents"]'); await p.waitForTimeout(300); await p.click("[data-act=agtab][data-id=tickets]"); await p.waitForTimeout(300);
+    await p.click("[data-act=tkAdd]"); await p.waitForTimeout(300);
+    await p.setInputFiles("#tkF", { name: "t.png", mimeType: "image/png", buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64") });
+    await p.waitForTimeout(1200); await p.click("#tk button[type=submit]");
+    await p.waitForFunction(() => document.querySelector(".tkc-v"), null, { timeout: 5000 });
+  }, ".sheet", "window.__badTicket=true"],
   ["quick-sheet", "#q", async (p) => p.click("[data-act=quick]"), ".sheet"],
   ["voice-sheet", "#q", async (p) => { await p.click("[data-act=quick]"); await p.waitForTimeout(250); await p.click(".qbtn[data-act=voice]"); }, ".sheet"],
   ["account-sheet", "#q", async (p) => p.click("#acctBtn"), ".sheet"],

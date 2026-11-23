@@ -100,7 +100,8 @@ function switchCar(id){if(id===CAR)return;CAR=id;try{localStorage.setItem('cj-ca
 function carName(c){c=c||{};return c.nickname||[c.make,c.model].filter(Boolean).join(' ')||'הרכב';}
 let db=null,assets=null,sample=null,mcp=null,imgOK=false;
 let view='home';
-try{const h=location.hash.slice(1);if(['home','fuel','service','expense','reminder','agents'].includes(h))view=h}catch(e){}
+let openTickets=false;
+try{const h=location.hash.slice(1);if(['home','fuel','service','expense','reminder','agents'].includes(h))view=h;if(h==='tickets'){view='agents';openTickets=true;}}catch(e){}
 
 /* ---------- derived ---------- */
 function odo(){
@@ -172,12 +173,13 @@ function sortedReminders(filter){
 
 /* ---------- db ---------- */
 async function boot(){
+  if(openTickets){agTab='tickets';try{history.replaceState(null,'','#agents');}catch(e){}}
   renderNav();
   try{PENDING=window.cjPending?window.cjPending():0;}catch(e){}
   if(window.cjAccount){const ab=$('#acctBtn');if(ab)ab.hidden=false;const bt=$('#betaTag');if(bt)bt.hidden=false;
     if(window.cjAccount.plan)window.cjAccount.plan().then(pl=>{if(pl&&pl.maxCars){MAX_CARS=pl.maxCars;PLAN=pl.plan||'private';render();}}).catch(()=>{});}
   try{const qp=new URLSearchParams(location.search);const qc=qp.get('car');if(qc){CAR=qc;try{localStorage.setItem('cj-car',qc);}catch(e){}history.replaceState(null,'',location.pathname+location.hash);}}catch(e){}
-  if(navigator.serviceWorker)navigator.serviceWorker.addEventListener('message',e=>{const d=e.data||{};if(d.type==='cj-open'){if(d.car&&d.car!==CAR&&S.cars.some(c=>c.id===d.car))switchCar(d.car);go('reminder');}});
+  if(navigator.serviceWorker)navigator.serviceWorker.addEventListener('message',e=>{const d=e.data||{};if(d.type==='cj-open'){if(String(d.url||'').includes('#tickets')){agTab='tickets';if(view==='agents')render();else go('agents');return;}if(d.car&&d.car!==CAR&&S.cars.some(c=>c.id===d.car))switchCar(d.car);go('reminder');}});
   const timer=setTimeout(()=>{if(S.ready.size<COLS.length){S.offline=true;render();}},10000);
   try{ db=await window.claude?.use?.('db'); }catch(e){ db=null; }
   if(!db){clearTimeout(timer);S.noDb=true;render();return;}

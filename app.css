@@ -570,3 +570,20 @@ body[data-fleet="1"] .fab{display:none}
 .vex{display:flex;flex-direction:column;gap:6px;width:100%}
 .vex button{font:inherit;font-size:13.5px;text-align:start;padding:8px 12px;border-radius:10px;border:1px dashed var(--line);background:none;color:var(--muted);cursor:pointer}
 .m-actions.four{grid-template-columns:1.4fr 1fr 1fr 1fr}
+/* ticket check */
+.tkc-v{display:flex;flex-direction:column;gap:2px;padding:14px 16px;border-radius:14px;border:1px solid var(--line)}
+.tkc-v b{font-size:16px;font-weight:600}.tkc-v span{font-size:13.5px;color:var(--muted)}
+.tkc-v[data-s="bad"]{background:var(--crit-soft);border-color:var(--crit)}.tkc-v[data-s="bad"] b{color:var(--crit)}
+.tkc-v[data-s="warn"]{background:var(--warn-soft);border-color:var(--warn)}.tkc-v[data-s="warn"] b{color:var(--warn)}
+.tkc-v[data-s="ok"]{background:var(--ok-soft);border-color:var(--ok)}.tkc-v[data-s="ok"] b{color:var(--ok)}
+.tkc-list{display:flex;flex-direction:column}
+.tkc-i{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:start;padding:10px 0;border-top:1px solid var(--line-soft);font-size:14px}
+.tkc-i:first-child{border-top:0}
+.tkc-ic{width:28px;height:28px;border-radius:50%;display:grid;place-items:center}
+.tkc-ic svg.i{width:16px;height:16px}
+.tkc-i[data-s="bad"] .tkc-ic{background:var(--crit-soft);color:var(--crit)}
+.tkc-i[data-s="warn"] .tkc-ic{background:var(--warn-soft);color:var(--warn)}
+.tkc-i[data-s="ok"] .tkc-ic{background:var(--ok-soft);color:var(--ok)}
+.tkc-dl{display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:12px;background:var(--raised);font-size:14px}
+.tkc-dl b{font-weight:600}
+.btn.tk-bad{border-color:var(--crit);color:var(--crit)}

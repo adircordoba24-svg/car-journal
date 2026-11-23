@@ -85,14 +85,18 @@ function tkRow(t){
   const car=t.carId&&t.carId!=='*'?S.cars.find(c=>c.id===t.carId):null;
   return `<div class="dstat ${st.c}" style="align-items:flex-start"><div class="ic">${I('ticket')}</div><div style="min-width:0;flex:1"><span class="tkst">${st.x}</span><b>${esc(t.description||TK_KIND[t.kind]||'דוח')}</b>
     <span>${[TK_KIND[t.kind],t.offenseDate&&fmtD(t.offenseDate),n(t.amount)?money(t.amount):'',n(t.points)?t.points+' נק׳':'',car&&carName(car)].filter(Boolean).join(' · ')}</span>
-    <div class="pol-acts" style="margin-top:8px">${t.status==='open'?`<button class="btn sm primary" data-act="tkPaid" data-id="${t.id}">${I('check')}שילמתי</button>`:''}<button class="btn sm ghost" data-act="tkEdit" data-id="${t.id}">${I('edit')}עריכה</button>${(t.files||[]).length?`<button class="btn sm ghost" data-act="tkFile" data-id="${t.id}">${I('doc')}הדוח</button>`:''}</div></div>
+    <div class="pol-acts" style="margin-top:8px">${tkCheckBtn(t)}${t.status==='open'?`<button class="btn sm primary" data-act="tkPaid" data-id="${t.id}">${I('check')}שילמתי</button>`:''}<button class="btn sm ghost" data-act="tkEdit" data-id="${t.id}">${I('edit')}עריכה</button>${(t.files||[]).length?`<button class="btn sm ghost" data-act="tkFile" data-id="${t.id}">${I('doc')}הדוח</button>`:''}</div></div>
     </div></div>`;
 }
 const ticketPrompt=()=>`זה דוח תנועה, דוח מצלמה או דוח חניה בישראל (צילום או PDF). החזר JSON בלבד:
-{"isTicket":boolean,"kind":"traffic"|"camera"|"parking"|"other","offenseDate":"YYYY-MM-DD"|null,"serviceDate":"YYYY-MM-DD"|null,"dueDate":"YYYY-MM-DD"|null,"amount":number|null,"points":number|null,"description":string|null,"ticketNo":string|null,"plate":string|null,"authority":string|null}
+{"isTicket":boolean,"kind":"traffic"|"camera"|"parking"|"other","offenseDate":"YYYY-MM-DD"|null,"offenseTime":"HH:MM"|null,"serviceDate":"YYYY-MM-DD"|null,"dueDate":"YYYY-MM-DD"|null,"cancelBy":"YYYY-MM-DD"|null,"trialBy":"YYYY-MM-DD"|null,"amount":number|null,"points":number|null,"description":string|null,"lawSection":string|null,"location":string|null,"ticketNo":string|null,"plate":string|null,"vehicleMake":string|null,"vehicleColor":string|null,"officer":string|null,"delivery":"hand"|"windshield"|"mail"|null,"hasPhoto":boolean|null,"authority":string|null,"issues":[string]}
 - offenseDate: תאריך העבירה. serviceDate: תאריך מסירת הדוח/המצאה אם מופיע. dueDate: "לתשלום עד" / מועד אחרון אם כתוב במפורש.
 - description: תיאור העבירה בעברית פשוטה ובקצרה ("מהירות 20 קמ״ש מעל המותר", "חניה באדום־לבן").
 - points: רק אם מספר הנקודות כתוב בדוח. אל תנחש.
+- location: מקום העבירה (רחוב/כביש ועיר). officer: שם או מספר השוטר/הפקח, או מזהה המצלמה. lawSection: סעיף החוק או התקנה אם כתוב.
+- vehicleMake / vehicleColor: סוג הרכב וצבעו כפי שכתוב בדוח. delivery: hand = נמסר ביד במקום, windshield = הודבק על הרכב, mail = נשלח בדואר. hasPhoto: האם יש בדוח תמונה של הרכב.
+- cancelBy / trialBy: רק אם כתוב בדוח מועד אחרון לבקשת ביטול / לבקשה להישפט.
+- issues: פגמים שאתה רואה בדוח עצמו, בעברית פשוטה ובקצרה: פרטים חיוניים חסרים או לא קריאים, סתירות (תאריכים, שעות, סוג רכב), תאריך מסירה לפני העבירה. רק מה שבאמת רואים. אם אין, מערך ריק.
 - authority: מי הוציא (משטרת ישראל, עיריית תל אביב...). תאריכים יום/חודש/שנה. אל תעתיק מספר זהות, שם או כתובת. היום ${today()}.`;
 function ticketSheet(id){
   const t=id?S.ticket.find(x=>x.id===id)||{}:{kind:'traffic',status:'open'};
@@ -115,7 +119,7 @@ function ticketSheet(id){
       try{const r=await sample.json(ticketPrompt(),{images:[file],modelTier:'default',maxTokens:600,purpose:'scan'});if(!sc.isConnected)return;const d=/^\d{4}-\d\d-\d\d$/;
         if(!r||r.isTicket===false){v('tkS').textContent='זה לא נראה כמו דוח. אפשר למלא ידנית.';}
         else{if(TK_KIND[r.kind])v('tkK').value=r.kind;if(r.description)v('tkD').value=r.description;['offenseDate:tkO','serviceDate:tkR','dueDate:tkU'].forEach(x=>{const [k,i]=x.split(':');if(d.test(r[k]||''))v(i).value=r[k];});
-          if(n(r.amount))v('tkA').value=n(r.amount);if(n(r.points)!=null)v('tkP').value=n(r.points);file._no=r.ticketNo||'';
+          if(n(r.amount))v('tkA').value=n(r.amount);if(n(r.points)!=null)v('tkP').value=n(r.points);file._no=r.ticketNo||'';file._scan=r;
           v('tkS').textContent=n(r.points)==null&&r.kind!=='parking'?'מולא. אם יש נקודות על העבירה, הוסף אותן ידנית.':'מולא. בדוק ושמור.';}
       }catch(e){if(sc.isConnected)v('tkS').textContent=aiErr(e,'הסוכן לא הצליח לקרוא. אפשר למלא ידנית.');}busy(sc,false);};}
     const del=v('tkDel');if(del)del.onclick=async()=>{await syncGlobalReminder('tk:'+id,'','');undoDelete('ticket',id,'הדוח נמחק');};
@@ -126,9 +130,12 @@ function ticketSheet(id){
       const b=root.querySelector('button[type=submit]');busy(b,true);
       try{
         if(file&&assets){const a=await assets.upload(file);data.files=[{id:a.id,type:file.type||'',name:(file.name||'').slice(0,120)}];if(file._no)data.ticketNo=file._no;}
+        if(file&&file._scan)Object.assign(data,tkScanFields(file._scan));
+        Object.assign(data,tkCheckSummary(Object.assign({},t,data)));
         let tid=id;if(id)await updRec('ticket',id,data);else{const ref=await addRec('ticket',Object.assign({createdAt:Date.now()},data));tid=ref.id;}
         const due=tkDue(data);await syncGlobalReminder('tk:'+tid,`תשלום ${TK_KIND[data.kind]||'דוח'}${n(data.amount)?' '+money(data.amount):''}`,data.status==='open'?due:'');
         closeModal();toast(data.status==='open'&&due?`נשמר. נזכיר לך לפני ${fmtD(due)}`:'נשמר');
+        if(!id&&data.status==='open')setTimeout(()=>tkCheckSheet(tid,true),350);
       }catch(x){console.error(x);busy(b,false);toast('השמירה נכשלה');}};
   });
 }
