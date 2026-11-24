@@ -336,6 +336,12 @@
     return q;
   }
   var db = { collection: collection, doc: function (p) { var s = p.split("/"); return docRef(s[0], s[1]); } };
+  // pull to refresh: send what's waiting, then load everything again
+  window.cjRefresh = async function () {
+    if (!uid) return;
+    try { if (qGet().length) await flush(); } catch (e) {}
+    await Promise.all(Object.keys(listeners).map(function (c) { return load(c); }));
+  };
   document.addEventListener("visibilitychange", function () {
     if (document.visibilityState === "visible" && uid) Object.keys(listeners).forEach(function (c) { load(c).catch(function () {}); });
   });

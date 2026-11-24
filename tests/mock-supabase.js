@@ -21,6 +21,8 @@ window.supabase={createClient:()=>({
    if(name==='vault'){__calls.push(['vault',body.op,body.items.length]);return {data:{items:body.items.map(x=>body.op==='enc'?'enc:v1:'+btoa(unescape(encodeURIComponent(x.v))):decodeURIComponent(escape(atob(x.v.slice(7)))))},error:null}}
    if(name==='push'){__calls.push(['push',body.action]);return {data:{publicKey:'BLWYm7i9bjfc4J587QhJV1DK7dJoOIxhDMM5Xjpzv-IdxX1HSLY6q6F3bKSmzF9pkdh9pWmhCw6XbCX54KajQ6M',sent:1},error:null}}
    if(name==='stt'){if(body.ping)return {data:{ready:!!window.__stt},error:null};__calls.push(['stt',body.type,body.audio.length>100]);if(!window.__stt)return {data:{error:'missing_key'},error:null};return {data:{text:'תדלקתי 38 ליטר ב-270 שקל, הקילומטראז׳ 31,200'},error:null};}
+   if(name==='backup'&&body&&body.action==='drill'){__calls.push(['drill']);return {data:{ok:true,file:'db-test.json.gz',ageHours:3,restored:40,sameAsLive:38,changedSince:2,addedSince:1,deletedSince:0,users:2,ms:900,tables:{docs:{backup:40,live:41}}},error:null};}
+   if(name==='watch'){__calls.push(['watch',body&&body.action]);return {data:{sent:1},error:null};}
    if(name==='delete-account'){__calls.push(['delete-account',body.confirm]);return {data:{ok:true},error:null}}
    if(window.__mode==='quota')return {data:null,error:{message:'non-2xx',context:{json:async()=>({error:'quota_exceeded',kind:body.messages.some(m=>Array.isArray(m.content)&&m.content.some(p=>p.type==='image'))?'receipt':'chat'})}}};
    __calls.push(['fn',body.tier,(body.messages[body.messages.length-1].content||[]).filter?body.messages[body.messages.length-1].content.filter(p=>p.type==='image').length:0]);await new Promise(r=>setTimeout(r,200));

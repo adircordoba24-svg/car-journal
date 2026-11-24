@@ -84,7 +84,7 @@ function tkRow(t){
   const due=tkDue(t),dl=due?daysBetween(today(),due):null;
   const st=t.status==='paid'?{c:'ok',x:'שולם'}:t.status==='cancelled'?{c:'',x:'בוטל'}:t.status==='court'?{c:'',x:'ביקשתי להישפט'}:dl===null?{c:'',x:'פתוח'}:dl<0?{c:'crit',x:`באיחור ${-dl} ימים · +50% פיגורים`}:{c:dl<=7?'crit':dl<=21?'warn':'ok',x:`עוד ${dl} ימים לשלם`};
   const car=t.carId&&t.carId!=='*'?S.cars.find(c=>c.id===t.carId):null;
-  return `<div class="dstat ${st.c}" style="align-items:flex-start"><div class="ic">${I('ticket')}</div><div style="min-width:0;flex:1"><span class="tkst">${st.x}</span><b>${esc(t.description||TK_KIND[t.kind]||'דוח')}</b>
+  return `<div class="dstat ${st.c}" style="align-items:flex-start;position:relative">${tkStamp(t)}<div class="ic">${I('ticket')}</div><div style="min-width:0;flex:1"><span class="tkst">${st.x}</span><b>${esc(t.description||TK_KIND[t.kind]||'דוח')}</b>
     <span>${[TK_KIND[t.kind],t.offenseDate&&fmtD(t.offenseDate),n(t.amount)?money(t.amount):'',n(t.points)?t.points+' נק׳':'',car&&carName(car)].filter(Boolean).join(' · ')}</span>
     <div class="pol-acts" style="margin-top:8px">${tkCheckBtn(t)}${t.status==='open'?`<button class="btn sm primary" data-act="tkPaid" data-id="${t.id}">${I('check')}שילמתי</button>`:''}<button class="btn sm ghost" data-act="tkEdit" data-id="${t.id}">${I('edit')}עריכה</button>${(t.files||[]).length?`<button class="btn sm ghost" data-act="tkFile" data-id="${t.id}">${I('doc')}הדוח</button>`:''}</div></div>
     </div></div>`;
@@ -126,8 +126,9 @@ function ticketSheet(id){
     const del=v('tkDel');if(del)del.onclick=async()=>{await syncGlobalReminder('tk:'+id,'','');undoDelete('ticket',id,'הדוח נמחק');};
     root.querySelector('#tk').onsubmit=async e=>{e.preventDefault();
       const data={kind:v('tkK').value,description:v('tkD').value.trim(),offenseDate:v('tkO').value,serviceDate:v('tkR').value,amount:n(v('tkA').value),points:n(v('tkP').value)||0,dueDate:v('tkU').value,status:v('tkSt').value,carId:v('tkC')?v('tkC').value:'*'};
-      if(!data.offenseDate){toast('צריך תאריך עבירה');return;}
+      if(!data.offenseDate){toast('צריך תאריך עבירה');shake(v('tkO').closest('.field'));return;}
       if(data.status==='paid'&&t.status!=='paid')data.paidAt=today();
+      if(id&&data.status!==t.status&&(data.status==='paid'||data.status==='cancelled'))JUST_STAMP={id,at:Date.now()};
       const b=root.querySelector('button[type=submit]');busy(b,true);
       try{
         if(file&&assets){const a=await assets.upload(file);data.files=[{id:a.id,type:file.type||'',name:(file.name||'').slice(0,120)}];if(file._no)data.ticketNo=file._no;}
@@ -140,7 +141,7 @@ function ticketSheet(id){
       }catch(x){console.error(x);busy(b,false);toast('השמירה נכשלה');}};
   });
 }
-async function ticketPaid(id){const t=S.ticket.find(x=>x.id===id);if(!t)return;try{await updRec('ticket',id,{status:'paid',paidAt:today()});await syncGlobalReminder('tk:'+id,'','');toast('סומן כשולם');}catch(e){toast('העדכון נכשל');}}
+async function ticketPaid(id){const t=S.ticket.find(x=>x.id===id);if(!t)return;try{JUST_STAMP={id,at:Date.now()};await updRec('ticket',id,{status:'paid',paidAt:today()});await syncGlobalReminder('tk:'+id,'','');toast('סומן כשולם');}catch(e){toast('העדכון נכשל');}}
 const pointsPrompt=()=>`זה תדפיס נקודות / רישום תעבורתי ממשרד התחבורה בישראל. החזר JSON בלבד: {"isPointsReport":boolean,"totalPoints":number|null,"offenses":[{"offenseDate":"YYYY-MM-DD","points":number,"description":string}]}
 כל עבירה עם תאריך העבירה, מספר הנקודות ותיאור קצר בעברית פשוטה. תאריכים יום/חודש/שנה. אל תעתיק מספר זהות, שם או כתובת. היום ${today()}.`;
 function pointsImportSheet(){

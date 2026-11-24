@@ -19,3 +19,4 @@ tests/admin.html
 node_modules/
 tests/vendor
 tests/shots/
+tests/icons

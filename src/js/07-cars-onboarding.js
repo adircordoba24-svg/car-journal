@@ -13,6 +13,7 @@ function carSheet(){
     ${isBiz()&&S.cars.length>1?`<button type="button" class="btn block" id="carFleet">${I('grid')}כל הצי במסך אחד</button>`:''}
     <div class="carlist">${list}</div>
     ${canAdd?`<button type="button" class="btn primary block" id="carAdd">${I('plus')}הוספת רכב${PLAN==='business'?'':' שני'}</button>`:`<p class="small muted" style="margin:0">${PLAN==='business'?`החשבון העסקי שלך כולל עד ${MAX_CARS} רכבים.`:`חשבון פרטי כולל עד ${MAX_CARS} רכבים. מנהל יותר רכבים, לעסק או למשפחה? <button type="button" class="linkbtn" data-act="bizAsk">חשבון עסקי</button>`}</p>`}
+    ${S.car&&!S.car.example?`<button type="button" class="btn block" data-act="report">${I('doc')}דוח היסטוריה של ${esc(carName(S.car))} (PDF)</button>`:''}
     ${S.cars.length>1&&S.car?`<button type="button" class="btn ghost block" id="carDel" style="color:var(--crit)">${I('trash')}מחיקת ${esc(carName(S.car))} וכל הרישומים שלו</button>`:''}
   </div>`,root=>{
     root.querySelectorAll('[data-car]').forEach(b=>b.onclick=()=>{closeModal();switchCar(b.dataset.car);});
@@ -28,7 +29,7 @@ function deleteCarSheet(){
     <div class="field"><label for="cdTxt">כדי לאשר, הקלד <b>מחק</b></label><input type="text" id="cdTxt" autocomplete="off"></div>
     <div class="formacts"><button class="btn primary" id="cdYes" style="background:var(--crit);border-color:var(--crit)">${I('trash')}מחיקה</button><button class="btn ghost" data-act="close">ביטול</button></div>`,root=>{
     root.querySelector('#cdYes').onclick=async e=>{
-      if(root.querySelector('#cdTxt').value.trim()!=='מחק'){toast('צריך להקליד מחק');return;}
+      if(root.querySelector('#cdTxt').value.trim()!=='מחק'){toast('צריך להקליד מחק');shake(root.querySelector('#cdTxt').closest('.field'));return;}
       busy(e.currentTarget,true,'מוחק…');
       try{
         for(const [k,r] of recs){await delRec(k,r.id);for(const f of [r.receipt,...(r.files||[])])if(f&&f.id&&assets&&assets.delete)await Promise.resolve(assets.delete(f.id)).catch(()=>{});}
@@ -65,10 +66,15 @@ function onboarding(step,st){
         <div class="mrow notif warn"><div class="ic">${I('bell')}</div><div><b>טסט שנתי</b><span>יומן הרכב · עכשיו</span></div><span class="tag">עוד 7 ימים</span></div>
         <div class="mrow notif"><div class="ic">${I('wrench')}</div><div><b>טיפול 15,000</b><span>לפי הק״מ שלך</span></div><span class="tag">עוד 1,200 ק״מ</span></div>
         <div class="mrow notif ok"><div class="ic">${I('tire')}</div><div><b>לחץ אוויר בצמיגים</b><span>סימנת שבדקת</span></div><span class="tag">${I('check')}</span></div></div>`},
-      {h:'הביטוח שלך, בשפה פשוטה',p:'מעלים את הפוליסה ורישיון הרכב. הסוכן מסביר מה מכוסה ומה לא, ויועץ הרכב עונה על כל שאלה. הנתונים שלך פרטיים, מוצפנים, ואפשר לייצא או למחוק אותם בכל רגע.',stage:`<div class="mock">
+      {h:'הביטוח שלך, בשפה פשוטה',p:'מעלים את הפוליסה ורישיון הרכב. הסוכן מסביר מה מכוסה ומה לא, ועונה על כל שאלה. הנתונים שלך פרטיים, מוצפנים, ואפשר לייצא או למחוק אותם בכל רגע.',stage:`<div class="mock">
         <div class="mrow"><div class="ic">${I('shield')}</div><div><b>נזק לרכב שלך</b><span>גם אם אתה אשם</span></div><span class="tag">עד שווי הרכב</span></div>
         <div class="mrow"><div class="ic">${I('car')}</div><div><b>רכב חלופי</b><span>כשהרכב במוסך</span></div><span class="tag">עד 14 ימים</span></div>
-        <div class="mrow"><div class="ic">${I('chat')}</div><div><b>״מה מכוסה אם נכנסו בי?״</b><span>יועץ הרכב</span></div><span class="tag">${I('send')}</span></div></div>`}];
+        <div class="mrow"><div class="ic">${I('chat')}</div><div><b>״מה מכוסה אם נכנסו בי?״</b><span>שואלים את הסוכן</span></div><span class="tag">${I('send')}</span></div></div>`},
+      {h:'פשוט מספרים לסוכן',p:'כותבים או אומרים לו מה עשית, והוא רושם במקום הנכון. ובכל מסך יש ״?״ עם הסבר קצר.',stage:`<div class="mock chatmock">
+        <div class="bub u">${I('mic')} עשיתי איזון וכיוון פרונט ב־250 שקל</div>
+        <div class="bub a">✓ נרשם טיפול: איזון וכיוון פרונט · ₪250</div>
+        <div class="bub u">בדקתי שמן ומים</div>
+        <div class="bub a">✓ בוצע היום. הבדיקה הבאה בעוד שבועיים</div></div>`}];
     el.innerHTML=`<div class="intro">
       <div class="intro-top"><span class="beta" style="top:0;margin:0">בטא</span><button class="onb-skip" id="onbSkipI">דילוג</button></div>
       <div class="intro-track" id="itr" aria-roledescription="קרוסלה" aria-label="מה יש ביומן הרכב">
@@ -119,7 +125,7 @@ function onboarding(step,st){
         }catch(e){busy(sb,false);ss.textContent=aiErr(e,'הסוכן לא הצליח לקרוא. אפשר לנסות צילום ברור יותר או למלא ידנית.');}};}
     el.querySelector('#onbCar').onsubmit=e=>{e.preventDefault();const g=id=>el.querySelector('#'+id).value.trim();
       Object.assign(st,{make:g('oMk'),model:g('oMd'),year:n(g('oY')),fuelType:g('oF'),plate:g('oP'),odometer:n(g('oO'))});
-      if(!st.make||!st.model||!st.odometer){el.querySelector('#onbErr').textContent='צריך יצרן, דגם וקילומטראז׳';return;}
+      if(!st.make||!st.model||!st.odometer){el.querySelector('#onbErr').textContent='צריך יצרן, דגם וקילומטראז׳';[['oMk',st.make],['oMd',st.model],['oO',st.odometer]].forEach(([k,v])=>{if(!v)shake(el.querySelector('#'+k).closest('.field'));});return;}
       onboarding(3,st);};
     return;
   }
@@ -152,6 +158,7 @@ function onboarding(step,st){
         if(st.licFile&&assets){try{const a=await assets.upload(st.licFile);const old=RAW.paper.filter(p=>p.type==='license'&&(p.carId||'car')===cid);for(const o of old)await delRec('paper',o.id);
           const pl=Object.assign({type:'license',files:[{id:a.id,type:st.licFile.type||'',name:(st.licFile.name||'').slice(0,120)}],readAt:Date.now(),createdAt:Date.now()},st.lic);
           const ref=await addRec('paper',pl);if(st.lic.validUntil)await syncDocReminder(Object.assign({id:ref.id},pl));}catch(e){console.warn(e);}}
+        if(!st.carId)lsSet('cj-tour-pending','1');
         close(false);toast(st.carId==='car2'&&PLAN!=='business'?'הרכב השני נוסף':st.carId?'הרכב נוסף':'הרכב נוסף. ברוך הבא!');go('home');
         if(mode==='ai')setTimeout(()=>runPlan(null),400);
       }catch(err){console.error(err);busy(btn,false);toast('השמירה נכשלה. בדוק את החיבור ונסה שוב');}};

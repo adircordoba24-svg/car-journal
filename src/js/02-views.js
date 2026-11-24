@@ -203,7 +203,7 @@ function vService(){
   const sched=sortedReminders(r=>r.kind==='service');
   const tot=rows.reduce((s,r)=>s+(n(r.cost)||0),0);
   return `
-  <div class="sec-title"><h2>טיפולים</h2><button class="btn primary" data-act="serviceForm">${I('plus')}רישום טיפול</button></div>
+  <div class="sec-title"><h2>טיפולים</h2><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="report">${I('doc')}דוח היסטוריה (PDF)</button><button class="btn primary" data-act="serviceForm">${I('plus')}רישום טיפול</button></span></div>
   <section class="two" style="margin-top:0">
     <div class="card"><div class="card-head"><h2>היסטוריית טיפולים</h2><span class="small muted">${rows.length} טיפולים · ${ils(tot)}</span></div>
       <div class="feed">${rows.map(r=>`<div class="fitem"><div class="ic">${I('wrench')}</div><div style="min-width:0"><div class="rtitle">${esc(r.title)}</div><div class="rsub">${fmtD(r.date)} · ${km(r.odo)} ק״מ${r.garage?' · '+esc(r.garage):''}</div>${r.note?`<div class="rsub" style="margin-top:3px">${esc(r.note)}</div>`:''}</div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><span class="amt">${ils(r.cost)}</span><div class="rowacts">${rcptChip(r.receipt)}<button class="mini" data-act="serviceForm" data-id="${r.id}" aria-label="עריכה">${I('edit')}</button><button class="mini" data-act="del" data-col="service" data-id="${r.id}" aria-label="מחיקה">${I('trash')}</button></div></div></div>`).join('')||'<div class="empty"><b>אין טיפולים רשומים</b>תעד טיפול במוסך כדי לעקוב אחרי ההיסטוריה של הרכב</div>'}</div></div>

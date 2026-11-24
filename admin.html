@@ -155,7 +155,8 @@ pre{white-space:pre-wrap;word-break:break-all;font-size:12px;background:var(--bg
   async function backups(){
     const b=await rpc('admin_backups');
     return `<section class="card"><h2>גיבויים</h2><p class="small muted">כל לילה בשעה 02:15 נשמר גיבוי של כל מסד הנתונים (14 הימים האחרונים). קבצי הקבלות עצמם נשמרים בנפרד ולא נכללים כאן.</p>
-      <p><button class="btn primary" id="bkNow">גיבוי עכשיו</button> <span id="bkSt" class="small" role="status"></span></p>
+      <p><button class="btn primary" id="bkNow">גיבוי עכשיו</button> <button class="btn" id="bkDrill">תרגול שחזור</button> <button class="btn" id="wTest">בדיקת התראות אליי</button> <span id="bkSt" class="small" role="status"></span></p>
+      <div id="drillOut"></div>
       <div class="tw"><table style="min-width:420px"><thead><tr><th>קובץ</th><th>נוצר</th><th class="num">גודל</th><th></th></tr></thead><tbody>
       ${b.map(x=>`<tr><td dir="ltr" style="text-align:end">${esc(x.name)}</td><td>${dtt(x.created_at)}</td><td class="num">${(x.size/1024).toFixed(1)} KB</td><td><button class="btn dl" data-n="${esc(x.name)}">הורדה</button></td></tr>`).join('')||'<tr><td colspan="4" class="muted">עוד אין גיבויים</td></tr>'}
       </tbody></table></div></section>`;
@@ -164,6 +165,15 @@ pre{white-space:pre-wrap;word-break:break-all;font-size:12px;background:var(--bg
     main.querySelectorAll('tr[data-u] .sv').forEach(b=>b.onclick=async()=>{const tr=b.closest('tr');b.disabled=true;
       try{await rpc('admin_set_plan',{p_user:tr.dataset.u,p_plan:tr.querySelector('.pl').value,p_max:+tr.querySelector('.mx').value||2});b.textContent='נשמר ✓';delete cache.users;}catch(e){b.textContent='שגיאה';}setTimeout(()=>{b.disabled=false;b.textContent='שמירה';},1800);});
     main.querySelectorAll('.dl').forEach(b=>b.onclick=async()=>{const r=await sb.storage.from('backups').createSignedUrl(b.dataset.n,300,{download:true});if(r.data)location.href=r.data.signedUrl;});
+    const dr=$('#bkDrill');if(dr)dr.onclick=async()=>{dr.disabled=true;$('#bkSt').textContent='משחזר את הגיבוי האחרון לטבלת בדיקה…';$('#bkSt').className='small';
+      const r=await sb.functions.invoke('backup',{body:{action:'drill'}});dr.disabled=false;const d=r.data||{};
+      if(r.error||!d.ok){$('#bkSt').textContent='התרגול נכשל'+(d.step?' בשלב '+d.step:'');$('#bkSt').className='small err';return;}
+      $('#bkSt').textContent='התרגול הצליח ✓';$('#bkSt').className='small ok';
+      $('#drillOut').innerHTML=`<div class="card" style="margin-top:10px"><b>הגיבוי ${esc(d.file)} (לפני ${d.ageHours} שעות) נפתח ושוחזר במלואו.</b>
+        <p class="small">${d.restored} רשומות שוחזרו. ${d.sameAsLive} זהות למצב היום, ${d.changedSince} שונו מאז, ${d.addedSince} נוספו מאז, ${d.deletedSince} נמחקו מאז. ${d.users} משתמשים בגיבוי. לקח ${(d.ms/1000).toFixed(1)} שניות.</p>
+        <div class="tw"><table><thead><tr><th>טבלה</th><th class="num">בגיבוי</th><th class="num">היום</th></tr></thead><tbody>${Object.entries(d.tables||{}).map(([t,v])=>`<tr><td dir="ltr" style="text-align:end">${esc(t)}</td><td class="num">${v.backup}</td><td class="num">${v.live}</td></tr>`).join('')}</tbody></table></div></div>`;};
+    const wt=$('#wTest');if(wt)wt.onclick=async()=>{wt.disabled=true;const r=await sb.functions.invoke('watch',{body:{action:'test'}});wt.disabled=false;const n=r.data&&r.data.sent;
+      $('#bkSt').textContent=r.error?'לא הצלחתי לשלוח':n?'נשלחה התראה לטלפון ✓':'אין טלפון עם התראות פעילות בחשבון המנהל';$('#bkSt').className='small '+(r.error||!n?'err':'ok');};
     const bk=$('#bkNow');if(bk)bk.onclick=async()=>{bk.disabled=true;$('#bkSt').textContent='מגבה…';
       const r=await sb.functions.invoke('backup',{body:{}});$('#bkSt').textContent=r.error?'הגיבוי נכשל':'נשמר ✓';$('#bkSt').className='small '+(r.error?'err':'ok');setTimeout(show,800);};
   }

@@ -552,7 +552,7 @@ function vService(){
   const sched=sortedReminders(r=>r.kind==='service');
   const tot=rows.reduce((s,r)=>s+(n(r.cost)||0),0);
   return `
-  <div class="sec-title"><h2>טיפולים</h2><button class="btn primary" data-act="serviceForm">${I('plus')}רישום טיפול</button></div>
+  <div class="sec-title"><h2>טיפולים</h2><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="report">${I('doc')}דוח היסטוריה (PDF)</button><button class="btn primary" data-act="serviceForm">${I('plus')}רישום טיפול</button></span></div>
   <section class="two" style="margin-top:0">
     <div class="card"><div class="card-head"><h2>היסטוריית טיפולים</h2><span class="small muted">${rows.length} טיפולים · ${ils(tot)}</span></div>
       <div class="feed">${rows.map(r=>`<div class="fitem"><div class="ic">${I('wrench')}</div><div style="min-width:0"><div class="rtitle">${esc(r.title)}</div><div class="rsub">${fmtD(r.date)} · ${km(r.odo)} ק״מ${r.garage?' · '+esc(r.garage):''}</div>${r.note?`<div class="rsub" style="margin-top:3px">${esc(r.note)}</div>`:''}</div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><span class="amt">${ils(r.cost)}</span><div class="rowacts">${rcptChip(r.receipt)}<button class="mini" data-act="serviceForm" data-id="${r.id}" aria-label="עריכה">${I('edit')}</button><button class="mini" data-act="del" data-col="service" data-id="${r.id}" aria-label="מחיקה">${I('trash')}</button></div></div></div>`).join('')||'<div class="empty"><b>אין טיפולים רשומים</b>תעד טיפול במוסך כדי לעקוב אחרי ההיסטוריה של הרכב</div>'}</div></div>
@@ -1457,7 +1457,7 @@ function tkRow(t){
   const due=tkDue(t),dl=due?daysBetween(today(),due):null;
   const st=t.status==='paid'?{c:'ok',x:'שולם'}:t.status==='cancelled'?{c:'',x:'בוטל'}:t.status==='court'?{c:'',x:'ביקשתי להישפט'}:dl===null?{c:'',x:'פתוח'}:dl<0?{c:'crit',x:`באיחור ${-dl} ימים · +50% פיגורים`}:{c:dl<=7?'crit':dl<=21?'warn':'ok',x:`עוד ${dl} ימים לשלם`};
   const car=t.carId&&t.carId!=='*'?S.cars.find(c=>c.id===t.carId):null;
-  return `<div class="dstat ${st.c}" style="align-items:flex-start"><div class="ic">${I('ticket')}</div><div style="min-width:0;flex:1"><span class="tkst">${st.x}</span><b>${esc(t.description||TK_KIND[t.kind]||'דוח')}</b>
+  return `<div class="dstat ${st.c}" style="align-items:flex-start;position:relative">${tkStamp(t)}<div class="ic">${I('ticket')}</div><div style="min-width:0;flex:1"><span class="tkst">${st.x}</span><b>${esc(t.description||TK_KIND[t.kind]||'דוח')}</b>
     <span>${[TK_KIND[t.kind],t.offenseDate&&fmtD(t.offenseDate),n(t.amount)?money(t.amount):'',n(t.points)?t.points+' נק׳':'',car&&carName(car)].filter(Boolean).join(' · ')}</span>
     <div class="pol-acts" style="margin-top:8px">${tkCheckBtn(t)}${t.status==='open'?`<button class="btn sm primary" data-act="tkPaid" data-id="${t.id}">${I('check')}שילמתי</button>`:''}<button class="btn sm ghost" data-act="tkEdit" data-id="${t.id}">${I('edit')}עריכה</button>${(t.files||[]).length?`<button class="btn sm ghost" data-act="tkFile" data-id="${t.id}">${I('doc')}הדוח</button>`:''}</div></div>
     </div></div>`;
@@ -1499,8 +1499,9 @@ function ticketSheet(id){
     const del=v('tkDel');if(del)del.onclick=async()=>{await syncGlobalReminder('tk:'+id,'','');undoDelete('ticket',id,'הדוח נמחק');};
     root.querySelector('#tk').onsubmit=async e=>{e.preventDefault();
       const data={kind:v('tkK').value,description:v('tkD').value.trim(),offenseDate:v('tkO').value,serviceDate:v('tkR').value,amount:n(v('tkA').value),points:n(v('tkP').value)||0,dueDate:v('tkU').value,status:v('tkSt').value,carId:v('tkC')?v('tkC').value:'*'};
-      if(!data.offenseDate){toast('צריך תאריך עבירה');return;}
+      if(!data.offenseDate){toast('צריך תאריך עבירה');shake(v('tkO').closest('.field'));return;}
       if(data.status==='paid'&&t.status!=='paid')data.paidAt=today();
+      if(id&&data.status!==t.status&&(data.status==='paid'||data.status==='cancelled'))JUST_STAMP={id,at:Date.now()};
       const b=root.querySelector('button[type=submit]');busy(b,true);
       try{
         if(file&&assets){const a=await assets.upload(file);data.files=[{id:a.id,type:file.type||'',name:(file.name||'').slice(0,120)}];if(file._no)data.ticketNo=file._no;}
@@ -1513,7 +1514,7 @@ function ticketSheet(id){
       }catch(x){console.error(x);busy(b,false);toast('השמירה נכשלה');}};
   });
 }
-async function ticketPaid(id){const t=S.ticket.find(x=>x.id===id);if(!t)return;try{await updRec('ticket',id,{status:'paid',paidAt:today()});await syncGlobalReminder('tk:'+id,'','');toast('סומן כשולם');}catch(e){toast('העדכון נכשל');}}
+async function ticketPaid(id){const t=S.ticket.find(x=>x.id===id);if(!t)return;try{JUST_STAMP={id,at:Date.now()};await updRec('ticket',id,{status:'paid',paidAt:today()});await syncGlobalReminder('tk:'+id,'','');toast('סומן כשולם');}catch(e){toast('העדכון נכשל');}}
 const pointsPrompt=()=>`זה תדפיס נקודות / רישום תעבורתי ממשרד התחבורה בישראל. החזר JSON בלבד: {"isPointsReport":boolean,"totalPoints":number|null,"offenses":[{"offenseDate":"YYYY-MM-DD","points":number,"description":string}]}
 כל עבירה עם תאריך העבירה, מספר הנקודות ותיאור קצר בעברית פשוטה. תאריכים יום/חודש/שנה. אל תעתיק מספר זהות, שם או כתובת. היום ${today()}.`;
 function pointsImportSheet(){
@@ -1551,6 +1552,7 @@ function carSheet(){
     ${isBiz()&&S.cars.length>1?`<button type="button" class="btn block" id="carFleet">${I('grid')}כל הצי במסך אחד</button>`:''}
     <div class="carlist">${list}</div>
     ${canAdd?`<button type="button" class="btn primary block" id="carAdd">${I('plus')}הוספת רכב${PLAN==='business'?'':' שני'}</button>`:`<p class="small muted" style="margin:0">${PLAN==='business'?`החשבון העסקי שלך כולל עד ${MAX_CARS} רכבים.`:`חשבון פרטי כולל עד ${MAX_CARS} רכבים. מנהל יותר רכבים, לעסק או למשפחה? <button type="button" class="linkbtn" data-act="bizAsk">חשבון עסקי</button>`}</p>`}
+    ${S.car&&!S.car.example?`<button type="button" class="btn block" data-act="report">${I('doc')}דוח היסטוריה של ${esc(carName(S.car))} (PDF)</button>`:''}
     ${S.cars.length>1&&S.car?`<button type="button" class="btn ghost block" id="carDel" style="color:var(--crit)">${I('trash')}מחיקת ${esc(carName(S.car))} וכל הרישומים שלו</button>`:''}
   </div>`,root=>{
     root.querySelectorAll('[data-car]').forEach(b=>b.onclick=()=>{closeModal();switchCar(b.dataset.car);});
@@ -1566,7 +1568,7 @@ function deleteCarSheet(){
     <div class="field"><label for="cdTxt">כדי לאשר, הקלד <b>מחק</b></label><input type="text" id="cdTxt" autocomplete="off"></div>
     <div class="formacts"><button class="btn primary" id="cdYes" style="background:var(--crit);border-color:var(--crit)">${I('trash')}מחיקה</button><button class="btn ghost" data-act="close">ביטול</button></div>`,root=>{
     root.querySelector('#cdYes').onclick=async e=>{
-      if(root.querySelector('#cdTxt').value.trim()!=='מחק'){toast('צריך להקליד מחק');return;}
+      if(root.querySelector('#cdTxt').value.trim()!=='מחק'){toast('צריך להקליד מחק');shake(root.querySelector('#cdTxt').closest('.field'));return;}
       busy(e.currentTarget,true,'מוחק…');
       try{
         for(const [k,r] of recs){await delRec(k,r.id);for(const f of [r.receipt,...(r.files||[])])if(f&&f.id&&assets&&assets.delete)await Promise.resolve(assets.delete(f.id)).catch(()=>{});}
@@ -1603,10 +1605,15 @@ function onboarding(step,st){
         <div class="mrow notif warn"><div class="ic">${I('bell')}</div><div><b>טסט שנתי</b><span>יומן הרכב · עכשיו</span></div><span class="tag">עוד 7 ימים</span></div>
         <div class="mrow notif"><div class="ic">${I('wrench')}</div><div><b>טיפול 15,000</b><span>לפי הק״מ שלך</span></div><span class="tag">עוד 1,200 ק״מ</span></div>
         <div class="mrow notif ok"><div class="ic">${I('tire')}</div><div><b>לחץ אוויר בצמיגים</b><span>סימנת שבדקת</span></div><span class="tag">${I('check')}</span></div></div>`},
-      {h:'הביטוח שלך, בשפה פשוטה',p:'מעלים את הפוליסה ורישיון הרכב. הסוכן מסביר מה מכוסה ומה לא, ויועץ הרכב עונה על כל שאלה. הנתונים שלך פרטיים, מוצפנים, ואפשר לייצא או למחוק אותם בכל רגע.',stage:`<div class="mock">
+      {h:'הביטוח שלך, בשפה פשוטה',p:'מעלים את הפוליסה ורישיון הרכב. הסוכן מסביר מה מכוסה ומה לא, ועונה על כל שאלה. הנתונים שלך פרטיים, מוצפנים, ואפשר לייצא או למחוק אותם בכל רגע.',stage:`<div class="mock">
         <div class="mrow"><div class="ic">${I('shield')}</div><div><b>נזק לרכב שלך</b><span>גם אם אתה אשם</span></div><span class="tag">עד שווי הרכב</span></div>
         <div class="mrow"><div class="ic">${I('car')}</div><div><b>רכב חלופי</b><span>כשהרכב במוסך</span></div><span class="tag">עד 14 ימים</span></div>
-        <div class="mrow"><div class="ic">${I('chat')}</div><div><b>״מה מכוסה אם נכנסו בי?״</b><span>יועץ הרכב</span></div><span class="tag">${I('send')}</span></div></div>`}];
+        <div class="mrow"><div class="ic">${I('chat')}</div><div><b>״מה מכוסה אם נכנסו בי?״</b><span>שואלים את הסוכן</span></div><span class="tag">${I('send')}</span></div></div>`},
+      {h:'פשוט מספרים לסוכן',p:'כותבים או אומרים לו מה עשית, והוא רושם במקום הנכון. ובכל מסך יש ״?״ עם הסבר קצר.',stage:`<div class="mock chatmock">
+        <div class="bub u">${I('mic')} עשיתי איזון וכיוון פרונט ב־250 שקל</div>
+        <div class="bub a">✓ נרשם טיפול: איזון וכיוון פרונט · ₪250</div>
+        <div class="bub u">בדקתי שמן ומים</div>
+        <div class="bub a">✓ בוצע היום. הבדיקה הבאה בעוד שבועיים</div></div>`}];
     el.innerHTML=`<div class="intro">
       <div class="intro-top"><span class="beta" style="top:0;margin:0">בטא</span><button class="onb-skip" id="onbSkipI">דילוג</button></div>
       <div class="intro-track" id="itr" aria-roledescription="קרוסלה" aria-label="מה יש ביומן הרכב">
@@ -1657,7 +1664,7 @@ function onboarding(step,st){
         }catch(e){busy(sb,false);ss.textContent=aiErr(e,'הסוכן לא הצליח לקרוא. אפשר לנסות צילום ברור יותר או למלא ידנית.');}};}
     el.querySelector('#onbCar').onsubmit=e=>{e.preventDefault();const g=id=>el.querySelector('#'+id).value.trim();
       Object.assign(st,{make:g('oMk'),model:g('oMd'),year:n(g('oY')),fuelType:g('oF'),plate:g('oP'),odometer:n(g('oO'))});
-      if(!st.make||!st.model||!st.odometer){el.querySelector('#onbErr').textContent='צריך יצרן, דגם וקילומטראז׳';return;}
+      if(!st.make||!st.model||!st.odometer){el.querySelector('#onbErr').textContent='צריך יצרן, דגם וקילומטראז׳';[['oMk',st.make],['oMd',st.model],['oO',st.odometer]].forEach(([k,v])=>{if(!v)shake(el.querySelector('#'+k).closest('.field'));});return;}
       onboarding(3,st);};
     return;
   }
@@ -1690,6 +1697,7 @@ function onboarding(step,st){
         if(st.licFile&&assets){try{const a=await assets.upload(st.licFile);const old=RAW.paper.filter(p=>p.type==='license'&&(p.carId||'car')===cid);for(const o of old)await delRec('paper',o.id);
           const pl=Object.assign({type:'license',files:[{id:a.id,type:st.licFile.type||'',name:(st.licFile.name||'').slice(0,120)}],readAt:Date.now(),createdAt:Date.now()},st.lic);
           const ref=await addRec('paper',pl);if(st.lic.validUntil)await syncDocReminder(Object.assign({id:ref.id},pl));}catch(e){console.warn(e);}}
+        if(!st.carId)lsSet('cj-tour-pending','1');
         close(false);toast(st.carId==='car2'&&PLAN!=='business'?'הרכב השני נוסף':st.carId?'הרכב נוסף':'הרכב נוסף. ברוך הבא!');go('home');
         if(mode==='ai')setTimeout(()=>runPlan(null),400);
       }catch(err){console.error(err);busy(btn,false);toast('השמירה נכשלה. בדוק את החיבור ונסה שוב');}};
@@ -2385,10 +2393,10 @@ const chatTools=[
  {name:'update_odometer',description:'Set the current odometer reading (km).',inputSchema:{type:'object',properties:{km:{type:'number'},...carProp},required:['km']},
   execute:async({km:v,car})=>{const c=useCar(car);v=n(v);if(!v)throw new Error('bad km');const before={odometer:c.odometer,odoUpdatedAt:c.odoUpdatedAt||''};
     await updRec('garage',c.id,{odometer:v,odoUpdatedAt:today()});agentNote(`הקילומטראז׳ עודכן ל־${km(v)}`,()=>updRec('garage',c.id,before));return {ok:true};}},
- {name:'open_screen',description:'Take the user to a screen of the app (after you answer).',inputSchema:{type:'object',properties:{screen:{type:'string',enum:['home','fuel','service','expense','reminder','agent','insurance','tickets','fleet','account','checks']},...carProp},required:['screen']},
+ {name:'open_screen',description:'Take the user to a screen of the app (after you answer). history_report = the PDF history report of the car.',inputSchema:{type:'object',properties:{screen:{type:'string',enum:['home','fuel','service','expense','reminder','agent','insurance','tickets','fleet','account','checks','history_report']},...carProp},required:['screen']},
   execute:({screen,car})=>{if(car)useCar(car);
     const nav={insurance:()=>{agTab='docs';go('agents');render();},tickets:()=>{agTab='tickets';go('agents');render();},agent:()=>{agTab='agents';go('agents');render();},
-      fleet:()=>{if(typeof setFleetView==='function')setFleetView(true);go('home');render();},account:()=>accountSheet(),checks:()=>checksSheet()}[screen]||(()=>{if(typeof setFleetView==='function'&&screen==='home'&&isBiz())setFleetView(false);go(screen);render();});
+      fleet:()=>{if(typeof setFleetView==='function')setFleetView(true);go('home');render();},account:()=>accountSheet(),checks:()=>checksSheet(),history_report:()=>reportSheet()}[screen]||(()=>{if(typeof setFleetView==='function'&&screen==='home'&&isBiz())setFleetView(false);go(screen);render();});
     AGENT_NAV=nav;return {ok:true,willOpen:screen};}},
 ];
 // open the agent from anywhere
@@ -2594,4 +2602,149 @@ setInterval(()=>{document.querySelectorAll('[data-cd]').forEach(el=>{const v=el.
 document.addEventListener('click',e=>{const b=e.target.closest('[data-act="healthOpen"]');if(b)healthSheet();});
 // after every render
 function afterRender(){rollOdos();fillRings();checkMilestones();}
+
+/* ===== 081-polish.js ===== */
+/* ---------- polish: shake, pull to refresh, count-up numbers, paid/cancelled stamps, first-run tour ---------- */
+
+/* shake a field that needs fixing */
+function shake(el){if(!el)return;el.classList.remove('shake');void el.offsetWidth;el.classList.add('shake');buzz(30);setTimeout(()=>el.classList.remove('shake'),600);}
+document.addEventListener('invalid',e=>{shake(e.target.closest('.field')||e.target);},true);
+
+/* pull down at the top of a screen to refresh */
+(function(){
+  let y0=null,pull=0,busyR=false;const sc=()=>$('#scroller');
+  const ind=()=>{let el=$('#ptr');if(!el){el=document.createElement('div');el.id='ptr';el.className='ptr';el.setAttribute('aria-hidden','true');el.innerHTML=`<svg viewBox="0 0 24 24" class="ptr-tire"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M12 3v5.5M12 15.5V21M3 12h5.5M15.5 12H21"/></svg>`;document.body.appendChild(el);}return el;};
+  document.addEventListener('touchstart',e=>{const s=sc();if(busyR||!s||s.scrollTop>0||!$('#ov').hidden||e.target.closest('.rrow,.onb,.intro-track,input,textarea,select'))return;y0=e.touches[0].clientY;pull=0;},{passive:true});
+  document.addEventListener('touchmove',e=>{if(y0===null)return;const s=sc();if(s.scrollTop>0){y0=null;return;}pull=Math.max(0,Math.min(110,(e.touches[0].clientY-y0)*.5));const el=ind();el.style.setProperty('--p',pull);el.classList.toggle('ready',pull>=70);el.classList.add('show');},{passive:true});
+  const end=async()=>{if(y0===null)return;y0=null;const el=$('#ptr');if(!el)return;
+    if(pull<70){el.classList.remove('show','ready');el.style.setProperty('--p',0);return;}
+    busyR=true;buzz(12);el.classList.add('spin-on');
+    try{if(window.cjRefresh)await window.cjRefresh();await new Promise(r=>setTimeout(r,450));toast('עודכן');}catch(x){toast('אין חיבור כרגע');}
+    finally{busyR=false;el.classList.remove('show','ready','spin-on');el.style.setProperty('--p',0);}};
+  document.addEventListener('touchend',end);document.addEventListener('touchcancel',end);
+})();
+
+/* numbers count up from zero the first time they show (and when they change) */
+const COUNTED={};
+function countUp(){
+  if(reduceMotion())return;
+  document.querySelectorAll('.kpi .v,.fl-kpis .v').forEach((el,i)=>{
+    const node=[...el.childNodes].find(nd=>nd.nodeType===3&&/\d/.test(nd.textContent));if(!node)return;
+    const txt=node.textContent,m=txt.match(/-?[\d,]*\.?\d+/);if(!m)return;
+    const key=view+':'+i;if(COUNTED[key]===txt)return;COUNTED[key]=txt;
+    const target=parseFloat(m[0].replace(/,/g,''));if(!isFinite(target)||target===0)return;
+    const dec=(m[0].split('.')[1]||'').length,fmt=new Intl.NumberFormat('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+    const pre=txt.slice(0,m.index),post=txt.slice(m.index+m[0].length),t0=performance.now(),dur=900;
+    const step=t=>{if(!node.isConnected)return;const k=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-k,3);node.textContent=pre+fmt.format(target*e)+post;if(k<1)requestAnimationFrame(step);else node.textContent=txt;};
+    node.textContent=pre+fmt.format(0)+post;requestAnimationFrame(step);
+  });
+}
+
+/* stamps on tickets: paid / cancelled */
+let JUST_STAMP=null;
+function tkStamp(t){
+  const s=t.status==='paid'?{c:'paid',x:'שולם'}:t.status==='cancelled'?{c:'cancelled',x:'בוטל'}:null;if(!s)return '';
+  const fresh=JUST_STAMP&&JUST_STAMP.id===t.id&&Date.now()-JUST_STAMP.at<4000;
+  return `<span class="stampmark ${s.c}${fresh?' fresh':''}" aria-hidden="true">${s.x}</span>`;
+}
+
+/* first-run tour: three quick pointers on the home screen */
+const TOUR=[
+  {sel:'[data-act=helpHere]',t:'הסבר בכל רגע',p:'לוחצים על ״?״ ומקבלים הסבר קצר על המסך.'},
+  {sel:'[data-act=agentOpen]',t:'הסוכן',p:'מספרים לו מה עשית, ״עשיתי איזון וכיוון פרונט ב־250״, והוא רושם בשבילך. אפשר גם לדבר.'},
+  {sel:'.m-actions,.m-hero,.hero',t:'רישום מהיר',p:'תדלוק, בדיקה, בקול או רישום. ובתזכורות: מחליקים ימינה = בוצע, שמאלה = דחייה.'},
+];
+function maybeTour(){
+  if(view!=='home'||lsGet('cj-tour-pending')!=='1'||$('#tour')||$('#onb')||!$('#ov').hidden)return;
+  lsSet('cj-tour-pending','0');setTimeout(()=>tourStep(0),500);
+}
+function tourStep(i){
+  let el=$('#tour');if(i>=TOUR.length){if(el)el.remove();return;}
+  const s=TOUR[i];const tg=s.sel.split(',').map(x=>document.querySelector(x)).find(x=>x&&x.getBoundingClientRect().width);if(!tg){tourStep(i+1);return;}
+  tg.scrollIntoView({block:'center',behavior:'instant'});const r=tg.getBoundingClientRect();
+  if(!el){el=document.createElement('div');el.id='tour';el.className='tour';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label','סיור קצר');document.body.appendChild(el);}
+  const below=r.bottom<innerHeight*.6;
+  el.innerHTML=`<div class="tour-hole" style="left:${r.left-6}px;top:${r.top-6}px;width:${r.width+12}px;height:${r.height+12}px"></div>
+    <div class="tour-tip" style="${below?`top:${Math.min(innerHeight-200,r.bottom+14)}px`:`bottom:${Math.min(innerHeight-200,innerHeight-r.top+14)}px`}"><b>${s.t}</b><p>${s.p}</p>
+    <div class="tour-acts"><span class="small muted">${i+1} מתוך ${TOUR.length}</span><span><button class="onb-skip" data-tour="x">דילוג</button><button class="btn primary sm" data-tour="n">${i===TOUR.length-1?'הבנתי':'הבא'}</button></span></div></div>`;
+  el.querySelector('[data-tour=n]').onclick=()=>tourStep(i+1);el.querySelector('[data-tour=x]').onclick=()=>el.remove();
+  el.querySelector('[data-tour=n]').focus();
+}
+
+/* hooked into every render */
+const _afterRender=afterRender;
+afterRender=function(){_afterRender();countUp();maybeTour();};
+
+/* ===== 082-report.js ===== */
+/* ---------- car history report (PDF): every service, check and fill-up, for the garage or for a buyer ---------- */
+const pdfLibs=()=>Promise.all([loadLib('vendor/html2canvas.min.js','html2canvas'),loadLib('vendor/jspdf.umd.min.js','jspdf')]);
+function reportSheet(){
+  if(!S.car||S.car.example){toast('אין עדיין רכב לדוח');return;}
+  openModal('דוח היסטוריה לרכב',`<div class="stack" style="gap:14px">
+    <p class="small muted" style="margin:0">קובץ PDF עם כל ההיסטוריה של ה${esc(carName(S.car))}: טיפולים, בדיקות שוטפות, תדלוקים ומועדים. מתאים למוסך, לליסינג או לקונה כשמוכרים את הרכב.</p>
+    <label class="toggle"><input type="checkbox" id="rpCost" checked> לכלול עלויות</label>
+    <label class="toggle"><input type="checkbox" id="rpFuel" checked> לכלול תדלוקים</label>
+    <div class="formacts"><button class="btn primary" id="rpGo">${I('download')}הורדת PDF</button><button class="btn ghost" data-act="close">ביטול</button></div>
+    <div class="small muted" id="rpSt" role="status"></div></div>`,root=>{
+    const b=root.querySelector('#rpGo');
+    b.onclick=async()=>{busy(b,true,'מכין את הדוח…');const st=root.querySelector('#rpSt');
+      try{const ok=await buildReport({cost:root.querySelector('#rpCost').checked,fuel:root.querySelector('#rpFuel').checked},m=>{if(root.contains(st))st.textContent=m;});
+        if(root.contains(b)){closeModal();toast(ok?'הדוח ירד לטלפון':'ההורדה לא הצליחה');}}
+      catch(e){console.error(e);if(root.contains(b)){busy(b,false);st.textContent='לא הצלחתי ליצור את הדוח. נסה שוב.';}}};
+  });
+}
+function reportData(o){
+  const c=S.car,sp=allSpend();
+  const svc=[...S.service].filter(r=>r.date).sort((a,b)=>b.date.localeCompare(a.date));
+  const fuel=[...S.fuel].filter(r=>r.date).sort((a,b)=>b.date.localeCompare(a.date));
+  const pts=[...S.fuel,...S.service].map(r=>n(r.odo)).filter(Boolean);
+  const eff=effStats();
+  const rem=sortedReminders(r=>r.carId!=='*');
+  const checks=S.reminder.filter(r=>r.kind==='check').map(r=>{const h=Array.isArray(r.history)?r.history:[];return {title:r.title,count:h.length,last:h.length?h[h.length-1].date:'',every:n(r.intervalDays)?daysLabel(r.intervalDays):''};});
+  const by={fuel:0,service:0,other:0};for(const r of sp){const k=r.cat==='fuel'?'fuel':r.cat==='service'?'service':'other';by[k]+=r.amount;}
+  return {c,svc,fuel,eff,rem,checks,by,total:by.fuel+by.service+by.other,first:sp.length?sp[sp.length-1].date:'',kmLogged:pts.length>1?Math.max(...pts)-Math.min(...pts):0,o};
+}
+function reportBlocks(d){
+  const o=d.o,c=d.c,blocks=[];
+  const due=x=>x?`${fmtD(x.st.dueDate)} <span class="rp-s ${x.st.status}">${esc(x.st.label)}</span>`:'—';
+  const test=d.rem.find(x=>isTest(x.r)),ins=d.rem.find(x=>isIns(x.r)),nxt=d.rem.find(x=>x.r.kind==='service');
+  blocks.push({h:`<div class="rp-head"><img src="icons/emblem.png" alt=""><div><div class="rp-k">דוח היסטוריית רכב</div><h1>${esc([c.make,c.model].filter(Boolean).join(' ')||carName(c))}</h1>
+    <div class="rp-m">${esc([c.year,c.fuelType?'דלק '+c.fuelType:'',c.nickname].filter(Boolean).join(' · '))}</div></div>${c.plate?`<div class="rp-plate"><span>IL</span>${esc(c.plate)}</div>`:''}</div>
+    <div class="rp-tiles"><div><span>קילומטראז׳</span><b>${km(odo())}</b></div><div><span>טיפולים שתועדו</span><b>${d.svc.length}</b></div><div><span>ק״מ לליטר</span><b>${d.eff?nf1.format(d.eff.avg):'—'}</b></div>${o.cost?`<div><span>סה״כ הוצאות</span><b>${ils(d.total)}</b></div>`:`<div><span>תדלוקים</span><b>${d.fuel.length}</b></div>`}</div>
+    <div class="rp-meta">הופק ב־${fmtD(today())} · מתועד מאז ${d.first?fmtD(d.first):'—'}${d.kmLogged?` · ${km(d.kmLogged)} ק״מ מתועדים`:''}</div>`});
+  blocks.push({h:`<h2>מצב נוכחי</h2><table class="rp-t"><tbody><tr><th>טסט</th><td>${due(test)}</td></tr><tr><th>ביטוח</th><td>${due(ins)}</td></tr><tr><th>טיפול הבא</th><td>${nxt?esc(nxt.r.title)+' · '+due(nxt):'—'}</td></tr></tbody></table>`});
+  if(o.cost)blocks.push({h:`<h2>הוצאות לפי סוג</h2><table class="rp-t"><tbody><tr><th>דלק</th><td>${ils(d.by.fuel)}</td></tr><tr><th>טיפולים ותיקונים</th><td>${ils(d.by.service)}</td></tr><tr><th>אחר (ביטוח, טסט, צמיגים, חניה…)</th><td>${ils(d.by.other)}</td></tr><tr class="rp-sum"><th>סה״כ</th><td>${ils(d.total)}</td></tr></tbody></table>`});
+  blocks.push({title:'היסטוריית טיפולים',head:['תאריך','ק״מ','מה נעשה','מוסך',...(o.cost?['עלות']:[])],rows:d.svc.map(r=>[fmtD(r.date),n(r.odo)?km(r.odo):'—',esc(r.title||'')+(r.note?`<div class="rp-n">${esc(r.note)}</div>`:''),esc(r.garage||''),...(o.cost?[n(r.cost)?ils(r.cost):'—']:[])]),empty:'עוד לא תועדו טיפולים'});
+  if(d.checks.length)blocks.push({title:'בדיקות שוטפות',head:['בדיקה','כל','בוצעה לאחרונה','פעמים'],rows:d.checks.map(x=>[esc(x.title),x.every||'—',x.last?fmtD(x.last):'—',String(x.count)])});
+  if(o.fuel)blocks.push({title:'תדלוקים',head:['תאריך','ק״מ','ליטרים',...(o.cost?['סכום']:[]),'תחנה'],rows:d.fuel.map(r=>[fmtD(r.date),n(r.odo)?km(r.odo):'—',n(r.liters)?nf1.format(r.liters):'—',...(o.cost?[ils(r.total)]:[]),esc(r.station||'')]),empty:'אין תדלוקים'});
+  return blocks;
+}
+async function buildReport(o,say){
+  say&&say('טוען…');
+  await pdfLibs();
+  const d=reportData(o),blocks=reportBlocks(d);
+  const host=document.createElement('div');host.className='rp-host';document.body.appendChild(host);
+  const W=794,H=1123,FOOT=46;const pages=[];
+  const newPage=()=>{const p=document.createElement('div');p.className='rp-page';p.innerHTML='<div class="rp-body"></div>';host.appendChild(p);pages.push(p);return p.firstChild;};
+  let body=newPage();const fits=()=>body.scrollHeight<=H-FOOT-48;
+  for(const b of blocks){
+    if(b.h){const x=document.createElement('div');x.className='rp-block';x.innerHTML=b.h;body.appendChild(x);if(!fits()){body.removeChild(x);body=newPage();body.appendChild(x);}continue;}
+    const mk=()=>{const x=document.createElement('div');x.className='rp-block';x.innerHTML=`<h2>${b.title}</h2><table class="rp-t rp-list"><thead><tr>${b.head.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody></tbody></table>`;body.appendChild(x);return x.querySelector('tbody');};
+    let tb=mk();if(!fits()){tb.closest('.rp-block').remove();body=newPage();tb=mk();}
+    if(!b.rows.length){tb.innerHTML=`<tr><td colspan="${b.head.length}" class="rp-empty">${b.empty||'—'}</td></tr>`;continue;}
+    for(const r of b.rows){const tr=document.createElement('tr');tr.innerHTML=r.map(c=>`<td>${c}</td>`).join('');tb.appendChild(tr);
+      if(!fits()){tb.removeChild(tr);body=newPage();tb=mk();tb.closest('.rp-block').querySelector('h2').textContent=b.title+' (המשך)';tb.appendChild(tr);}}
+  }
+  pages.forEach((p,i)=>{const f=document.createElement('div');f.className='rp-foot';f.innerHTML=`<span>יומן הרכב · ${esc(carName(d.c))}${d.c.plate?' · '+esc(d.c.plate):''}</span><span>עמוד ${i+1} מתוך ${pages.length}</span>`;p.appendChild(f);});
+  try{await document.fonts.ready;}catch(e){}
+  const {jsPDF}=window.jspdf;const pdf=new jsPDF({orientation:'p',unit:'pt',format:'a4',compress:true});
+  for(let i=0;i<pages.length;i++){say&&say(`מכין עמוד ${i+1} מתוך ${pages.length}…`);
+    const cv=await window.html2canvas(pages[i],{scale:2,backgroundColor:'#ffffff',width:W,height:H,windowWidth:W,logging:false,useCORS:true});
+    if(i)pdf.addPage();pdf.addImage(cv.toDataURL('image/jpeg',0.9),'JPEG',0,0,595.28,841.89);}
+  host.remove();
+  pdf.setProperties({title:'דוח היסטוריית רכב',creator:'יומן הרכב'});
+  const name=`car-history-${(d.c.plate||carName(d.c)).replace(/[^\w֐-׿-]+/g,'-')}-${today()}.pdf`;
+  return saveBlob(pdf.output('blob'),name);
+}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-act="report"]');if(b)reportSheet();});
 })();

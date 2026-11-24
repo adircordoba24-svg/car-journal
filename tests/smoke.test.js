@@ -40,13 +40,16 @@ const ok = (cond, name, extra) => { if (cond) { passed++; console.log("  ✓ " +
 
   console.log("new user: intro, license scan, car");
   p = await page("#new", { init: "window.__lic2=true" });
-  for (let i = 0; i < 4; i++) { await p.click("#onbNext"); await p.waitForTimeout(350); }
+  for (let i = 0; i < 5; i++) { await p.click("#onbNext"); await p.waitForTimeout(350); }
   await p.setInputFiles("#oScanF", IMG); await p.waitForTimeout(1200);
   ok((await p.inputValue("#oMk")) === "טויוטה" && (await p.inputValue("#oY")) === "2021", "license scan fills the car");
   await p.fill("#oO", "52000"); await p.click("#onbCar button[type=submit]"); await p.waitForTimeout(300);
   await p.evaluate(() => document.querySelector(".onb input[value=basic]").click()); await p.click("#onbDone"); await p.waitForTimeout(1500);
   ok(!(await p.evaluate(() => !!document.querySelector(".onb"))), "onboarding closes");
   ok((await p.textContent("#subline")).includes("קורולה"), "home shows the new car");
+  ok(await until(p, () => document.querySelector("#tour .tour-tip")), "a short tour starts after setup");
+  for (let i = 0; i < 3; i++) { await p.click("[data-tour=n]"); await p.waitForTimeout(300); }
+  ok(!(await p.$("#tour")), "tour can be finished");
   await p.context().close();
 
   console.log("everyday use");
@@ -113,10 +116,20 @@ const ok = (cond, name, extra) => { if (cond) { passed++; console.log("  ✓ " +
   await p.click('[data-nav="home"]'); await p.waitForTimeout(400); await p.click(".m-odo"); await p.waitForTimeout(300); await p.fill("#oV", "40100"); await p.click("#f button[type=submit]");
   ok(await until(p, () => document.querySelector(".celebrate") && /40,000/.test(document.querySelector(".celebrate").innerText)), "crossing 10,000 km is celebrated");
 
+  console.log("shake, pull to refresh, count-up");
+  await p.waitForTimeout(4500); await p.click('[data-nav="home"]'); await p.waitForTimeout(300);
+  await p.click(".m-odo"); await p.waitForTimeout(300); await p.fill("#oV", ""); await p.click("#f button[type=submit]");
+  ok(await until(p, () => document.querySelector(".shake")), "an empty required field shakes"); await p.keyboard.press("Escape");
+  await p.evaluate(() => { document.querySelector("#scroller").scrollTop = 0; const t = document.querySelector("#view"); const mk = (y) => new Touch({ identifier: 2, target: t, clientX: 200, clientY: y });
+    t.dispatchEvent(new TouchEvent("touchstart", { bubbles: true, touches: [mk(120)] })); for (const y of [160, 220, 300, 380]) document.dispatchEvent(new TouchEvent("touchmove", { bubbles: true, touches: [mk(y)] })); document.dispatchEvent(new TouchEvent("touchend", { bubbles: true, touches: [] })); });
+  ok(await until(p, () => /עודכן/.test(document.querySelector("#toast").innerText)), "pull down refreshes");
+
   console.log("help");
   await p.waitForTimeout(4500); await p.click('[data-nav="reminder"]'); await p.waitForTimeout(300);
+  ok(!(await p.isVisible("[data-act=helpHere]")) && !(await p.isVisible("#acctBtn")), "header buttons only on the home screen");
+  await p.click('[data-nav="home"]'); await p.waitForTimeout(300);
   await p.click("[data-act=helpHere]"); await p.waitForTimeout(300);
-  ok((await p.textContent("#mtitle")) === "תזכורות", "? explains the screen you're on");
+  ok((await p.textContent("#mtitle")) === "מסך הבית", "? explains the screen you're on");
   await p.keyboard.press("Escape");
 
   console.log("the agent does things");
@@ -149,17 +162,19 @@ const ok = (cond, name, extra) => { if (cond) { passed++; console.log("  ✓ " +
   ok(/לא תואם/.test(bad) && /סוג הרכב/.test(bad) && /התיישנה/.test(bad), "wrong plate, wrong make and late delivery are found", bad);
   ok(await p.evaluate(() => { const t = __rows.find((r) => r.collection === "ticket" && r.data.offenseDate === "2026-03-01"); return t && t.data.checkBad === 3 && t.data.cancelBy === "2026-10-20" && String(t.data.plateOnTicket).startsWith("enc:"); }), "check summary saved, plate on the ticket encrypted");
   await p.keyboard.press("Escape"); await p.evaluate(() => { window.__badTicket = false; });
+  await p.waitForTimeout(300); await p.click("[data-act=tkPaid]");
+  ok(await until(p, () => document.querySelector(".stampmark.paid.fresh")), "paid stamp lands on the ticket");
   await p.click("[data-act=agtab][data-id=docs]"); await p.waitForTimeout(300);
   await p.click("[data-act=docUp][data-type=insurance]"); await p.waitForTimeout(300); await p.setInputFiles("#duFile", PDF); await p.click("#duGo"); await p.waitForTimeout(2200);
   ok((await p.evaluate(() => document.querySelectorAll(".cov").length)) >= 3, "policy coverages are shown");
   ok(!(await overflow(p)), "no sideways scroll: documents");
 
   console.log("backup and restore");
-  await p.click("#acctBtn"); await p.waitForTimeout(300);
+  await p.click('[data-nav="home"]'); await p.waitForTimeout(300); await p.click("#acctBtn"); await p.waitForTimeout(300);
   const dl = p.waitForEvent("download"); await p.click("#acExport"); const file = await dl; const fp = await file.path();
   await p.keyboard.press("Escape");
   await p.evaluate(() => { window.__rows = window.__rows.filter((r) => r.collection !== "expense"); });
-  await p.click("#acctBtn"); await p.waitForTimeout(300); await p.click("[data-act=restore]"); await p.waitForTimeout(300);
+  await p.click('[data-nav="home"]'); await p.waitForTimeout(300); await p.click("#acctBtn"); await p.waitForTimeout(300); await p.click("[data-act=restore]"); await p.waitForTimeout(300);
   await p.setInputFiles("#rsF", fp); await until(p, () => !document.querySelector("#rsGo").disabled); await p.click("#rsGo");
   ok(await until(p, () => __rows.some((r) => r.collection === "expense")), "restore puts records back");
   await p.context().close();
@@ -244,6 +259,11 @@ const ok = (cond, name, extra) => { if (cond) { passed++; console.log("  ✓ " +
   ok((await p.evaluate(() => document.querySelectorAll("tr[data-u]").length)) === 2, "admin users table");
   await p.click('#tabs button[data-t="costs"]'); await p.waitForTimeout(400);
   ok((await p.evaluate(() => document.querySelector("main").innerText)).includes("סריקות"), "admin costs");
+  await p.click('#tabs button[data-t="backups"]'); await p.waitForTimeout(500);
+  await p.click("#bkDrill");
+  ok(await until(p, () => /שוחזר במלואו/.test(document.querySelector("#drillOut").innerText)), "restore drill from the admin screen");
+  await p.click("#wTest");
+  ok(await until(p, () => /נשלחה התראה/.test(document.querySelector("#bkSt").innerText)), "owner alert test");
   await p.context().close();
 
   ok(errors.length === 0, "no errors in the page", errors.slice(0, 5));

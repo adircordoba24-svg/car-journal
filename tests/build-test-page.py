@@ -16,7 +16,8 @@ app = app.replace('navigator.serviceWorker.register("../sw.js")', 'void 0')
 (tests / "app.html").write_text(app)
 (tests / "admin.html").write_text(rewrite((root / "admin.html").read_text()))
 # scripts the app loads later (pdf.js, Excel) are fetched relative to the page
-link = tests / "vendor"
-if not link.exists():
-    link.symlink_to("../vendor")
+for d in ("vendor", "icons"):
+    link = tests / d
+    if not link.exists():
+        link.symlink_to("../" + d)
 print("built tests/app.html and tests/admin.html")
