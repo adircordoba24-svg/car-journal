@@ -224,7 +224,7 @@ function closeModal(){document.body.style.overflow='';$('#ov').hidden=true;$('#m
 $('#ov').addEventListener('click',e=>{if(e.target.id==='ov')closeModal();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#ov').hidden)closeModal();});
 
-const NAV=[['home','בית','home'],['fuel','דלק','fuel'],['service','טיפולים','wrench'],['expense','הוצאות','receipt'],['reminder','תזכורות','bell'],['agents','סוכנים','spark']];
+const NAV=[['home','בית','home'],['fuel','דלק','fuel'],['service','טיפולים','wrench'],['expense','הוצאות','receipt'],['reminder','תזכורות','bell'],['agents','הסוכן','spark']];
 const scroller=()=>$('#scroller');
 const scrollMem={};
 function renderNav(instant){
@@ -329,10 +329,14 @@ function remRow(x,compact){
   const {r,st}=x;
   const due=st.dueDate?`צפוי ${fmtD(st.dueDate)}`:'';
   const intervals=[n(r.intervalKm)?`כל ${km(r.intervalKm)} ק״מ`:'',n(r.intervalDays)?`כל ${daysLabel(r.intervalDays)}`:''].filter(Boolean).join(' או ');
-  return `<div class="rrow${compact?'':' full'}" data-s="${st.status}">
+  const jd=JUST_DONE&&Date.now()-JUST_DONE.at<5000&&(JUST_DONE.id===r.id||(JUST_DONE.ids||[]).includes(r.id));
+  const h=Array.isArray(r.history)&&r.history.length?r.history[r.history.length-1]:null;
+  const ago=h&&h.date?daysBetween(h.date,today()):null;
+  const last=ago===null?'':ago<=0?'בוצע היום':ago===1?'בוצע אתמול':`בוצע לפני ${daysLabel(ago)}`;
+  return `<div class="rrow${compact?'':' full'}${jd?' just':''}" data-s="${st.status}">
     <div class="ricon">${I(iconFor(r.title,r.kind))}</div>
     <div style="min-width:0"><div class="rtitle">${esc(r.title)}</div>
-      <div class="rsub"><span class="pill ${st.status}">${esc(st.label)}</span>${!compact&&intervals?`<span class="nw">${esc(intervals)}</span>`:''}${due?`<span class="nw">${esc(due)}</span>`:''}</div>
+      <div class="rsub"><span class="pill ${st.status}">${esc(st.label)}</span>${!compact&&intervals?`<span class="nw">${esc(intervals)}</span>`:''}${due?`<span class="nw">${esc(due)}</span>`:''}${last?`<span class="nw last">${I('check')}${esc(last)}</span>`:''}</div>
       <div class="bar"><i style="width:${Math.round(st.pct*100)}%"></i></div></div>
     <div class="racts">
       <button class="btn sm" data-act="done" data-id="${r.id}">${I('check')}בוצע</button>
@@ -340,7 +344,7 @@ function remRow(x,compact){
       ${compact?'':`<button class="mini" data-act="cal" data-id="${r.id}" title="הוספה ליומן Google" aria-label="הוספה ליומן">${I('cal')}</button><button class="mini" data-act="editRem" data-id="${r.id}" aria-label="עריכה">${I('edit')}</button>`}
     </div></div>`;
 }
-function daysLabel(d){d=+d;if(d%365===0)return d===365?'שנה':`${d/365} שנים`;if(d%30===0)return d===30?'חודש':`${d/30} חודשים`;if(d%7===0)return d===7?'שבוע':`${d/7} שבועות`;return `${d} ימים`;}
+function daysLabel(d){d=Math.round(+d);if(d<=0)return '0 ימים';if(d===1)return 'יום';if(d===2)return 'יומיים';if(d%365===0)return d===365?'שנה':`${d/365} שנים`;if(d%30===0)return d===30?'חודש':`${d/30} חודשים`;if(d%7===0)return d===7?'שבוע':`${d/7} שבועות`;return `${d} ימים`;}
 
 /* ===== 02-views.js ===== */
 /* ---------- views ---------- */
@@ -414,7 +418,7 @@ function vHomeMobile(){
   const mSpend=sp.filter(r=>monthKey(r.date)===thisM).reduce((s,r)=>s+r.amount,0);
   const docs=sortedReminders(r=>/טסט/.test(r.title))[0];
   const attn=svc.filter(x=>x.st.status!=='ok').slice(0,3);
-  return `
+  return `${homeIntro()}
   <section class="card m m-hero">
     <div class="m-car"><div style="min-width:0"><div class="eyebrow">${esc(car.nickname||'הרכב שלי')}</div><div class="m-carname">${esc([car.make,car.model].filter(Boolean).join(' ')||'רכב חדש')}</div></div>${plate(car.plate)}</div>
     <button class="m-odo" data-act="odo" aria-label="עדכון מד אוץ">${odoDigits(o)}<span class="m-odo-edit">${I('edit')}</span></button>
@@ -460,7 +464,7 @@ function vHome(){
   const checks=sortedReminders(r=>r.kind==='check');
   const feed=sp.slice(0,6);
   const effDelta=eff&&eff.prev?eff.last-eff.prev:null;
-  return `
+  return `${homeIntro()}
   <section class="hero">
     <div class="card carcard">
       <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
@@ -528,6 +532,17 @@ function vFuel(){
   </tbody></table></div>`:`<div class="empty"><b>אין תדלוקים עדיין</b>רשום תדלוק ראשון, או צלם קבלה והסוכן ימלא את הפרטים</div>`}</section>`;
 }
 
+// routine checks (oil, water, tyre pressure…): what's next, and a log of every time they were done
+function checksCard(){
+  const list=sortedReminders(r=>r.kind==='check');
+  const log=S.reminder.filter(r=>r.kind==='check').flatMap(r=>(Array.isArray(r.history)?r.history:[]).map(h=>({r,h}))).filter(x=>x.h&&x.h.date).sort((a,b)=>b.h.date.localeCompare(a.h.date)||0).slice(0,14);
+  return `<section class="two" style="margin-top:16px">
+    <div class="card"><div class="card-head"><h2>בדיקות שוטפות</h2><button class="btn sm" data-act="checks">${I('check')}סימון בדיקות</button></div>
+      <div class="rlist">${list.map(x=>remRow(x,true)).join('')||'<div class="empty">אין בדיקות מוגדרות</div>'}</div></div>
+    <div class="card"><div class="card-head"><h2>יומן הבדיקות</h2><span class="small muted">${log.length?'האחרונות':''}</span></div>
+      <div class="feed">${log.map(({r,h})=>`<div class="fitem"><div class="ic ok">${I(iconFor(r.title,'check'))}</div><div style="min-width:0"><div class="rtitle">${esc(r.title)}</div><div class="rsub">${fmtD(h.date)}${n(h.km)?` · ${km(h.km)} ק״מ`:''}</div></div><span class="pill ok">בוצע</span></div>`).join('')||'<div class="empty"><b>עוד לא נרשמו בדיקות</b>כשתלחץ ״בוצע״ על בדיקה, היא תופיע כאן עם התאריך</div>'}</div></div>
+  </section>`;
+}
 function vService(){
   const rows=[...S.service].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   const sched=sortedReminders(r=>r.kind==='service');
@@ -539,7 +554,8 @@ function vService(){
       <div class="feed">${rows.map(r=>`<div class="fitem"><div class="ic">${I('wrench')}</div><div style="min-width:0"><div class="rtitle">${esc(r.title)}</div><div class="rsub">${fmtD(r.date)} · ${km(r.odo)} ק״מ${r.garage?' · '+esc(r.garage):''}</div>${r.note?`<div class="rsub" style="margin-top:3px">${esc(r.note)}</div>`:''}</div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><span class="amt">${ils(r.cost)}</span><div class="rowacts">${rcptChip(r.receipt)}<button class="mini" data-act="serviceForm" data-id="${r.id}" aria-label="עריכה">${I('edit')}</button><button class="mini" data-act="del" data-col="service" data-id="${r.id}" aria-label="מחיקה">${I('trash')}</button></div></div></div>`).join('')||'<div class="empty"><b>אין טיפולים רשומים</b>תעד טיפול במוסך כדי לעקוב אחרי ההיסטוריה של הרכב</div>'}</div></div>
     <div class="card"><div class="card-head"><h2>לוח טיפולים</h2><button class="link" data-act="remForm" data-kind="service">הוספה</button></div>
       <div class="rlist">${sched.map(x=>remRow(x,true)).join('')||'<div class="empty">אין טיפולים מתוזמנים</div>'}</div></div>
-  </section>`;
+  </section>
+  ${checksCard()}`;
 }
 
 function vExpense(){
@@ -574,27 +590,28 @@ function vReminder(){
 let lastInsight='',insightBusy=false;
 let agTab='agents';try{if(location.hash==='#docs')agTab='docs';if(location.hash==='#tickets')agTab='tickets';}catch(e){}
 function agTabs(){const t=(id,ic,l)=>`<button type="button" role="tab" aria-selected="${agTab===id}" class="${agTab===id?'on':''}" data-act="agtab" data-id="${id}">${I(ic)}${l}</button>`;
-  return `<div class="seg agtabs" role="tablist" aria-label="סוכנים, מסמכים ודוחות">${t('agents','spark','סוכנים')}${t('docs','shield','מסמכים')}${t('tickets','ticket','דוחות')}</div>`;}
+  return `<div class="seg agtabs" role="tablist" aria-label="סוכנים, מסמכים ודוחות">${t('agents','spark','הסוכן')}${t('docs','shield','מסמכים')}${t('tickets','ticket','דוחות')}</div>`;}
 function vAgents(){
   if(agTab==='docs')return agTabs()+vDocs();
   if(agTab==='tickets')return agTabs()+vTickets();
   const off=!sample;
-  return agTabs()+`<div class="sec-title"><h2>סוכנים</h2><span class="small muted">עוזרים חכמים שעובדים על הנתונים של הרכב שלך</span></div>
+  return agTabs()+`<div class="sec-title"><h2>הסוכן</h2><span class="small muted">רושם בשבילך, עונה, ומנווט באפליקציה</span></div>
   ${off?`<div class="banner warn">הסוכנים זמינים כשהדף פתוח ב־Claude עם חשבון מחובר.</div>`:''}
   ${window.cjAccount?`<div class="small muted" id="agQuota" style="margin:-4px 0 14px"></div>`:''}
+  <section class="card agent-chat" style="margin-bottom:16px">
+    <div class="card-head"><h2>${I('spark')} הסוכן</h2><span class="small muted">מספרים לו מה עשית, והוא רושם. או שואלים.</span></div>
+    <div class="chat" id="chat">
+      <div class="msgs" id="msgs">${chatLog.length?'':`<div class="msg a">שלום! ספר לי מה עשית עם ${esc(S.car?.nickname||carName(S.car))} ואני ארשום, למשל ״עשיתי איזון וכיוון פרונט ב־250 שקל״. אפשר גם לשאול כל דבר על הרכב.</div>`}</div>
+      <div class="suggest" id="sugg">${['בדקתי היום שמן ומים','עשיתי איזון וכיוון פרונט ב־250 שקל','כמה הוצאתי על הרכב החודש?','תעביר אותי לביטוח'].map(q=>`<button class="btn sm ghost" data-act="ask" data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>
+      <form class="composer" id="composer"><button class="btn ghost" type="button" data-act="agMic" aria-label="לדבר עם הסוכן" ${off?'disabled':''}>${I('mic')}</button><input type="text" id="chatIn" placeholder="מה עשית עם הרכב? או שאלה…" autocomplete="off" ${off?'disabled':''}><button class="btn primary" type="submit" ${off?'disabled':''} aria-label="שליחה">${I('send')}</button></form>
+    </div>
+  </section>
   <section class="agents">
     <div class="card agent"><div class="badge">${I('cam')}</div><h3>סוכן הקבלות</h3><p>צלם קבלה מהתחנה או מהמוסך. הסוכן יזהה אם זה תדלוק, טיפול או הוצאה, ימלא סכום, ליטרים, תאריך ותחנה, ויצרף את הקבלה לרישום.</p><button class="btn primary" data-act="scan" ${off||!imgOK?'disabled':''}>${I('cam')}סריקת קבלה</button>${!off&&!imgOK?'<span class="small muted">סריקת תמונות לא זמינה בתצוגה הזו</span>':''}</div>
     <div class="card agent"><div class="badge">${I('list')}</div><h3>מתכנן הטיפולים</h3><p>לפי היצרן, הדגם, השנה והקילומטראז׳, הסוכן בונה לוח טיפולים מומלץ עם מרווחים בק״מ ובזמן. אתה בוחר מה להוסיף לתזכורות.</p><button class="btn primary" data-act="plan" ${off?'disabled':''}>${I('spark')}בניית תוכנית</button></div>
     <div class="card agent"><div class="badge">${I('chart')}</div><h3>האנליסט</h3><p>סוקר את הצריכה, המחירים וההוצאות, מאתר חריגות כמו ירידה פתאומית בק״מ לליטר, ומסכם מה כדאי לעשות החודש.</p><button class="btn primary" data-act="insight" ${off?'disabled':''}>${I('chart')}ניתוח עכשיו</button></div>
   </section>
-  <section class="card" style="margin-top:16px">
-    <div class="card-head"><h2>יועץ הרכב</h2><span class="small muted">שאלות על הרכב והנתונים שלך בלבד</span></div>
-    <div class="chat" id="chat">
-      <div class="msgs" id="msgs">${chatLog.length?'':`<div class="msg a">שלום! אני מכיר את כל היומן של ${esc(S.car?.nickname||'הרכב')}: תדלוקים, טיפולים, הוצאות ותזכורות. על מה נדבר?</div>`}</div>
-      <div class="suggest" id="sugg">${['כמה הוצאתי על הרכב בשלושת החודשים האחרונים?','הצריכה שלי תקינה לדגם הזה?','מה הטיפולים שמחכים לי עד סוף השנה?','סמן שבדקתי היום לחץ אוויר'].map(q=>`<button class="btn sm ghost" data-act="ask" data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>
-      <form class="composer" id="composer"><input type="text" id="chatIn" placeholder="שאל את יועץ הרכב…" autocomplete="off" ${off?'disabled':''}><button class="btn primary" type="submit" ${off?'disabled':''} aria-label="שליחה">${I('send')}</button></form>
-    </div>
-  </section>`;
+`;
 }
 
 /* ===== 03-forms-agents.js ===== */
@@ -800,7 +817,9 @@ function checksSheet(){
   openModal('בדיקה שוטפת',`<p class="small muted" style="margin-top:0">סמן מה בדקת היום. ${S.car?.psiFront?`לחץ מומלץ: ${S.car.psiFront} PSI קדימה, ${S.car.psiRear||S.car.psiFront} PSI אחורה.`:''}</p>
   <div class="stack" style="gap:10px">${list.map(({r,st})=>`<label class="toggle"><input type="checkbox" class="ck" value="${r.id}" ${st.status!=='ok'?'checked':''}> ${esc(r.title)} <span class="pill ${st.status}">${esc(st.label)}</span></label>`).join('')||'<div class="empty">אין בדיקות מוגדרות</div>'}</div>
   <div class="formacts"><button class="btn primary" id="ckSave">${I('check')}סימון כבוצע</button><button class="btn ghost" data-act="close">ביטול</button></div>`,root=>{
-    root.querySelector('#ckSave').onclick=async e=>{busy(e.currentTarget,true);try{for(const c of root.querySelectorAll('.ck:checked')) await markDone(c.value,odo(),today(),true);closeModal();toast('הבדיקות נרשמו');}catch(err){toast('השמירה נכשלה');}};
+    root.querySelector('#ckSave').onclick=async e=>{busy(e.currentTarget,true);try{const done=[];for(const c of root.querySelectorAll('.ck:checked')){const r=await markDone(c.value,odo(),today(),true);if(r&&r.undo)done.push(r);}closeModal();if(!done.length){toast('לא סימנת בדיקה');return;}
+      const soon=done.map(x=>x.next).filter(Boolean).sort()[0];JUST_DONE={ids:done.map(x=>x.id),at:Date.now()};render();
+      toastAct(done.length===1?`✓ ${done[0].title}: בוצע היום. ${done[0].nextLabel}`:`✓ ${done.length} בדיקות נרשמו היום.${soon?` הבאה ב־${fmtD(soon)}.`:''}`,'ביטול',()=>Promise.all(done.map(x=>x.undo())).then(()=>toast('בוטל')).catch(()=>toast('הביטול נכשל')),null,7000);}catch(err){busy(e.currentTarget,false);toast('השמירה נכשלה');}};
   });
 }
 async function markDone(id,atKm,atDate,silent){
@@ -814,11 +833,24 @@ async function markDone(id,atKm,atDate,silent){
     else if(!silent)toast(`״${r.title}״ סומן כבוצע`);
     return true;
   }
-  const hist=Array.isArray(r.history)?r.history.slice(-19):[];
+  const before={lastKm:r.lastKm??null,lastDate:r.lastDate||'',history:Array.isArray(r.history)?r.history:[],snoozeDate:r.snoozeDate||'',snoozeKm:r.snoozeKm??null};
+  const hist=before.history.slice(-19);
   hist.push({date:atDate||today(),km:atKm||odo()});
-  await updRec('reminder',id,{lastKm:atKm||odo(),lastDate:atDate||today(),history:hist,snoozeDate:'',snoozeKm:null});
-  if(!silent) toast(`״${r.title}״ סומן כבוצע`);
-  return true;
+  const upd={lastKm:atKm||odo(),lastDate:atDate||today(),history:hist,snoozeDate:'',snoozeKm:null};
+  await updRec('reminder',id,upd);
+  JUST_DONE={id,at:Date.now()};
+  const next=remState(Object.assign({},r,upd));
+  const info={id,title:r.title,next:next.dueDate,nextLabel:nextText(r,upd,next),undo:()=>updRec('reminder',id,before)};
+  if(!silent)toastAct(`✓ ${r.title}: בוצע היום. ${info.nextLabel}`,'ביטול',()=>info.undo().then(()=>toast('בוטל')).catch(()=>toast('הביטול נכשל')),null,7000);
+  return info;
+}
+let JUST_DONE=null;
+// "the next one is on 8 Dec (in 14 days)" or "in 15,000 km"
+function nextText(r,upd,st){
+  const parts=[];
+  if(n(r.intervalDays)){const d=addDays(upd.lastDate,n(r.intervalDays));parts.push(`${fmtD(d)} (עוד ${daysLabel(daysBetween(today(),d))})`);}
+  if(n(r.intervalKm))parts.push(`ב־${km((n(upd.lastKm)||0)+n(r.intervalKm))} ק״מ`);
+  return parts.length?`הפעם הבאה: ${parts.join(' או ')}`:'';
 }
 const rcptSrc=id=>window.__rcptUrl?window.__rcptUrl(id):'/_blob/'+encodeURIComponent(id);
 window.__rcptRefresh=()=>render();
@@ -1024,7 +1056,7 @@ async function accountSheet(){
     </div></div>`,root=>{
     A.quota().then(q=>{const box=root.querySelector('#acQ');if(!box)return;
       if(q.unlimited){box.innerHTML='<div class="small muted">שימוש בסוכנים ללא הגבלה.</div>';return;}
-      const L={receipt:'צילומי קבלות',chat:'שאלות ליועץ',analysis:'ניתוחים ותוכניות'};
+      const L={receipt:'צילומי קבלות',chat:'הודעות לסוכן',analysis:'ניתוחים ותוכניות'};
       box.innerHTML='<div class="eyebrow">שימוש בסוכנים החודש</div>'+Object.keys(L).map(k=>{const x=q[k]||{limit:0,used:0};const pct=x.limit?Math.min(100,x.used/x.limit*100):0;
         return `<div><div class="row"><span>${L[k]}</span><span class="num">${x.used}/${x.limit}</span></div><div class="bar"><i style="width:${pct}%;background:${pct>=100?'var(--crit)':pct>=80?'var(--warn)':'var(--accent)'}"></i></div></div>`;}).join('')+'<div class="small muted">המכסה מתחדשת ב־1 בכל חודש.</div>';
     }).catch(()=>{const b=root.querySelector('#acQ');if(b)b.innerHTML='';});
@@ -1396,10 +1428,10 @@ function vTickets(){
   const pct=Math.min(100,ps.total/36*100);
   const since=ps.last?daysBetween(ps.last,today()):null;
   const tl=ps.reset&&ps.valid.length?(()=>{const start=ps.valid[ps.valid.length-1].offenseDate;const all=daysBetween(start,ps.reset),gone=Math.max(0,Math.min(all,daysBetween(start,today())));return {pct:all?gone/all*100:100,left:Math.max(0,all-gone),start};})():null;
-  const up=`<div class="docs-up"><button class="btn primary" data-act="tkAdd">${I('cam')}דוח חדש</button><button class="btn ghost" data-act="tkImport">${I('doc')}ייבוא תדפיס נקודות</button></div>`;
-  return `<div class="sec-title"><h2>דוחות ונקודות</h2><span class="small muted">של הנהג, לכל הרכבים</span></div>
+  const up=`<div class="docs-up"><button class="btn primary" data-act="tkAdd">${I('cam')}דוח חדש</button><button class="btn ghost" data-act="tkImport">${I('doc')}ייבוא תדפיס נקודות</button><button class="btn ghost" data-act="help" data-id="points">${I('doc')}איך מביאים את התדפיס?</button></div>`;
+  return `<div class="sec-title"><h2>דוחות ונקודות ${helpBtn('tickets','איך זה עובד')}</h2><span class="small muted">של הנהג, לכל הרכבים</span></div>
   <section class="card pol">
-    <div class="pol-head"><div><div class="eyebrow">הנקודות שלי כרגע</div><h2 class="num" style="font-size:44px;line-height:1">${ps.total}<small style="font-size:16px;color:var(--muted);font-weight:400"> נקודות</small></h2></div>
+    <div class="pol-head"><div><div class="eyebrow">הנקודות שלי כרגע ${helpBtn('points','איך מביאים את תדפיס הנקודות')}</div><h2 class="num" style="font-size:44px;line-height:1">${ps.total}<small style="font-size:16px;color:var(--muted);font-weight:400"> נקודות</small></h2></div>
       <span class="chip" style="${lvl.c==='crit'?'color:var(--crit);border-color:var(--crit)':lvl.c==='warn'?'color:var(--warn);border-color:var(--warn)':'color:var(--ok);border-color:var(--ok)'}">${lvl.t}</span></div>
     <div class="ptsbar" role="img" aria-label="${ps.total} מתוך 36 נקודות"><i style="width:${pct}%"></i><span style="inset-inline-start:33.3%">12</span><span style="inset-inline-start:66.6%">24</span><span style="inset-inline-start:calc(100% - 14px)">36</span></div>
     <div class="docs-strip" style="margin:0">
@@ -1686,25 +1718,9 @@ const chatLog=[];let chatBusy=false;
 function captureChat(){const i=$('#chatIn');return {val:i?i.value:'',focus:document.activeElement===i};}
 function restoreChat(k){const m=$('#msgs');if(!m)return;for(const x of chatLog)appendMsg(x.role,x.html,true);const i=$('#chatIn');if(i){i.value=k.val;if(k.focus)i.focus();}m.scrollTop=m.scrollHeight;$('#sugg').hidden=chatLog.length>0;}
 function appendMsg(role,html,noLog){const m=$('#msgs');if(!m)return null;const d=document.createElement('div');d.className='msg '+(role==='user'?'u':role==='note'?'note':'a');d.innerHTML=html;m.appendChild(d);m.scrollTop=m.scrollHeight;return d;}
-const CHAT_SYS=`אתה "יועץ הרכב" בתוך אפליקציית יומן רכב. התפקיד היחיד שלך: לענות על הרכב של המשתמש ועל הנתונים שבאפליקציה (תדלוקים, צריכה, טיפולים, הוצאות, תזכורות, ביטוח ומסמכים, דוחות ונקודות), ועל שאלות כלליות על רכב ונהיגה (תחזוקה, נורות בלוח, צמיגים, דלק, טסט, ביטוח רכב).
-כל שאלה אחרת, שלא קשורה לרכב: ענה רק במשפט "אני עונה רק על הרכב שלך ועל דברים שקשורים לרכב 🙂" בלי להפעיל כלים ובלי שום תוכן נוסף.
-כללים: עברית בלבד. קצר: עד 80 מילים, אלא אם ביקשו פירוט. מספרים מדויקים מהכלים בלבד, בלי להמציא. הפעל רק את הכלי שצריך לשאלה. מותר לסמן תזכורת כבוצעה או להוסיף תזכורת רק כשהמשתמש מבקש במפורש. מטבע ₪; יחידות ק״מ, ליטר, ק״מ לליטר.`;
-const chatTools=[
- {name:'get_overview',description:'Car profile, odometer, km per day, fuel economy series, monthly spend, and every reminder with its status and expected date.',inputSchema:{type:'object',properties:{}},execute:()=>snapshotData()},
- {name:'get_records',description:'List logged records of one type, newest first. fuel=fill-ups, service=garage work, expense=other costs.',inputSchema:{type:'object',properties:{type:{type:'string',enum:['fuel','service','expense']},limit:{type:'number'}},required:['type']},
-  execute:({type,limit})=>[...(S[type]||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,Math.min(+limit||30,100)).map(r=>{const o=Object.assign({},r);delete o.receipt;delete o.history;return o;})},
- {name:'get_insurance',description:'The car insurance policies and the vehicle license read from the documents the user uploaded: insurer, type, dates, who may drive, deductibles, every coverage in plain Hebrew, what is not covered, and phone numbers. Use it for any question about insurance, coverage, claims or the annual test.',inputSchema:{type:'object',properties:{}},
-  execute:()=>S.paper.map(p=>{const o=Object.assign({},p);delete o.files;return o;})},
- {name:'get_tickets_and_license',description:'Traffic tickets (date, points, amount, payment due date, status), the current valid points total and reset date, and the driver license expiry and new-driver refresher status.',inputSchema:{type:'object',properties:{}},
-  execute:()=>({points:(({total,years,last,reset})=>({total,years,last,reset}))(pointsState()),tickets:S.ticket.map(t=>{const o=Object.assign({},t);delete o.files;delete o.ticketNo;o.payBy=tkDue(t);return o;}),driver:(({exp,newEnd,refresherDue})=>({licenseExpiry:exp,newDriverEnds:newEnd,refresherDue}))(driverInfo())})},
- {name:'mark_reminder_done',description:'Mark a reminder as done today at the current odometer. Use only when the user says they did it.',inputSchema:{type:'object',properties:{id:{type:'string'}},required:['id']},
-  execute:async({id})=>{const ok=await markDone(id,odo(),today(),true);if(!ok)throw new Error('unknown reminder id');appendMsg('note','✓ התזכורת עודכנה');return {ok:true};}},
- {name:'add_reminder',description:'Create a new reminder counted from today and the current odometer.',inputSchema:{type:'object',properties:{title:{type:'string'},kind:{type:'string',enum:['service','check','doc']},intervalKm:{type:['number','null']},intervalDays:{type:['number','null']}},required:['title','kind']},
-  execute:async(a)=>{if(!a.intervalKm&&!a.intervalDays)throw new Error('need intervalKm or intervalDays');await addRec('reminder',{title:a.title,kind:a.kind,intervalKm:n(a.intervalKm),intervalDays:n(a.intervalDays),lastKm:odo(),lastDate:today()});appendMsg('note','✓ נוספה תזכורת: '+esc(a.title));return {ok:true};}}
-];
 async function sendChat(q){
   q=(q||'').trim();if(!q||chatBusy)return;
-  if(!sample){toast('היועץ זמין כשהדף פתוח ב־Claude');return;}
+  if(!sample){toast('הסוכן לא זמין כרגע');return;}
   chatBusy=true;$('#sugg')&&($('#sugg').hidden=true);
   chatLog.push({role:'user',content:q,html:esc(q)});appendMsg('user',esc(q));
   const bubble=appendMsg('assistant','<span class="spin"></span>');
@@ -1712,10 +1728,11 @@ async function sendChat(q){
   let input=chatLog.filter(m=>m.role==='user'||m.role==='assistant').slice(-6).map(m=>({role:m.role,content:m.content}));
   while(input.length&&input[0].role!=='user')input.shift();
   try{
-    const res=await sample(input,{cache:false,tools:chatTools,system:CHAT_SYS,maxTokens:700,onText:({text})=>{if(bubble&&text&&text!=='Thinking...')bubble.innerHTML=mdLite(text);}});
+    const res=await sample(input,{cache:false,tools:chatTools,system:chatSys(),maxTokens:800,onText:({text})=>{if(bubble&&text&&text!=='Thinking...')bubble.innerHTML=mdLite(text);}});
     const html=mdLite(res.text||'');if(bubble)bubble.innerHTML=html;
     chatLog.push({role:'assistant',content:res.text||'',html});
-  }catch(e){const t=e?.code==='missing_api_key'?'היועץ עוד לא מחובר: חסר מפתח API בשרת.':e?.code==='rate_limited'?'הגעת למגבלת השימוש, נסה שוב בעוד כמה דקות.':e?.code==='not_granted'?'היועץ לא קיבל הרשאה לפנות ל־Claude.':e?.code==='quota_exceeded'?aiErr(e,''):'משהו השתבש. נסה לשאול שוב.';if(bubble)bubble.innerHTML=t;chatLog.pop();}
+    if(AGENT_NAV){const nv=AGENT_NAV;AGENT_NAV=null;setTimeout(nv,700);}
+  }catch(e){const t=e?.code==='missing_api_key'?'הסוכן עוד לא מחובר: חסר מפתח API בשרת.':e?.code==='rate_limited'?'הגעת למגבלת השימוש, נסה שוב בעוד כמה דקות.':e?.code==='not_granted'?'הסוכן לא קיבל הרשאה.':e?.code==='quota_exceeded'?aiErr(e,''):'משהו השתבש. נסה לשאול שוב.';if(bubble)bubble.innerHTML=t;chatLog.pop();}
   finally{chatBusy=false;}
 }
 
@@ -2039,15 +2056,16 @@ function joinResults(results){
   const out=[];for(let i=0;i<parts.length;i++){if(!parts[i])continue;if(i+1<parts.length&&parts[i+1].startsWith(parts[i]))continue;if(out.length&&parts[i].startsWith(out[out.length-1])){out[out.length-1]=parts[i];continue;}out.push(parts[i]);}
   return out.join(' ').replace(/\s+/g,' ').trim();
 }
-function voiceSheet(){
+function voiceSheet(opts){
+  opts=opts||{};
   if(!sample){toast('הסוכן לא זמין כרגע');return;}
   const IDLE='לוחצים על המיקרופון ואומרים במשפט אחד מה היה';
-  openModal('רישום בקול',`<div class="vbox">
+  openModal(opts.agent?'לדבר עם הסוכן':'רישום בקול',`<div class="vbox">
     <button type="button" class="vmic" id="vMic" aria-label="התחלת הקלטה">${I('mic')}</button>
     <div class="vstate" id="vSt" role="status">${IDLE}</div>
     <textarea id="vTxt" rows="2" placeholder="מה שתגיד יופיע כאן" aria-label="מה אמרת"></textarea>
     <div class="vex" id="vEx"><span class="small muted">למשל:</span>${VOICE_EX.map(x=>`<button type="button">״${esc(x)}״</button>`).join('')}</div>
-    <div class="formacts" style="width:100%"><button class="btn primary" id="vGo" disabled>${I('spark')}מילוי הטופס</button><button class="btn ghost" data-act="close">ביטול</button></div></div>`,root=>{
+    <div class="formacts" style="width:100%"><button class="btn primary" id="vGo" disabled>${I('spark')}${opts.agent?'שליחה לסוכן':'מילוי הטופס'}</button><button class="btn ghost" data-act="close">ביטול</button></div></div>`,root=>{
     const mic=root.querySelector('#vMic'),st=root.querySelector('#vSt'),ta=root.querySelector('#vTxt'),goB=root.querySelector('#vGo');
     const alive=()=>root.contains(ta);
     const sync=()=>{goB.disabled=!ta.value.trim();};
@@ -2094,7 +2112,7 @@ function voiceSheet(){
       say('מתמלל…');busy(goB,true,'מתמלל…');
       try{const text=await window.cjSTT.transcribe(blob,secs);if(!alive())return;busy(goB,false);
         if(!text){say('לא הצלחתי להבין את ההקלטה. אפשר לנסות שוב.');return;}
-        ta.value=text;sync();say('הבנתי. ממלא את הטופס…');run();
+        ta.value=text;sync();say(opts.agent?'הבנתי. שולח לסוכן…':'הבנתי. ממלא את הטופס…');run();
       }catch(e){if(!alive())return;busy(goB,false);
         if(e&&e.code==='missing_key'){mode=SpeechRec&&!iosApp()?'browser':'keyboard';if(mode==='keyboard')keyboard();else say('נסה שוב.');}
         else say(aiErr(e,'התמלול נכשל. אפשר לנסות שוב, או לדבר דרך המיקרופון שבמקלדת.'));}
@@ -2110,7 +2128,7 @@ function voiceSheet(){
       rec.onresult=ev=>{heard=joinResults(ev.results);ta.value=(base?base+' ':'')+heard;sync();clearTimeout(silence);silence=setTimeout(()=>{try{rec.stop();}catch(e){}},1600);};
       rec.onerror=ev=>{const c=ev&&ev.error;if(c==='not-allowed'||c==='service-not-allowed')keyboard('הדפדפן לא מאפשר זיהוי דיבור כאן. לוחצים בתיבה ואז על המיקרופון שבמקלדת.');else if(c==='network')keyboard('זיהוי הדיבור של הדפדפן צריך אינטרנט. אפשר לדבר דרך המיקרופון שבמקלדת.');else if(c==='language-not-supported')keyboard('הדפדפן לא מזהה עברית. לוחצים בתיבה ואז על המיקרופון שבמקלדת.');};
       rec.onend=()=>{stopNow=null;clearTimeout(silence);clearTimeout(startT);if(!alive())return;onMic(false);if(cancelled)return;
-        if(heard){say('הבנתי. ממלא את הטופס…');run();}
+        if(heard){say(opts.agent?'הבנתי. שולח לסוכן…':'הבנתי. ממלא את הטופס…');run();}
         else if(!mic.hidden)say('לא שמעתי. אפשר לנסות שוב, או לדבר דרך המיקרופון שבמקלדת.');};
       try{rec.start();}catch(e){keyboard();}
     }
@@ -2124,7 +2142,9 @@ function voiceSheet(){
     };
     let running=false;
     const run=async()=>{
-      const text=ta.value.trim();if(!text||running)return;running=true;busy(goB,true,'הסוכן מבין…');
+      const text=ta.value.trim();if(!text||running)return;
+      if(opts.agent){closeModal();agTab='agents';if(view!=='agents')go('agents');else render();setTimeout(()=>sendChat(text),60);return;}
+      running=true;busy(goB,true,'הסוכן מבין…');
       try{
         const r=await sample.json(voicePrompt(text),{maxTokens:400,modelTier:'default'});
         if(!alive())return;
@@ -2239,6 +2259,145 @@ function tkCheckSheet(id,fresh,tries){
 }
 document.addEventListener('click',e=>{const b=e.target.closest('[data-act="tkCheck"]');if(b)tkCheckSheet(b.dataset.id);});
 
+/* ===== 078-help.js ===== */
+/* ---------- help: a "?" that explains the screen you're on, and short how-tos ---------- */
+const POINTS_URL='https://www.gov.il/he/service/driver_penalty_point_check';
+const HELP={
+  home:{t:'מסך הבית',b:`<ul class="hlp">
+    <li><b>מד האוץ:</b> הקילומטראז׳ של הרכב. לוחצים עליו כדי לעדכן. תדלוק וטיפול מעדכנים אותו לבד.</li>
+    <li><b>טיפול הבא ובדיקה הבאה:</b> העיגול מראה כמה נשאר עד הפעם הבאה. מלא = הרבה זמן, ריק = הגיע הזמן.</li>
+    <li><b>״בדקתי״ / ״בוצע״:</b> לוחצים אחרי שעשית את הבדיקה. הספירה מתחילה מחדש, ותראה מתי הפעם הבאה.</li>
+    <li><b>תדלוק, בדיקה, בקול, רישום:</b> הדרכים המהירות לרשום. ״בקול״ = אומרים במשפט אחד מה היה.</li>
+    <li><b>הסוכן</b> (כפתור הניצוץ למעלה): כותבים או אומרים לו מה עשית, והוא רושם בשבילך.</li></ul>`},
+  fuel:{t:'דלק',b:`<p>כל תדלוק נרשם כאן. כדי שהצריכה (ק״מ לליטר) תחושב, צריך את הקילומטראז׳ בכל תדלוק, ושני מילויים מלאים לפחות.</p><p>הכי מהיר: לוחצים ״תדלוק״ ומצלמים את הקבלה. הסוכן ממלא סכום, ליטרים ותחנה.</p>`},
+  service:{t:'טיפולים ובדיקות',b:`<ul class="hlp"><li><b>היסטוריית טיפולים:</b> כל מה שנעשה במוסך, עם עלות וקבלה.</li><li><b>לוח טיפולים:</b> מתי הטיפול הבא, לפי ק״מ או לפי זמן, מה שמגיע קודם.</li><li><b>בדיקות שוטפות:</b> שמן, מים, אוויר ונוזל שמשות. לוחצים ״בוצע״ אחרי כל בדיקה, והיא נרשמת ביומן הבדיקות עם התאריך.</li></ul>`},
+  expense:{t:'הוצאות',b:`<p>כל ההוצאות על הרכב: דלק, טיפולים, ביטוח, חניה ועוד, לפי חודש ולפי קטגוריה. הקבלות שצילמת נשמרות בארכיון.</p>`},
+  reminder:{t:'תזכורות',b:`<ul class="hlp"><li><b>טיפול תקופתי:</b> לפי ק״מ או זמן.</li><li><b>בדיקה שוטפת:</b> כל שבועיים או חודש.</li><li><b>מסמכים ותשלומים:</b> טסט, ביטוח, רישיון ודוחות.</li><li>״בוצע״ מאפס את הספירה ומראה מתי הפעם הבאה. השעון = לדחות. אם התראות פעילות, תקבל הודעה לטלפון.</li></ul>`},
+  agents:{t:'הסוכן',b:`<p>הסוכן עונה על שאלות וגם <b>עושה פעולות בשבילך</b>. כותבים או אומרים לו בפשטות, למשל:</p><ul class="hlp"><li>״עשיתי איזון וכיוון פרונט ב־250 שקל״</li><li>״בדקתי שמן ומים״</li><li>״תדלקתי ב־300, הקילומטראז׳ 31,500״</li><li>״תעביר אותי לביטוח״</li></ul><p>בחשבון עם כמה רכבים, אומרים לאיזה רכב (״לקיה של דנה״). בלי זה, הוא רושם לרכב שפתוח עכשיו. כל פעולה אפשר לבטל.</p>`},
+  docs:{t:'ביטוח ומסמכים',b:`<p>מעלים את פוליסת הביטוח (PDF או צילום) ואת רישיון הרכב. הסוכן קורא אותם, מסביר בשפה פשוטה מה מכוסה, ומזכיר לפני שהביטוח או הטסט נגמרים.</p>`},
+  tickets:{t:'דוחות ונקודות',b:`<ul class="hlp"><li><b>דוח חדש:</b> מצלמים את הדוח. הסוכן קורא אותו ובודק אם הוא תקין: מספר רכב, סוג רכב, מועד מסירה ופרטים חסרים. אחר כך רואים את המועדים לבקשת ביטול, לבקשה להישפט ולתשלום.</li><li><b>תזכורת בערב:</b> באותו ערב, ושוב לפני המועד האחרון לבקשת ביטול, עד שתלחץ ״בדקתי״.</li><li><b>הנקודות:</b> מחושבות מהדוחות שרשמת. הנתון הרשמי הוא בתדפיס הנקודות, ראה למטה.</li></ul>
+    <button class="btn block" data-act="help" data-id="points">${'איך מביאים את תדפיס הנקודות?'}</button>`},
+  points:{t:'תדפיס הנקודות ממשרד התחבורה',b:`<ol class="hlp">
+    <li>נכנסים לשירות <b>״קבלת תדפיס נקודות חובה״</b> באתר gov.il (הכפתור למטה).</li>
+    <li>מזדהים עם הפרטים שהאתר מבקש.</li>
+    <li>שומרים את התדפיס כ־PDF, או מצלמים אותו מהמסך.</li>
+    <li>חוזרים לכאן ולוחצים <b>״ייבוא תדפיס נקודות״</b>. הסוכן קורא את התדפיס ומעדכן את הנקודות ואת העבירות.</li></ol>
+    <p class="small muted">אפשר לקבל את המידע גם בטלפון, במרכז המידע של משרד התחבורה: <bdi dir="ltr">1-222-56-78</bdi>.</p>
+    <p class="small muted">איך זה עובד: נקודות נספרות שנתיים מתאריך העבירה (4 שנים אם צברת 22 ומעלה בתוך שנתיים). ב־12 נקודות שולחים לקורס נהיגה נכונה, ב־24 לקורס מתקדם, וב־36 יש פסילה.</p>
+    <div class="formacts"><a class="btn primary" href="${POINTS_URL}" target="_blank" rel="noopener">${'לאתר משרד התחבורה'}</a><button class="btn ghost" data-act="tkImport">${'ייבוא תדפיס'}</button></div>`},
+  fleet:{t:'הצי',b:`<ul class="hlp"><li><b>למעלה:</b> מספרים על כל הצי יחד.</li><li><b>דורש טיפול:</b> כל מה שדחוף, מכל הרכבים, ברשימה אחת. לחיצה פותחת את הרכב.</li><li><b>טבלת הצי:</b> אפשר למיין, ולייצא לאקסל.</li><li><b>ייבוא מאקסל:</b> מוסיפים הרבה רכבים בבת אחת.</li></ul>`},
+};
+const helpBtn=(id,label)=>`<button type="button" class="helpq" data-act="help" data-id="${id}" aria-label="${esc(label||'הסבר')}">?</button>`;
+function helpSheet(id){
+  const h=HELP[id]||HELP[view]||HELP.home;
+  openModal(h.t,`<div class="hlp-body">${h.b}</div>`);
+}
+function helpTopic(){if(view==='agents')return agTab==='docs'?'docs':agTab==='tickets'?'tickets':'agents';if(view==='home'&&typeof isBiz==='function'&&isBiz()&&FLEET_VIEW)return 'fleet';return view;}
+// a one-time hint on the home screen
+function homeIntro(){
+  let seen=false;try{seen=localStorage.getItem('cj-intro-home')==='1';}catch(e){}
+  if(seen||!S.car||S.car.example)return '';
+  return `<section class="intro-tip"><span>${I('spark')}</span><p><b>טיפ:</b> לוחצים על ״?״ למעלה בכל מסך כדי לקבל הסבר קצר. ואפשר פשוט לספר לסוכן מה עשית, והוא ירשום.</p><button type="button" class="mini" data-act="introX" aria-label="סגירה">✕</button></section>`;
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act="help"],[data-act="introX"],[data-act="helpHere"]');if(!b)return;
+  if(b.dataset.act==='introX'){try{localStorage.setItem('cj-intro-home','1');}catch(x){}const s=b.closest('.intro-tip');if(s)s.remove();return;}
+  if(b.dataset.act==='helpHere'){helpSheet(helpTopic());return;}
+  helpSheet(b.dataset.id);
+});
+
+/* ===== 079-agent.js ===== */
+/* ---------- the agent: answers, and does things in the app for you ---------- */
+let AGENT_NAV=null;const AGENT_UNDO={};let undoSeq=0;
+function chatSys(){
+  const multi=S.cars.length>1;
+  return `אתה "הסוכן" של אפליקציית יומן הרכב. אתה עונה על שאלות וגם מבצע פעולות באפליקציה בשם המשתמש, בעזרת הכלים.
+כשהמשתמש מספר שעשה משהו, בצע מיד עם הכלי המתאים, בלי לבקש אישור:
+- טיפול, תיקון או עבודה במוסך (איזון וכיוון פרונט, החלפת שמן, צמיגים, בלמים…) → log_service. אם יש תזכורת שמתאימה למה שנעשה (לפי get_overview), העבר את ה־id שלה ב־done_reminder_ids.
+- בדיקה שוטפת (שמן, מים, נוזל קירור, אוויר בצמיגים, נוזל שמשות) → mark_reminder_done עם ה־ids של התזכורות המתאימות.
+- תדלוק → log_fuel (צריך סכום; אם לא נאמר, שאל במשפט אחד). הוצאה אחרת (חניה, ביטוח, טסט, כביש 6, שטיפה, חלפים) → log_expense.
+- קילומטראז׳ חדש → update_odometer. תזכורת חדשה → add_reminder.
+- "תעביר אותי ל…", "תראה לי…", "תפתח…" → open_screen.
+אל תמציא סכומים או תאריכים: מה שלא נאמר נשאר ריק, והתאריך הוא היום. "אתמול" = התאריך של אתמול.
+${multi?'בחשבון יש כמה רכבים (list_cars). אם המשתמש מזכיר רכב, כינוי, נהג או מספר רישוי, העבר car עם ה־id. אחרת הפעולה היא לרכב שפתוח עכשיו.':''}
+אחרי פעולה: משפט אחד קצר, מה נרשם ומתי הפעם הבאה (לפי תוצאת הכלי). המשתמש יכול לבטל כל פעולה בכפתור, אל תציע לבטל.
+שאלות: ענה על הרכב ועל הנתונים שבאפליקציה (דלק, צריכה, טיפולים, הוצאות, תזכורות, ביטוח ומסמכים, דוחות ונקודות), ועל רכב ונהיגה בכלל. מספרים רק מהכלים.
+כל דבר שלא קשור לרכב: ענה רק "אני עוזר רק בדברים שקשורים לרכב ולאפליקציה 🙂".
+עברית בלבד, קצר: עד 60 מילים אלא אם ביקשו פירוט. מטבע ₪.`;
+}
+// which car a tool call is about: id, plate, nickname, make/model or driver; default = the open car
+function agentCar(ref){
+  if(!ref)return S.car;
+  const q=String(ref).trim().toLowerCase(),d=q.replace(/\D/g,'');
+  return S.cars.find(c=>c.id===ref)||(d.length>=5?S.cars.find(c=>plateKey(c.plate)===d):null)
+    ||S.cars.find(c=>[c.nickname,c.driver,[c.make,c.model].filter(Boolean).join(' '),c.make,c.model].some(x=>x&&String(x).toLowerCase()&&(String(x).toLowerCase().includes(q)||q.includes(String(x).toLowerCase()))))||null;
+}
+function useCar(ref){
+  const c=agentCar(ref);if(!c)throw new Error('unknown car: '+ref+'. Call list_cars.');
+  if(c.id!==CAR){CAR=c.id;try{localStorage.setItem('cj-car',c.id);}catch(e){}applyCar();if(typeof setFleetView==='function'&&isBiz())setFleetView(false);agentNote(`עברתי ל${esc(carName(c))}`);}
+  return c;
+}
+function agentNote(html,undo){
+  let btn='';if(undo){const k=++undoSeq;AGENT_UNDO[k]=undo;btn=` <button class="linkbtn" data-act="agUndo" data-id="${k}">ביטול</button>`;}
+  const h='✓ '+html+btn;chatLog.push({role:'note',html:h});appendMsg('note',h);
+}
+const isoOr=(d)=>/^\d{4}-\d\d-\d\d$/.test(d||'')&&d<=today()?d:today();
+const carProp={car:{type:'string',description:'Car id from list_cars, or plate / nickname / driver. Omit for the car that is open now.'}};
+const chatTools=[
+ {name:'list_cars',description:'All cars in the account: id, name, plate, driver, odometer, and which one is open now.',inputSchema:{type:'object',properties:{}},
+  execute:()=>S.cars.map(c=>({id:c.id,name:carName(c),make:c.make,model:c.model,plate:c.plate||'',driver:c.driver||'',odometer:n(c.odometer),open:c.id===CAR}))},
+ {name:'get_overview',description:'One car: profile, odometer, km per day, fuel economy, monthly spend, and every reminder (id, title, kind, status, expected date, last time done).',inputSchema:{type:'object',properties:{...carProp}},
+  execute:({car})=>{const c=agentCar(car);if(!c)throw new Error('unknown car');return withCar(c.id,()=>Object.assign(snapshotData(),{carId:c.id}));}},
+ {name:'get_records',description:'Logged records of one type for a car, newest first. fuel=fill-ups, service=garage work, expense=other costs.',inputSchema:{type:'object',properties:{type:{type:'string',enum:['fuel','service','expense']},limit:{type:'number'},...carProp},required:['type']},
+  execute:({type,limit,car})=>{const c=agentCar(car);if(!c)throw new Error('unknown car');return withCar(c.id,()=>[...(S[type]||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,Math.min(+limit||30,100)).map(r=>{const o=Object.assign({},r);delete o.receipt;delete o.history;return o;}));}},
+ {name:'get_insurance',description:'Insurance policies and vehicle license read from uploaded documents: insurer, type, dates, drivers, deductibles, coverages in plain Hebrew, exclusions, phone numbers. For any insurance, claim or annual test question.',inputSchema:{type:'object',properties:{}},
+  execute:()=>S.paper.map(p=>{const o=Object.assign({},p);delete o.files;return o;})},
+ {name:'get_tickets_and_license',description:'Traffic tickets (date, points, amount, deadlines, check result, status), the valid points total and reset date, driver license expiry and new-driver refresher.',inputSchema:{type:'object',properties:{}},
+  execute:()=>({points:(({total,years,last,reset})=>({total,years,last,reset}))(pointsState()),tickets:S.ticket.map(t=>{const o=Object.assign({},t);delete o.files;delete o.ticketNo;delete o.plateOnTicket;o.payBy=tkDue(t);return o;}),driver:(({exp,newEnd,refresherDue})=>({licenseExpiry:exp,newDriverEnds:newEnd,refresherDue}))(driverInfo())})},
+ {name:'log_service',description:'Record garage work / maintenance that was done (e.g. wheel alignment, oil change, tyres, brakes). Optionally marks matching reminders done.',inputSchema:{type:'object',properties:{title:{type:'string',description:'Short Hebrew description'},cost:{type:['number','null']},date:{type:['string','null'],description:'YYYY-MM-DD, default today'},odo:{type:['number','null']},garage:{type:['string','null']},note:{type:['string','null']},done_reminder_ids:{type:'array',items:{type:'string'}},...carProp},required:['title']},
+  execute:async(a)=>{const c=useCar(a.car);const data={date:isoOr(a.date),title:String(a.title).slice(0,120),cost:n(a.cost),odo:n(a.odo)||odo(),garage:a.garage||'',note:a.note||'',carId:c.id};
+    const ref=await addRec('service',data);await bumpOdo(data.odo);
+    const done=[];for(const id of a.done_reminder_ids||[]){const r=await markDone(id,data.odo,data.date,true);if(r&&r.undo)done.push(r);}
+    agentNote(`נרשם טיפול: <b>${esc(data.title)}</b>${data.cost?' · '+ils(data.cost):''}${done.length?' · '+done.map(x=>esc(x.nextLabel)).join(' · '):''}`,async()=>{await delRec('service',ref.id);for(const x of done)await x.undo();});
+    return {ok:true,carId:c.id,next:done.map(x=>({title:x.title,next:x.nextLabel}))};}},
+ {name:'log_fuel',description:'Record a fill-up.',inputSchema:{type:'object',properties:{total:{type:'number',description:'Total paid in ₪'},liters:{type:['number','null']},pricePerL:{type:['number','null']},odo:{type:['number','null']},station:{type:['string','null']},full:{type:['boolean','null']},date:{type:['string','null']},...carProp},required:['total']},
+  execute:async(a)=>{const c=useCar(a.car);const x=normFuel(a)||{};const data={date:isoOr(a.date),total:x.total,liters:x.liters,pricePerL:x.pricePerL,station:a.station||'',odo:n(a.odo)||null,full:a.full!==false,carId:c.id};
+    const ref=await addRec('fuel',data);if(data.odo)await bumpOdo(data.odo);
+    agentNote(`נרשם תדלוק: ${ils(data.total)}${data.liters?' · '+nf1.format(data.liters)+' ל׳':''}${data.odo?' · '+km(data.odo)+' ק״מ':''}`,()=>delRec('fuel',ref.id));
+    return {ok:true,carId:c.id,missingOdo:!data.odo};}},
+ {name:'log_expense',description:'Record any other car expense.',inputSchema:{type:'object',properties:{title:{type:'string'},amount:{type:'number'},category:{type:'string',enum:['insurance','test','tires','parking','wash','parts','other']},vendor:{type:['string','null']},date:{type:['string','null']},...carProp},required:['title','amount']},
+  execute:async(a)=>{const c=useCar(a.car);const data={date:isoOr(a.date),title:String(a.title).slice(0,120),amount:n(a.amount),category:CATS[a.category]?a.category:'other',vendor:a.vendor||'',note:'',carId:c.id};
+    const ref=await addRec('expense',data);agentNote(`נרשמה הוצאה: <b>${esc(data.title)}</b> · ${ils(data.amount)}`,()=>delRec('expense',ref.id));return {ok:true,carId:c.id};}},
+ {name:'mark_reminder_done',description:'Mark reminders (routine checks or maintenance) as done today. Returns when each is due next.',inputSchema:{type:'object',properties:{ids:{type:'array',items:{type:'string'}},...carProp},required:['ids']},
+  execute:async({ids,car})=>{useCar(car);const out=[],done=[];
+    for(const id of ids||[]){const r=await markDone(id,odo(),today(),true);if(!r)throw new Error('unknown reminder id '+id);if(r.undo){done.push(r);out.push({title:r.title,next:r.nextLabel});}else out.push({id,done:true});}
+    if(done.length){JUST_DONE={ids:done.map(x=>x.id),at:Date.now()};agentNote(done.map(x=>`<b>${esc(x.title)}</b>: בוצע היום. ${esc(x.nextLabel)}`).join('<br>'),()=>Promise.all(done.map(x=>x.undo())));}
+    return out;}},
+ {name:'add_reminder',description:'Create a reminder counted from today and the current odometer.',inputSchema:{type:'object',properties:{title:{type:'string'},kind:{type:'string',enum:['service','check','doc']},intervalKm:{type:['number','null']},intervalDays:{type:['number','null']},...carProp},required:['title','kind']},
+  execute:async(a)=>{if(!a.intervalKm&&!a.intervalDays)throw new Error('need intervalKm or intervalDays');const c=useCar(a.car);
+    const ref=await addRec('reminder',{title:a.title,kind:a.kind,intervalKm:n(a.intervalKm),intervalDays:n(a.intervalDays),lastKm:odo(),lastDate:today(),history:[],note:'',carId:c.id});
+    agentNote('נוספה תזכורת: <b>'+esc(a.title)+'</b>',()=>delRec('reminder',ref.id));return {ok:true};}},
+ {name:'update_odometer',description:'Set the current odometer reading (km).',inputSchema:{type:'object',properties:{km:{type:'number'},...carProp},required:['km']},
+  execute:async({km:v,car})=>{const c=useCar(car);v=n(v);if(!v)throw new Error('bad km');const before={odometer:c.odometer,odoUpdatedAt:c.odoUpdatedAt||''};
+    await updRec('garage',c.id,{odometer:v,odoUpdatedAt:today()});agentNote(`הקילומטראז׳ עודכן ל־${km(v)}`,()=>updRec('garage',c.id,before));return {ok:true};}},
+ {name:'open_screen',description:'Take the user to a screen of the app (after you answer).',inputSchema:{type:'object',properties:{screen:{type:'string',enum:['home','fuel','service','expense','reminder','agent','insurance','tickets','fleet','account','checks']},...carProp},required:['screen']},
+  execute:({screen,car})=>{if(car)useCar(car);
+    const nav={insurance:()=>{agTab='docs';go('agents');render();},tickets:()=>{agTab='tickets';go('agents');render();},agent:()=>{agTab='agents';go('agents');render();},
+      fleet:()=>{if(typeof setFleetView==='function')setFleetView(true);go('home');render();},account:()=>accountSheet(),checks:()=>checksSheet()}[screen]||(()=>{if(typeof setFleetView==='function'&&screen==='home'&&isBiz())setFleetView(false);go(screen);render();});
+    AGENT_NAV=nav;return {ok:true,willOpen:screen};}},
+];
+// open the agent from anywhere
+function agentOpen(){
+  agTab='agents';if(view!=='agents')go('agents');else render();
+  setTimeout(()=>{const c=$('#chat');if(c)c.scrollIntoView({block:'end',behavior:'smooth'});const i=$('#chatIn');if(i&&window.innerWidth>700)i.focus();},120);
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act="agentOpen"],[data-act="agUndo"],[data-act="agMic"]');if(!b)return;
+  if(b.dataset.act==='agentOpen')agentOpen();
+  else if(b.dataset.act==='agMic')voiceSheet({agent:true});
+  else{const f=AGENT_UNDO[b.dataset.id];if(!f)return;delete AGENT_UNDO[b.dataset.id];b.disabled=true;Promise.resolve(f()).then(()=>{b.textContent='בוטל';toast('הפעולה בוטלה');}).catch(()=>{b.disabled=false;toast('הביטול נכשל');});}
+});
+
 /* ===== 08-events-boot.js ===== */
 /* ---------- events ---------- */
 document.addEventListener('click',e=>{
@@ -2289,10 +2448,10 @@ document.addEventListener('click',e=>{
     case 'restore':restoreSheet();break;
     case 'done':{const r=S.reminder.find(x=>x.id===id);if(!r)break;
       if(r.kind==='service'){serviceForm(null,{title:r.title,remId:r.id});}
-      else markDone(id).catch(()=>toast('העדכון נכשל'));break;}
+      else markDone(id).then(()=>render()).catch(()=>toast('העדכון נכשל'));break;}
   }
 });
-document.addEventListener('submit',e=>{if(e.target.id==='composer'){e.preventDefault();const i=$('#chatIn');const q=i.value;i.value='';sendChat(q);}});
+document.addEventListener('submit',e=>{if(e.target.id==='composer'){e.preventDefault();if(chatBusy){toast('רגע, הסוכן עוד עונה…');return;}const i=$('#chatIn');const q=i.value;i.value='';sendChat(q);}});
 window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(h&&h!==view&&NAV.some(x=>x[0]===h))go(h);});
 
 (function(){

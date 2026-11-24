@@ -69,7 +69,7 @@ function vHomeMobile(){
   const mSpend=sp.filter(r=>monthKey(r.date)===thisM).reduce((s,r)=>s+r.amount,0);
   const docs=sortedReminders(r=>/טסט/.test(r.title))[0];
   const attn=svc.filter(x=>x.st.status!=='ok').slice(0,3);
-  return `
+  return `${homeIntro()}
   <section class="card m m-hero">
     <div class="m-car"><div style="min-width:0"><div class="eyebrow">${esc(car.nickname||'הרכב שלי')}</div><div class="m-carname">${esc([car.make,car.model].filter(Boolean).join(' ')||'רכב חדש')}</div></div>${plate(car.plate)}</div>
     <button class="m-odo" data-act="odo" aria-label="עדכון מד אוץ">${odoDigits(o)}<span class="m-odo-edit">${I('edit')}</span></button>
@@ -115,7 +115,7 @@ function vHome(){
   const checks=sortedReminders(r=>r.kind==='check');
   const feed=sp.slice(0,6);
   const effDelta=eff&&eff.prev?eff.last-eff.prev:null;
-  return `
+  return `${homeIntro()}
   <section class="hero">
     <div class="card carcard">
       <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
@@ -183,6 +183,17 @@ function vFuel(){
   </tbody></table></div>`:`<div class="empty"><b>אין תדלוקים עדיין</b>רשום תדלוק ראשון, או צלם קבלה והסוכן ימלא את הפרטים</div>`}</section>`;
 }
 
+// routine checks (oil, water, tyre pressure…): what's next, and a log of every time they were done
+function checksCard(){
+  const list=sortedReminders(r=>r.kind==='check');
+  const log=S.reminder.filter(r=>r.kind==='check').flatMap(r=>(Array.isArray(r.history)?r.history:[]).map(h=>({r,h}))).filter(x=>x.h&&x.h.date).sort((a,b)=>b.h.date.localeCompare(a.h.date)||0).slice(0,14);
+  return `<section class="two" style="margin-top:16px">
+    <div class="card"><div class="card-head"><h2>בדיקות שוטפות</h2><button class="btn sm" data-act="checks">${I('check')}סימון בדיקות</button></div>
+      <div class="rlist">${list.map(x=>remRow(x,true)).join('')||'<div class="empty">אין בדיקות מוגדרות</div>'}</div></div>
+    <div class="card"><div class="card-head"><h2>יומן הבדיקות</h2><span class="small muted">${log.length?'האחרונות':''}</span></div>
+      <div class="feed">${log.map(({r,h})=>`<div class="fitem"><div class="ic ok">${I(iconFor(r.title,'check'))}</div><div style="min-width:0"><div class="rtitle">${esc(r.title)}</div><div class="rsub">${fmtD(h.date)}${n(h.km)?` · ${km(h.km)} ק״מ`:''}</div></div><span class="pill ok">בוצע</span></div>`).join('')||'<div class="empty"><b>עוד לא נרשמו בדיקות</b>כשתלחץ ״בוצע״ על בדיקה, היא תופיע כאן עם התאריך</div>'}</div></div>
+  </section>`;
+}
 function vService(){
   const rows=[...S.service].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   const sched=sortedReminders(r=>r.kind==='service');
@@ -194,7 +205,8 @@ function vService(){
       <div class="feed">${rows.map(r=>`<div class="fitem"><div class="ic">${I('wrench')}</div><div style="min-width:0"><div class="rtitle">${esc(r.title)}</div><div class="rsub">${fmtD(r.date)} · ${km(r.odo)} ק״מ${r.garage?' · '+esc(r.garage):''}</div>${r.note?`<div class="rsub" style="margin-top:3px">${esc(r.note)}</div>`:''}</div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><span class="amt">${ils(r.cost)}</span><div class="rowacts">${rcptChip(r.receipt)}<button class="mini" data-act="serviceForm" data-id="${r.id}" aria-label="עריכה">${I('edit')}</button><button class="mini" data-act="del" data-col="service" data-id="${r.id}" aria-label="מחיקה">${I('trash')}</button></div></div></div>`).join('')||'<div class="empty"><b>אין טיפולים רשומים</b>תעד טיפול במוסך כדי לעקוב אחרי ההיסטוריה של הרכב</div>'}</div></div>
     <div class="card"><div class="card-head"><h2>לוח טיפולים</h2><button class="link" data-act="remForm" data-kind="service">הוספה</button></div>
       <div class="rlist">${sched.map(x=>remRow(x,true)).join('')||'<div class="empty">אין טיפולים מתוזמנים</div>'}</div></div>
-  </section>`;
+  </section>
+  ${checksCard()}`;
 }
 
 function vExpense(){
@@ -229,25 +241,26 @@ function vReminder(){
 let lastInsight='',insightBusy=false;
 let agTab='agents';try{if(location.hash==='#docs')agTab='docs';if(location.hash==='#tickets')agTab='tickets';}catch(e){}
 function agTabs(){const t=(id,ic,l)=>`<button type="button" role="tab" aria-selected="${agTab===id}" class="${agTab===id?'on':''}" data-act="agtab" data-id="${id}">${I(ic)}${l}</button>`;
-  return `<div class="seg agtabs" role="tablist" aria-label="סוכנים, מסמכים ודוחות">${t('agents','spark','סוכנים')}${t('docs','shield','מסמכים')}${t('tickets','ticket','דוחות')}</div>`;}
+  return `<div class="seg agtabs" role="tablist" aria-label="סוכנים, מסמכים ודוחות">${t('agents','spark','הסוכן')}${t('docs','shield','מסמכים')}${t('tickets','ticket','דוחות')}</div>`;}
 function vAgents(){
   if(agTab==='docs')return agTabs()+vDocs();
   if(agTab==='tickets')return agTabs()+vTickets();
   const off=!sample;
-  return agTabs()+`<div class="sec-title"><h2>סוכנים</h2><span class="small muted">עוזרים חכמים שעובדים על הנתונים של הרכב שלך</span></div>
+  return agTabs()+`<div class="sec-title"><h2>הסוכן</h2><span class="small muted">רושם בשבילך, עונה, ומנווט באפליקציה</span></div>
   ${off?`<div class="banner warn">הסוכנים זמינים כשהדף פתוח ב־Claude עם חשבון מחובר.</div>`:''}
   ${window.cjAccount?`<div class="small muted" id="agQuota" style="margin:-4px 0 14px"></div>`:''}
+  <section class="card agent-chat" style="margin-bottom:16px">
+    <div class="card-head"><h2>${I('spark')} הסוכן</h2><span class="small muted">מספרים לו מה עשית, והוא רושם. או שואלים.</span></div>
+    <div class="chat" id="chat">
+      <div class="msgs" id="msgs">${chatLog.length?'':`<div class="msg a">שלום! ספר לי מה עשית עם ${esc(S.car?.nickname||carName(S.car))} ואני ארשום, למשל ״עשיתי איזון וכיוון פרונט ב־250 שקל״. אפשר גם לשאול כל דבר על הרכב.</div>`}</div>
+      <div class="suggest" id="sugg">${['בדקתי היום שמן ומים','עשיתי איזון וכיוון פרונט ב־250 שקל','כמה הוצאתי על הרכב החודש?','תעביר אותי לביטוח'].map(q=>`<button class="btn sm ghost" data-act="ask" data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>
+      <form class="composer" id="composer"><button class="btn ghost" type="button" data-act="agMic" aria-label="לדבר עם הסוכן" ${off?'disabled':''}>${I('mic')}</button><input type="text" id="chatIn" placeholder="מה עשית עם הרכב? או שאלה…" autocomplete="off" ${off?'disabled':''}><button class="btn primary" type="submit" ${off?'disabled':''} aria-label="שליחה">${I('send')}</button></form>
+    </div>
+  </section>
   <section class="agents">
     <div class="card agent"><div class="badge">${I('cam')}</div><h3>סוכן הקבלות</h3><p>צלם קבלה מהתחנה או מהמוסך. הסוכן יזהה אם זה תדלוק, טיפול או הוצאה, ימלא סכום, ליטרים, תאריך ותחנה, ויצרף את הקבלה לרישום.</p><button class="btn primary" data-act="scan" ${off||!imgOK?'disabled':''}>${I('cam')}סריקת קבלה</button>${!off&&!imgOK?'<span class="small muted">סריקת תמונות לא זמינה בתצוגה הזו</span>':''}</div>
     <div class="card agent"><div class="badge">${I('list')}</div><h3>מתכנן הטיפולים</h3><p>לפי היצרן, הדגם, השנה והקילומטראז׳, הסוכן בונה לוח טיפולים מומלץ עם מרווחים בק״מ ובזמן. אתה בוחר מה להוסיף לתזכורות.</p><button class="btn primary" data-act="plan" ${off?'disabled':''}>${I('spark')}בניית תוכנית</button></div>
     <div class="card agent"><div class="badge">${I('chart')}</div><h3>האנליסט</h3><p>סוקר את הצריכה, המחירים וההוצאות, מאתר חריגות כמו ירידה פתאומית בק״מ לליטר, ומסכם מה כדאי לעשות החודש.</p><button class="btn primary" data-act="insight" ${off?'disabled':''}>${I('chart')}ניתוח עכשיו</button></div>
   </section>
-  <section class="card" style="margin-top:16px">
-    <div class="card-head"><h2>יועץ הרכב</h2><span class="small muted">שאלות על הרכב והנתונים שלך בלבד</span></div>
-    <div class="chat" id="chat">
-      <div class="msgs" id="msgs">${chatLog.length?'':`<div class="msg a">שלום! אני מכיר את כל היומן של ${esc(S.car?.nickname||'הרכב')}: תדלוקים, טיפולים, הוצאות ותזכורות. על מה נדבר?</div>`}</div>
-      <div class="suggest" id="sugg">${['כמה הוצאתי על הרכב בשלושת החודשים האחרונים?','הצריכה שלי תקינה לדגם הזה?','מה הטיפולים שמחכים לי עד סוף השנה?','סמן שבדקתי היום לחץ אוויר'].map(q=>`<button class="btn sm ghost" data-act="ask" data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>
-      <form class="composer" id="composer"><input type="text" id="chatIn" placeholder="שאל את יועץ הרכב…" autocomplete="off" ${off?'disabled':''}><button class="btn primary" type="submit" ${off?'disabled':''} aria-label="שליחה">${I('send')}</button></form>
-    </div>
-  </section>`;
+`;
 }

@@ -32,6 +32,15 @@ window.supabase={createClient:()=>({
    if(/תדפיס נקודות/.test(txt))return {data:{content:[{type:'text',text:'{"isPointsReport":true,"totalPoints":12,"offenses":[{"offenseDate":"2025-06-01","points":4,"description":"אי ציות לתמרור"},{"offenseDate":"2026-11-10","points":8,"description":"מהירות"}]}'}],stop_reason:'end_turn'}};
    if(/רישיון רכב ישראלי/.test(txt)&&window.__lic2)return {data:{content:[{type:'text',text:'{"isLicense":true,"plate":"12-345-67","make":"טויוטה","model":"קורולה","year":2021,"validUntil":"2027-03-01","ownership":"פרטי","color":"לבן","fuel":"בנזין"}'}],stop_reason:'end_turn'}};
    if(/רישיון רכב ישראלי/.test(txt))return {data:{content:[{type:'text',text:'{"isLicense":true,"plate":"12-345-67","make":"שברולט","model":"Trax","year":2024,"validUntil":"2027-06-17","ownership":"ליסינג","color":"לבן"}'}],stop_reason:'end_turn'}};}
+   // the agent: answers a scripted request with a tool call, then a short reply after the tool result
+   if(Array.isArray(body.tools)&&body.tools.length){const lm=body.messages[body.messages.length-1];
+     if(Array.isArray(lm.content)&&lm.content.some(p=>p.type==='tool_result')){__calls.push(['agent-result',lm.content.map(p=>p.content).join('|')]);return {data:{content:[{type:'text',text:'רשמתי. הבדיקה הבאה בעוד שבועיים.'}],stop_reason:'end_turn'}};}
+     const q=String(typeof lm.content==='string'?lm.content:'');let use=null;
+     if(/איזון/.test(q))use={name:'log_service',input:{title:'איזון וכיוון פרונט',cost:250}};
+     else if(/בדקתי.*שמן/.test(q))use={name:'mark_reminder_done',input:{ids:['r2','r3']}};
+     else if(/ביטוח/.test(q))use={name:'open_screen',input:{screen:'insurance'}};
+     else if(/קיה/.test(q))use={name:'log_expense',input:{title:'חניה',amount:30,category:'parking',car:'קיה'}};
+     if(use)return {data:{content:[{type:'tool_use',id:'tu1',name:use.name,input:use.input}],stop_reason:'tool_use'}};}
    const txt=(()=>{const c=body.messages[body.messages.length-1].content;return Array.isArray(c)?c.filter(p=>p.type==='text').map(p=>p.text).join(''):String(c);})();
    if(/המשתמש אמר בעברית משפט/.test(txt))return {data:{content:[{type:'text',text:/"""[^"]*צמיגים/.test(txt)?'{"type":"expense","total":1600,"title":"צמיגים","category":"tires","vendor":"צמיגי השרון"}':'{"type":"fuel","total":270,"liters":38,"odo":31200,"full":true,"date":null}'}],stop_reason:'end_turn'}};
    if(/רשימת רכבים של עסק/.test(txt))return {data:{content:[{type:'text',text:'{"headerRow":0,"columns":{"plate":0,"make":1,"model":2,"odo":3,"test":4}}'}],stop_reason:'end_turn'}};

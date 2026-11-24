@@ -103,7 +103,7 @@ async function accountSheet(){
     </div></div>`,root=>{
     A.quota().then(q=>{const box=root.querySelector('#acQ');if(!box)return;
       if(q.unlimited){box.innerHTML='<div class="small muted">שימוש בסוכנים ללא הגבלה.</div>';return;}
-      const L={receipt:'צילומי קבלות',chat:'שאלות ליועץ',analysis:'ניתוחים ותוכניות'};
+      const L={receipt:'צילומי קבלות',chat:'הודעות לסוכן',analysis:'ניתוחים ותוכניות'};
       box.innerHTML='<div class="eyebrow">שימוש בסוכנים החודש</div>'+Object.keys(L).map(k=>{const x=q[k]||{limit:0,used:0};const pct=x.limit?Math.min(100,x.used/x.limit*100):0;
         return `<div><div class="row"><span>${L[k]}</span><span class="num">${x.used}/${x.limit}</span></div><div class="bar"><i style="width:${pct}%;background:${pct>=100?'var(--crit)':pct>=80?'var(--warn)':'var(--accent)'}"></i></div></div>`;}).join('')+'<div class="small muted">המכסה מתחדשת ב־1 בכל חודש.</div>';
     }).catch(()=>{const b=root.querySelector('#acQ');if(b)b.innerHTML='';});

@@ -1,0 +1,45 @@
+/* ---------- help: a "?" that explains the screen you're on, and short how-tos ---------- */
+const POINTS_URL='https://www.gov.il/he/service/driver_penalty_point_check';
+const HELP={
+  home:{t:'מסך הבית',b:`<ul class="hlp">
+    <li><b>מד האוץ:</b> הקילומטראז׳ של הרכב. לוחצים עליו כדי לעדכן. תדלוק וטיפול מעדכנים אותו לבד.</li>
+    <li><b>טיפול הבא ובדיקה הבאה:</b> העיגול מראה כמה נשאר עד הפעם הבאה. מלא = הרבה זמן, ריק = הגיע הזמן.</li>
+    <li><b>״בדקתי״ / ״בוצע״:</b> לוחצים אחרי שעשית את הבדיקה. הספירה מתחילה מחדש, ותראה מתי הפעם הבאה.</li>
+    <li><b>תדלוק, בדיקה, בקול, רישום:</b> הדרכים המהירות לרשום. ״בקול״ = אומרים במשפט אחד מה היה.</li>
+    <li><b>הסוכן</b> (כפתור הניצוץ למעלה): כותבים או אומרים לו מה עשית, והוא רושם בשבילך.</li></ul>`},
+  fuel:{t:'דלק',b:`<p>כל תדלוק נרשם כאן. כדי שהצריכה (ק״מ לליטר) תחושב, צריך את הקילומטראז׳ בכל תדלוק, ושני מילויים מלאים לפחות.</p><p>הכי מהיר: לוחצים ״תדלוק״ ומצלמים את הקבלה. הסוכן ממלא סכום, ליטרים ותחנה.</p>`},
+  service:{t:'טיפולים ובדיקות',b:`<ul class="hlp"><li><b>היסטוריית טיפולים:</b> כל מה שנעשה במוסך, עם עלות וקבלה.</li><li><b>לוח טיפולים:</b> מתי הטיפול הבא, לפי ק״מ או לפי זמן, מה שמגיע קודם.</li><li><b>בדיקות שוטפות:</b> שמן, מים, אוויר ונוזל שמשות. לוחצים ״בוצע״ אחרי כל בדיקה, והיא נרשמת ביומן הבדיקות עם התאריך.</li></ul>`},
+  expense:{t:'הוצאות',b:`<p>כל ההוצאות על הרכב: דלק, טיפולים, ביטוח, חניה ועוד, לפי חודש ולפי קטגוריה. הקבלות שצילמת נשמרות בארכיון.</p>`},
+  reminder:{t:'תזכורות',b:`<ul class="hlp"><li><b>טיפול תקופתי:</b> לפי ק״מ או זמן.</li><li><b>בדיקה שוטפת:</b> כל שבועיים או חודש.</li><li><b>מסמכים ותשלומים:</b> טסט, ביטוח, רישיון ודוחות.</li><li>״בוצע״ מאפס את הספירה ומראה מתי הפעם הבאה. השעון = לדחות. אם התראות פעילות, תקבל הודעה לטלפון.</li></ul>`},
+  agents:{t:'הסוכן',b:`<p>הסוכן עונה על שאלות וגם <b>עושה פעולות בשבילך</b>. כותבים או אומרים לו בפשטות, למשל:</p><ul class="hlp"><li>״עשיתי איזון וכיוון פרונט ב־250 שקל״</li><li>״בדקתי שמן ומים״</li><li>״תדלקתי ב־300, הקילומטראז׳ 31,500״</li><li>״תעביר אותי לביטוח״</li></ul><p>בחשבון עם כמה רכבים, אומרים לאיזה רכב (״לקיה של דנה״). בלי זה, הוא רושם לרכב שפתוח עכשיו. כל פעולה אפשר לבטל.</p>`},
+  docs:{t:'ביטוח ומסמכים',b:`<p>מעלים את פוליסת הביטוח (PDF או צילום) ואת רישיון הרכב. הסוכן קורא אותם, מסביר בשפה פשוטה מה מכוסה, ומזכיר לפני שהביטוח או הטסט נגמרים.</p>`},
+  tickets:{t:'דוחות ונקודות',b:`<ul class="hlp"><li><b>דוח חדש:</b> מצלמים את הדוח. הסוכן קורא אותו ובודק אם הוא תקין: מספר רכב, סוג רכב, מועד מסירה ופרטים חסרים. אחר כך רואים את המועדים לבקשת ביטול, לבקשה להישפט ולתשלום.</li><li><b>תזכורת בערב:</b> באותו ערב, ושוב לפני המועד האחרון לבקשת ביטול, עד שתלחץ ״בדקתי״.</li><li><b>הנקודות:</b> מחושבות מהדוחות שרשמת. הנתון הרשמי הוא בתדפיס הנקודות, ראה למטה.</li></ul>
+    <button class="btn block" data-act="help" data-id="points">${'איך מביאים את תדפיס הנקודות?'}</button>`},
+  points:{t:'תדפיס הנקודות ממשרד התחבורה',b:`<ol class="hlp">
+    <li>נכנסים לשירות <b>״קבלת תדפיס נקודות חובה״</b> באתר gov.il (הכפתור למטה).</li>
+    <li>מזדהים עם הפרטים שהאתר מבקש.</li>
+    <li>שומרים את התדפיס כ־PDF, או מצלמים אותו מהמסך.</li>
+    <li>חוזרים לכאן ולוחצים <b>״ייבוא תדפיס נקודות״</b>. הסוכן קורא את התדפיס ומעדכן את הנקודות ואת העבירות.</li></ol>
+    <p class="small muted">אפשר לקבל את המידע גם בטלפון, במרכז המידע של משרד התחבורה: <bdi dir="ltr">1-222-56-78</bdi>.</p>
+    <p class="small muted">איך זה עובד: נקודות נספרות שנתיים מתאריך העבירה (4 שנים אם צברת 22 ומעלה בתוך שנתיים). ב־12 נקודות שולחים לקורס נהיגה נכונה, ב־24 לקורס מתקדם, וב־36 יש פסילה.</p>
+    <div class="formacts"><a class="btn primary" href="${POINTS_URL}" target="_blank" rel="noopener">${'לאתר משרד התחבורה'}</a><button class="btn ghost" data-act="tkImport">${'ייבוא תדפיס'}</button></div>`},
+  fleet:{t:'הצי',b:`<ul class="hlp"><li><b>למעלה:</b> מספרים על כל הצי יחד.</li><li><b>דורש טיפול:</b> כל מה שדחוף, מכל הרכבים, ברשימה אחת. לחיצה פותחת את הרכב.</li><li><b>טבלת הצי:</b> אפשר למיין, ולייצא לאקסל.</li><li><b>ייבוא מאקסל:</b> מוסיפים הרבה רכבים בבת אחת.</li></ul>`},
+};
+const helpBtn=(id,label)=>`<button type="button" class="helpq" data-act="help" data-id="${id}" aria-label="${esc(label||'הסבר')}">?</button>`;
+function helpSheet(id){
+  const h=HELP[id]||HELP[view]||HELP.home;
+  openModal(h.t,`<div class="hlp-body">${h.b}</div>`);
+}
+function helpTopic(){if(view==='agents')return agTab==='docs'?'docs':agTab==='tickets'?'tickets':'agents';if(view==='home'&&typeof isBiz==='function'&&isBiz()&&FLEET_VIEW)return 'fleet';return view;}
+// a one-time hint on the home screen
+function homeIntro(){
+  let seen=false;try{seen=localStorage.getItem('cj-intro-home')==='1';}catch(e){}
+  if(seen||!S.car||S.car.example)return '';
+  return `<section class="intro-tip"><span>${I('spark')}</span><p><b>טיפ:</b> לוחצים על ״?״ למעלה בכל מסך כדי לקבל הסבר קצר. ואפשר פשוט לספר לסוכן מה עשית, והוא ירשום.</p><button type="button" class="mini" data-act="introX" aria-label="סגירה">✕</button></section>`;
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act="help"],[data-act="introX"],[data-act="helpHere"]');if(!b)return;
+  if(b.dataset.act==='introX'){try{localStorage.setItem('cj-intro-home','1');}catch(x){}const s=b.closest('.intro-tip');if(s)s.remove();return;}
+  if(b.dataset.act==='helpHere'){helpSheet(helpTopic());return;}
+  helpSheet(b.dataset.id);
+});

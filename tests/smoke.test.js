@@ -84,6 +84,37 @@ const ok = (cond, name, extra) => { if (cond) { passed++; console.log("  ✓ " +
   await p.click('.snz button[data-v="7"]');
   ok(await until(p, () => document.querySelector("#view").innerText.includes("נדחה עד")), "snooze shows on the reminder");
 
+  console.log("check done: clear feedback, history in service");
+  await p.click('[data-nav="reminder"]'); await p.waitForTimeout(300);
+  const ckRow = await p.$('.rrow:has([data-act=done][data-id="r2"])');
+  await p.click('[data-act=done][data-id="r2"]');
+  ok(await until(p, () => /בוצע היום/.test(document.querySelector("#toast").innerText) && /הפעם הבאה/.test(document.querySelector("#toast").innerText)), "done shows when the next time is", await p.textContent("#toast"));
+  ok(await until(p, () => /בוצע היום/.test(document.querySelector('.rrow:has([data-id="r2"])').innerText)), "the row shows it was done today");
+  await p.click('[data-nav="service"]'); await p.waitForTimeout(400);
+  ok(/יומן הבדיקות/.test(await p.textContent("#view")) && (await p.evaluate(() => [...document.querySelectorAll(".feed .fitem")].some((x) => /בדיקת מפלס שמן/.test(x.innerText) && /בוצע/.test(x.innerText)))), "checks are listed in the service tab");
+  await p.click('[data-nav="reminder"]'); await p.waitForTimeout(300);
+  await p.click(".toast-act");
+  ok(await until(p, () => !/בוצע היום/.test(document.querySelector('.rrow:has([data-id="r2"])').innerText)), "undo puts the check back");
+
+  console.log("help");
+  await p.click("[data-act=helpHere]"); await p.waitForTimeout(300);
+  ok((await p.textContent("#mtitle")) === "תזכורות", "? explains the screen you're on");
+  await p.keyboard.press("Escape");
+
+  console.log("the agent does things");
+  await p.click("[data-act=agentOpen]"); await p.waitForTimeout(400);
+  await p.fill("#chatIn", "עשיתי איזון וכיוון פרונט ב־250 שקל"); await p.press("#chatIn", "Enter");
+  ok(await until(p, () => __rows.some((r) => r.collection === "service" && r.data.title === "איזון וכיוון פרונט" && r.data.cost === 250)), "agent logs the service");
+  ok(await until(p, () => /נרשם טיפול/.test(document.querySelector("#msgs").innerText) && /רשמתי/.test(document.querySelector("#msgs").innerText)), "agent says what it did");
+  await p.click("[data-act=agUndo]");
+  ok(await until(p, () => !__rows.some((r) => r.collection === "service" && r.data.title === "איזון וכיוון פרונט")), "agent action can be undone");
+  await p.fill("#chatIn", "בדקתי היום שמן ואוויר"); await p.press("#chatIn", "Enter");
+  ok(await until(p, () => __rows.filter((r) => r.collection === "reminder" && ["r2", "r3"].includes(r.id) && r.data.lastDate === new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10)).length === 2), "agent marks checks done");
+  ok(await until(p, () => __calls.some((c) => c[0] === "agent-result" && /הפעם הבאה/.test(c[1])) && (document.querySelector("#msgs").innerText.match(/רשמתי/g) || []).length >= 2 && !document.querySelector("#msgs .spin")), "agent is told when the next time is");
+  await p.fill("#chatIn", "תעביר אותי לביטוח"); await p.press("#chatIn", "Enter");
+  ok(await until(p, () => document.querySelector("[data-act=agtab][data-id=docs].on")), "agent opens the insurance screen");
+  await p.click("[data-act=agtab][data-id=agents]"); await p.waitForTimeout(300);
+
   console.log("tickets and documents");
   await p.click('[data-nav="agents"]'); await p.waitForTimeout(300); await p.click("[data-act=agtab][data-id=tickets]"); await p.waitForTimeout(300);
   await p.click("[data-act=tkAdd]"); await p.waitForTimeout(300); await p.setInputFiles("#tkF", IMG); await p.waitForTimeout(1200);

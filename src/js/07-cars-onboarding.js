@@ -185,25 +185,9 @@ const chatLog=[];let chatBusy=false;
 function captureChat(){const i=$('#chatIn');return {val:i?i.value:'',focus:document.activeElement===i};}
 function restoreChat(k){const m=$('#msgs');if(!m)return;for(const x of chatLog)appendMsg(x.role,x.html,true);const i=$('#chatIn');if(i){i.value=k.val;if(k.focus)i.focus();}m.scrollTop=m.scrollHeight;$('#sugg').hidden=chatLog.length>0;}
 function appendMsg(role,html,noLog){const m=$('#msgs');if(!m)return null;const d=document.createElement('div');d.className='msg '+(role==='user'?'u':role==='note'?'note':'a');d.innerHTML=html;m.appendChild(d);m.scrollTop=m.scrollHeight;return d;}
-const CHAT_SYS=`אתה "יועץ הרכב" בתוך אפליקציית יומן רכב. התפקיד היחיד שלך: לענות על הרכב של המשתמש ועל הנתונים שבאפליקציה (תדלוקים, צריכה, טיפולים, הוצאות, תזכורות, ביטוח ומסמכים, דוחות ונקודות), ועל שאלות כלליות על רכב ונהיגה (תחזוקה, נורות בלוח, צמיגים, דלק, טסט, ביטוח רכב).
-כל שאלה אחרת, שלא קשורה לרכב: ענה רק במשפט "אני עונה רק על הרכב שלך ועל דברים שקשורים לרכב 🙂" בלי להפעיל כלים ובלי שום תוכן נוסף.
-כללים: עברית בלבד. קצר: עד 80 מילים, אלא אם ביקשו פירוט. מספרים מדויקים מהכלים בלבד, בלי להמציא. הפעל רק את הכלי שצריך לשאלה. מותר לסמן תזכורת כבוצעה או להוסיף תזכורת רק כשהמשתמש מבקש במפורש. מטבע ₪; יחידות ק״מ, ליטר, ק״מ לליטר.`;
-const chatTools=[
- {name:'get_overview',description:'Car profile, odometer, km per day, fuel economy series, monthly spend, and every reminder with its status and expected date.',inputSchema:{type:'object',properties:{}},execute:()=>snapshotData()},
- {name:'get_records',description:'List logged records of one type, newest first. fuel=fill-ups, service=garage work, expense=other costs.',inputSchema:{type:'object',properties:{type:{type:'string',enum:['fuel','service','expense']},limit:{type:'number'}},required:['type']},
-  execute:({type,limit})=>[...(S[type]||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,Math.min(+limit||30,100)).map(r=>{const o=Object.assign({},r);delete o.receipt;delete o.history;return o;})},
- {name:'get_insurance',description:'The car insurance policies and the vehicle license read from the documents the user uploaded: insurer, type, dates, who may drive, deductibles, every coverage in plain Hebrew, what is not covered, and phone numbers. Use it for any question about insurance, coverage, claims or the annual test.',inputSchema:{type:'object',properties:{}},
-  execute:()=>S.paper.map(p=>{const o=Object.assign({},p);delete o.files;return o;})},
- {name:'get_tickets_and_license',description:'Traffic tickets (date, points, amount, payment due date, status), the current valid points total and reset date, and the driver license expiry and new-driver refresher status.',inputSchema:{type:'object',properties:{}},
-  execute:()=>({points:(({total,years,last,reset})=>({total,years,last,reset}))(pointsState()),tickets:S.ticket.map(t=>{const o=Object.assign({},t);delete o.files;delete o.ticketNo;o.payBy=tkDue(t);return o;}),driver:(({exp,newEnd,refresherDue})=>({licenseExpiry:exp,newDriverEnds:newEnd,refresherDue}))(driverInfo())})},
- {name:'mark_reminder_done',description:'Mark a reminder as done today at the current odometer. Use only when the user says they did it.',inputSchema:{type:'object',properties:{id:{type:'string'}},required:['id']},
-  execute:async({id})=>{const ok=await markDone(id,odo(),today(),true);if(!ok)throw new Error('unknown reminder id');appendMsg('note','✓ התזכורת עודכנה');return {ok:true};}},
- {name:'add_reminder',description:'Create a new reminder counted from today and the current odometer.',inputSchema:{type:'object',properties:{title:{type:'string'},kind:{type:'string',enum:['service','check','doc']},intervalKm:{type:['number','null']},intervalDays:{type:['number','null']}},required:['title','kind']},
-  execute:async(a)=>{if(!a.intervalKm&&!a.intervalDays)throw new Error('need intervalKm or intervalDays');await addRec('reminder',{title:a.title,kind:a.kind,intervalKm:n(a.intervalKm),intervalDays:n(a.intervalDays),lastKm:odo(),lastDate:today()});appendMsg('note','✓ נוספה תזכורת: '+esc(a.title));return {ok:true};}}
-];
 async function sendChat(q){
   q=(q||'').trim();if(!q||chatBusy)return;
-  if(!sample){toast('היועץ זמין כשהדף פתוח ב־Claude');return;}
+  if(!sample){toast('הסוכן לא זמין כרגע');return;}
   chatBusy=true;$('#sugg')&&($('#sugg').hidden=true);
   chatLog.push({role:'user',content:q,html:esc(q)});appendMsg('user',esc(q));
   const bubble=appendMsg('assistant','<span class="spin"></span>');
@@ -211,9 +195,10 @@ async function sendChat(q){
   let input=chatLog.filter(m=>m.role==='user'||m.role==='assistant').slice(-6).map(m=>({role:m.role,content:m.content}));
   while(input.length&&input[0].role!=='user')input.shift();
   try{
-    const res=await sample(input,{cache:false,tools:chatTools,system:CHAT_SYS,maxTokens:700,onText:({text})=>{if(bubble&&text&&text!=='Thinking...')bubble.innerHTML=mdLite(text);}});
+    const res=await sample(input,{cache:false,tools:chatTools,system:chatSys(),maxTokens:800,onText:({text})=>{if(bubble&&text&&text!=='Thinking...')bubble.innerHTML=mdLite(text);}});
     const html=mdLite(res.text||'');if(bubble)bubble.innerHTML=html;
     chatLog.push({role:'assistant',content:res.text||'',html});
-  }catch(e){const t=e?.code==='missing_api_key'?'היועץ עוד לא מחובר: חסר מפתח API בשרת.':e?.code==='rate_limited'?'הגעת למגבלת השימוש, נסה שוב בעוד כמה דקות.':e?.code==='not_granted'?'היועץ לא קיבל הרשאה לפנות ל־Claude.':e?.code==='quota_exceeded'?aiErr(e,''):'משהו השתבש. נסה לשאול שוב.';if(bubble)bubble.innerHTML=t;chatLog.pop();}
+    if(AGENT_NAV){const nv=AGENT_NAV;AGENT_NAV=null;setTimeout(nv,700);}
+  }catch(e){const t=e?.code==='missing_api_key'?'הסוכן עוד לא מחובר: חסר מפתח API בשרת.':e?.code==='rate_limited'?'הגעת למגבלת השימוש, נסה שוב בעוד כמה דקות.':e?.code==='not_granted'?'הסוכן לא קיבל הרשאה.':e?.code==='quota_exceeded'?aiErr(e,''):'משהו השתבש. נסה לשאול שוב.';if(bubble)bubble.innerHTML=t;chatLog.pop();}
   finally{chatBusy=false;}
 }

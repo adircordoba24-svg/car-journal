@@ -20,15 +20,16 @@ function joinResults(results){
   const out=[];for(let i=0;i<parts.length;i++){if(!parts[i])continue;if(i+1<parts.length&&parts[i+1].startsWith(parts[i]))continue;if(out.length&&parts[i].startsWith(out[out.length-1])){out[out.length-1]=parts[i];continue;}out.push(parts[i]);}
   return out.join(' ').replace(/\s+/g,' ').trim();
 }
-function voiceSheet(){
+function voiceSheet(opts){
+  opts=opts||{};
   if(!sample){toast('הסוכן לא זמין כרגע');return;}
   const IDLE='לוחצים על המיקרופון ואומרים במשפט אחד מה היה';
-  openModal('רישום בקול',`<div class="vbox">
+  openModal(opts.agent?'לדבר עם הסוכן':'רישום בקול',`<div class="vbox">
     <button type="button" class="vmic" id="vMic" aria-label="התחלת הקלטה">${I('mic')}</button>
     <div class="vstate" id="vSt" role="status">${IDLE}</div>
     <textarea id="vTxt" rows="2" placeholder="מה שתגיד יופיע כאן" aria-label="מה אמרת"></textarea>
     <div class="vex" id="vEx"><span class="small muted">למשל:</span>${VOICE_EX.map(x=>`<button type="button">״${esc(x)}״</button>`).join('')}</div>
-    <div class="formacts" style="width:100%"><button class="btn primary" id="vGo" disabled>${I('spark')}מילוי הטופס</button><button class="btn ghost" data-act="close">ביטול</button></div></div>`,root=>{
+    <div class="formacts" style="width:100%"><button class="btn primary" id="vGo" disabled>${I('spark')}${opts.agent?'שליחה לסוכן':'מילוי הטופס'}</button><button class="btn ghost" data-act="close">ביטול</button></div></div>`,root=>{
     const mic=root.querySelector('#vMic'),st=root.querySelector('#vSt'),ta=root.querySelector('#vTxt'),goB=root.querySelector('#vGo');
     const alive=()=>root.contains(ta);
     const sync=()=>{goB.disabled=!ta.value.trim();};
@@ -75,7 +76,7 @@ function voiceSheet(){
       say('מתמלל…');busy(goB,true,'מתמלל…');
       try{const text=await window.cjSTT.transcribe(blob,secs);if(!alive())return;busy(goB,false);
         if(!text){say('לא הצלחתי להבין את ההקלטה. אפשר לנסות שוב.');return;}
-        ta.value=text;sync();say('הבנתי. ממלא את הטופס…');run();
+        ta.value=text;sync();say(opts.agent?'הבנתי. שולח לסוכן…':'הבנתי. ממלא את הטופס…');run();
       }catch(e){if(!alive())return;busy(goB,false);
         if(e&&e.code==='missing_key'){mode=SpeechRec&&!iosApp()?'browser':'keyboard';if(mode==='keyboard')keyboard();else say('נסה שוב.');}
         else say(aiErr(e,'התמלול נכשל. אפשר לנסות שוב, או לדבר דרך המיקרופון שבמקלדת.'));}
@@ -91,7 +92,7 @@ function voiceSheet(){
       rec.onresult=ev=>{heard=joinResults(ev.results);ta.value=(base?base+' ':'')+heard;sync();clearTimeout(silence);silence=setTimeout(()=>{try{rec.stop();}catch(e){}},1600);};
       rec.onerror=ev=>{const c=ev&&ev.error;if(c==='not-allowed'||c==='service-not-allowed')keyboard('הדפדפן לא מאפשר זיהוי דיבור כאן. לוחצים בתיבה ואז על המיקרופון שבמקלדת.');else if(c==='network')keyboard('זיהוי הדיבור של הדפדפן צריך אינטרנט. אפשר לדבר דרך המיקרופון שבמקלדת.');else if(c==='language-not-supported')keyboard('הדפדפן לא מזהה עברית. לוחצים בתיבה ואז על המיקרופון שבמקלדת.');};
       rec.onend=()=>{stopNow=null;clearTimeout(silence);clearTimeout(startT);if(!alive())return;onMic(false);if(cancelled)return;
-        if(heard){say('הבנתי. ממלא את הטופס…');run();}
+        if(heard){say(opts.agent?'הבנתי. שולח לסוכן…':'הבנתי. ממלא את הטופס…');run();}
         else if(!mic.hidden)say('לא שמעתי. אפשר לנסות שוב, או לדבר דרך המיקרופון שבמקלדת.');};
       try{rec.start();}catch(e){keyboard();}
     }
@@ -105,7 +106,9 @@ function voiceSheet(){
     };
     let running=false;
     const run=async()=>{
-      const text=ta.value.trim();if(!text||running)return;running=true;busy(goB,true,'הסוכן מבין…');
+      const text=ta.value.trim();if(!text||running)return;
+      if(opts.agent){closeModal();agTab='agents';if(view!=='agents')go('agents');else render();setTimeout(()=>sendChat(text),60);return;}
+      running=true;busy(goB,true,'הסוכן מבין…');
       try{
         const r=await sample.json(voicePrompt(text),{maxTokens:400,modelTier:'default'});
         if(!alive())return;

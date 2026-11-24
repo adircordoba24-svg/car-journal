@@ -47,10 +47,10 @@ document.addEventListener('click',e=>{
     case 'restore':restoreSheet();break;
     case 'done':{const r=S.reminder.find(x=>x.id===id);if(!r)break;
       if(r.kind==='service'){serviceForm(null,{title:r.title,remId:r.id});}
-      else markDone(id).catch(()=>toast('העדכון נכשל'));break;}
+      else markDone(id).then(()=>render()).catch(()=>toast('העדכון נכשל'));break;}
   }
 });
-document.addEventListener('submit',e=>{if(e.target.id==='composer'){e.preventDefault();const i=$('#chatIn');const q=i.value;i.value='';sendChat(q);}});
+document.addEventListener('submit',e=>{if(e.target.id==='composer'){e.preventDefault();if(chatBusy){toast('רגע, הסוכן עוד עונה…');return;}const i=$('#chatIn');const q=i.value;i.value='';sendChat(q);}});
 window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(h&&h!==view&&NAV.some(x=>x[0]===h))go(h);});
 
 (function(){

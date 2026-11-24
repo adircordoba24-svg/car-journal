@@ -200,7 +200,9 @@ function checksSheet(){
   openModal('בדיקה שוטפת',`<p class="small muted" style="margin-top:0">סמן מה בדקת היום. ${S.car?.psiFront?`לחץ מומלץ: ${S.car.psiFront} PSI קדימה, ${S.car.psiRear||S.car.psiFront} PSI אחורה.`:''}</p>
   <div class="stack" style="gap:10px">${list.map(({r,st})=>`<label class="toggle"><input type="checkbox" class="ck" value="${r.id}" ${st.status!=='ok'?'checked':''}> ${esc(r.title)} <span class="pill ${st.status}">${esc(st.label)}</span></label>`).join('')||'<div class="empty">אין בדיקות מוגדרות</div>'}</div>
   <div class="formacts"><button class="btn primary" id="ckSave">${I('check')}סימון כבוצע</button><button class="btn ghost" data-act="close">ביטול</button></div>`,root=>{
-    root.querySelector('#ckSave').onclick=async e=>{busy(e.currentTarget,true);try{for(const c of root.querySelectorAll('.ck:checked')) await markDone(c.value,odo(),today(),true);closeModal();toast('הבדיקות נרשמו');}catch(err){toast('השמירה נכשלה');}};
+    root.querySelector('#ckSave').onclick=async e=>{busy(e.currentTarget,true);try{const done=[];for(const c of root.querySelectorAll('.ck:checked')){const r=await markDone(c.value,odo(),today(),true);if(r&&r.undo)done.push(r);}closeModal();if(!done.length){toast('לא סימנת בדיקה');return;}
+      const soon=done.map(x=>x.next).filter(Boolean).sort()[0];JUST_DONE={ids:done.map(x=>x.id),at:Date.now()};render();
+      toastAct(done.length===1?`✓ ${done[0].title}: בוצע היום. ${done[0].nextLabel}`:`✓ ${done.length} בדיקות נרשמו היום.${soon?` הבאה ב־${fmtD(soon)}.`:''}`,'ביטול',()=>Promise.all(done.map(x=>x.undo())).then(()=>toast('בוטל')).catch(()=>toast('הביטול נכשל')),null,7000);}catch(err){busy(e.currentTarget,false);toast('השמירה נכשלה');}};
   });
 }
 async function markDone(id,atKm,atDate,silent){
@@ -214,11 +216,24 @@ async function markDone(id,atKm,atDate,silent){
     else if(!silent)toast(`״${r.title}״ סומן כבוצע`);
     return true;
   }
-  const hist=Array.isArray(r.history)?r.history.slice(-19):[];
+  const before={lastKm:r.lastKm??null,lastDate:r.lastDate||'',history:Array.isArray(r.history)?r.history:[],snoozeDate:r.snoozeDate||'',snoozeKm:r.snoozeKm??null};
+  const hist=before.history.slice(-19);
   hist.push({date:atDate||today(),km:atKm||odo()});
-  await updRec('reminder',id,{lastKm:atKm||odo(),lastDate:atDate||today(),history:hist,snoozeDate:'',snoozeKm:null});
-  if(!silent) toast(`״${r.title}״ סומן כבוצע`);
-  return true;
+  const upd={lastKm:atKm||odo(),lastDate:atDate||today(),history:hist,snoozeDate:'',snoozeKm:null};
+  await updRec('reminder',id,upd);
+  JUST_DONE={id,at:Date.now()};
+  const next=remState(Object.assign({},r,upd));
+  const info={id,title:r.title,next:next.dueDate,nextLabel:nextText(r,upd,next),undo:()=>updRec('reminder',id,before)};
+  if(!silent)toastAct(`✓ ${r.title}: בוצע היום. ${info.nextLabel}`,'ביטול',()=>info.undo().then(()=>toast('בוטל')).catch(()=>toast('הביטול נכשל')),null,7000);
+  return info;
+}
+let JUST_DONE=null;
+// "the next one is on 8 Dec (in 14 days)" or "in 15,000 km"
+function nextText(r,upd,st){
+  const parts=[];
+  if(n(r.intervalDays)){const d=addDays(upd.lastDate,n(r.intervalDays));parts.push(`${fmtD(d)} (עוד ${daysLabel(daysBetween(today(),d))})`);}
+  if(n(r.intervalKm))parts.push(`ב־${km((n(upd.lastKm)||0)+n(r.intervalKm))} ק״מ`);
+  return parts.length?`הפעם הבאה: ${parts.join(' או ')}`:'';
 }
 const rcptSrc=id=>window.__rcptUrl?window.__rcptUrl(id):'/_blob/'+encodeURIComponent(id);
 window.__rcptRefresh=()=>render();

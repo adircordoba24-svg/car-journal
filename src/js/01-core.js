@@ -221,7 +221,7 @@ function closeModal(){document.body.style.overflow='';$('#ov').hidden=true;$('#m
 $('#ov').addEventListener('click',e=>{if(e.target.id==='ov')closeModal();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#ov').hidden)closeModal();});
 
-const NAV=[['home','בית','home'],['fuel','דלק','fuel'],['service','טיפולים','wrench'],['expense','הוצאות','receipt'],['reminder','תזכורות','bell'],['agents','סוכנים','spark']];
+const NAV=[['home','בית','home'],['fuel','דלק','fuel'],['service','טיפולים','wrench'],['expense','הוצאות','receipt'],['reminder','תזכורות','bell'],['agents','הסוכן','spark']];
 const scroller=()=>$('#scroller');
 const scrollMem={};
 function renderNav(instant){
@@ -326,10 +326,14 @@ function remRow(x,compact){
   const {r,st}=x;
   const due=st.dueDate?`צפוי ${fmtD(st.dueDate)}`:'';
   const intervals=[n(r.intervalKm)?`כל ${km(r.intervalKm)} ק״מ`:'',n(r.intervalDays)?`כל ${daysLabel(r.intervalDays)}`:''].filter(Boolean).join(' או ');
-  return `<div class="rrow${compact?'':' full'}" data-s="${st.status}">
+  const jd=JUST_DONE&&Date.now()-JUST_DONE.at<5000&&(JUST_DONE.id===r.id||(JUST_DONE.ids||[]).includes(r.id));
+  const h=Array.isArray(r.history)&&r.history.length?r.history[r.history.length-1]:null;
+  const ago=h&&h.date?daysBetween(h.date,today()):null;
+  const last=ago===null?'':ago<=0?'בוצע היום':ago===1?'בוצע אתמול':`בוצע לפני ${daysLabel(ago)}`;
+  return `<div class="rrow${compact?'':' full'}${jd?' just':''}" data-s="${st.status}">
     <div class="ricon">${I(iconFor(r.title,r.kind))}</div>
     <div style="min-width:0"><div class="rtitle">${esc(r.title)}</div>
-      <div class="rsub"><span class="pill ${st.status}">${esc(st.label)}</span>${!compact&&intervals?`<span class="nw">${esc(intervals)}</span>`:''}${due?`<span class="nw">${esc(due)}</span>`:''}</div>
+      <div class="rsub"><span class="pill ${st.status}">${esc(st.label)}</span>${!compact&&intervals?`<span class="nw">${esc(intervals)}</span>`:''}${due?`<span class="nw">${esc(due)}</span>`:''}${last?`<span class="nw last">${I('check')}${esc(last)}</span>`:''}</div>
       <div class="bar"><i style="width:${Math.round(st.pct*100)}%"></i></div></div>
     <div class="racts">
       <button class="btn sm" data-act="done" data-id="${r.id}">${I('check')}בוצע</button>
@@ -337,4 +341,4 @@ function remRow(x,compact){
       ${compact?'':`<button class="mini" data-act="cal" data-id="${r.id}" title="הוספה ליומן Google" aria-label="הוספה ליומן">${I('cal')}</button><button class="mini" data-act="editRem" data-id="${r.id}" aria-label="עריכה">${I('edit')}</button>`}
     </div></div>`;
 }
-function daysLabel(d){d=+d;if(d%365===0)return d===365?'שנה':`${d/365} שנים`;if(d%30===0)return d===30?'חודש':`${d/30} חודשים`;if(d%7===0)return d===7?'שבוע':`${d/7} שבועות`;return `${d} ימים`;}
+function daysLabel(d){d=Math.round(+d);if(d<=0)return '0 ימים';if(d===1)return 'יום';if(d===2)return 'יומיים';if(d%365===0)return d===365?'שנה':`${d/365} שנים`;if(d%30===0)return d===30?'חודש':`${d/30} חודשים`;if(d%7===0)return d===7?'שבוע':`${d/7} שבועות`;return `${d} ימים`;}

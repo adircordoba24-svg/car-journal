@@ -59,10 +59,10 @@ function vTickets(){
   const pct=Math.min(100,ps.total/36*100);
   const since=ps.last?daysBetween(ps.last,today()):null;
   const tl=ps.reset&&ps.valid.length?(()=>{const start=ps.valid[ps.valid.length-1].offenseDate;const all=daysBetween(start,ps.reset),gone=Math.max(0,Math.min(all,daysBetween(start,today())));return {pct:all?gone/all*100:100,left:Math.max(0,all-gone),start};})():null;
-  const up=`<div class="docs-up"><button class="btn primary" data-act="tkAdd">${I('cam')}דוח חדש</button><button class="btn ghost" data-act="tkImport">${I('doc')}ייבוא תדפיס נקודות</button></div>`;
-  return `<div class="sec-title"><h2>דוחות ונקודות</h2><span class="small muted">של הנהג, לכל הרכבים</span></div>
+  const up=`<div class="docs-up"><button class="btn primary" data-act="tkAdd">${I('cam')}דוח חדש</button><button class="btn ghost" data-act="tkImport">${I('doc')}ייבוא תדפיס נקודות</button><button class="btn ghost" data-act="help" data-id="points">${I('doc')}איך מביאים את התדפיס?</button></div>`;
+  return `<div class="sec-title"><h2>דוחות ונקודות ${helpBtn('tickets','איך זה עובד')}</h2><span class="small muted">של הנהג, לכל הרכבים</span></div>
   <section class="card pol">
-    <div class="pol-head"><div><div class="eyebrow">הנקודות שלי כרגע</div><h2 class="num" style="font-size:44px;line-height:1">${ps.total}<small style="font-size:16px;color:var(--muted);font-weight:400"> נקודות</small></h2></div>
+    <div class="pol-head"><div><div class="eyebrow">הנקודות שלי כרגע ${helpBtn('points','איך מביאים את תדפיס הנקודות')}</div><h2 class="num" style="font-size:44px;line-height:1">${ps.total}<small style="font-size:16px;color:var(--muted);font-weight:400"> נקודות</small></h2></div>
       <span class="chip" style="${lvl.c==='crit'?'color:var(--crit);border-color:var(--crit)':lvl.c==='warn'?'color:var(--warn);border-color:var(--warn)':'color:var(--ok);border-color:var(--ok)'}">${lvl.t}</span></div>
     <div class="ptsbar" role="img" aria-label="${ps.total} מתוך 36 נקודות"><i style="width:${pct}%"></i><span style="inset-inline-start:33.3%">12</span><span style="inset-inline-start:66.6%">24</span><span style="inset-inline-start:calc(100% - 14px)">36</span></div>
     <div class="docs-strip" style="margin:0">

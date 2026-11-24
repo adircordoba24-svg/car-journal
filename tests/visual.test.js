@@ -88,6 +88,9 @@ const SCREENS = [
     await p.waitForTimeout(1200); await p.click("#tk button[type=submit]");
     await p.waitForFunction(() => document.querySelector(".tkc-v"), null, { timeout: 5000 });
   }, ".sheet", "window.__badTicket=true"],
+  ["help-points", "#q", async (p) => { await p.click('[data-nav="agents"]'); await p.waitForTimeout(300); await p.click("[data-act=agtab][data-id=tickets]"); await p.waitForTimeout(300); await p.click('.eyebrow [data-act=help][data-id=points]'); }, ".sheet"],
+  ["help-home", "#q", async (p) => p.click("[data-act=helpHere]"), ".sheet"],
+  ["checks-done", "#q", async (p) => { await p.click('[data-nav="service"]'); await p.waitForTimeout(300); await p.click('.rrow [data-act=done][data-id="r2"]'); await p.waitForTimeout(500); }],
   ["quick-sheet", "#q", async (p) => p.click("[data-act=quick]"), ".sheet"],
   ["voice-sheet", "#q", async (p) => { await p.click("[data-act=quick]"); await p.waitForTimeout(250); await p.click(".qbtn[data-act=voice]"); }, ".sheet"],
   ["account-sheet", "#q", async (p) => p.click("#acctBtn"), ".sheet"],
