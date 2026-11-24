@@ -60,7 +60,7 @@ const ok = (cond, name, extra) => { if (cond) { passed++; console.log("  ✓ " +
 
   // regression: closing the window while the agent reads a receipt used to throw
   await p.click(".m-act.primary"); await p.waitForTimeout(300);
-  await p.setInputFiles("#qfFile", IMG); await p.keyboard.press("Escape"); await p.waitForTimeout(1200);
+  await p.setInputFiles("#qfFile", IMG); ok(await until(p, () => document.querySelector(".pump")), "fuel pump animation while reading"); await p.keyboard.press("Escape"); await p.waitForTimeout(1200);
   ok(!errors.some((e) => /qfT|qfMore/.test(e)), "closing quick fuel while reading is safe", errors);
 
   console.log("offline");
@@ -96,7 +96,25 @@ const ok = (cond, name, extra) => { if (cond) { passed++; console.log("  ✓ " +
   await p.click(".toast-act");
   ok(await until(p, () => !/בוצע היום/.test(document.querySelector('.rrow:has([data-id="r2"])').innerText)), "undo puts the check back");
 
+  console.log("motion: odometer, health, countdown, swipe, celebration");
+  await p.click('[data-nav="home"]'); await p.waitForTimeout(1600);
+  ok(await p.evaluate(() => [...document.querySelectorAll(".odo-digits.roll .strip")].map((b) => b.style.getPropertyValue("--d")).join("") === String(Math.round(30400 > 0 ? document.querySelector(".odo-digits.roll").getAttribute("aria-label").replace(/\D/g, "") : 0)).padStart(6, "0")), "odometer rolls to the right number");
+  ok(await p.evaluate(() => { const h = document.querySelector(".health .hr-num"); return h && +h.textContent >= 0 && +h.textContent <= 100; }), "car health score is shown");
+  await p.click(".health"); await p.waitForTimeout(300);
+  ok((await p.textContent("#mtitle")) === "מצב הרכב", "health explains the score"); await p.keyboard.press("Escape");
+  const c1 = await p.evaluate(() => (document.querySelector("[data-cd] .cd-clock") || {}).textContent); await p.waitForTimeout(1300);
+  const c2 = await p.evaluate(() => (document.querySelector("[data-cd] .cd-clock") || {}).textContent);
+  ok(c1 && c2 && c1 !== c2, "countdown is live", [c1, c2]);
+  await p.click('[data-nav="reminder"]'); await p.waitForTimeout(400);
+  await p.evaluate(() => { const r = document.querySelector('.rrow:has([data-id="r3"])'); const b = r.getBoundingClientRect(); const mk = (x) => new Touch({ identifier: 1, target: r, clientX: x, clientY: b.top + 20 });
+    r.dispatchEvent(new TouchEvent("touchstart", { bubbles: true, touches: [mk(100)] })); for (const x of [120, 150, 200, 240]) document.dispatchEvent(new TouchEvent("touchmove", { bubbles: true, touches: [mk(x)] })); document.dispatchEvent(new TouchEvent("touchend", { bubbles: true, touches: [] })); });
+  ok(await until(p, () => /בוצע היום/.test(document.querySelector('.rrow:has([data-id="r3"])').innerText)), "swipe right marks done");
+  await p.evaluate(() => { localStorage.setItem("cj-ms-km-car", "2"); });
+  await p.click('[data-nav="home"]'); await p.waitForTimeout(400); await p.click(".m-odo"); await p.waitForTimeout(300); await p.fill("#oV", "40100"); await p.click("#f button[type=submit]");
+  ok(await until(p, () => document.querySelector(".celebrate") && /40,000/.test(document.querySelector(".celebrate").innerText)), "crossing 10,000 km is celebrated");
+
   console.log("help");
+  await p.waitForTimeout(4500); await p.click('[data-nav="reminder"]'); await p.waitForTimeout(300);
   await p.click("[data-act=helpHere]"); await p.waitForTimeout(300);
   ok((await p.textContent("#mtitle")) === "תזכורות", "? explains the screen you're on");
   await p.keyboard.press("Escape");

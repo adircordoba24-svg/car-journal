@@ -13,7 +13,7 @@ async function uploadReceipt(file){
   try{const r=await assets.upload(file);return {id:r.id,type:r.contentType||file.type||'',name:file.name||''};}
   catch(e){if(e&&e.code==='offline'||navigator.onLine===false){toast('אין קליטה: הרישום נשמר בלי הקבלה. אפשר לצרף אותה אחר כך בעריכה');return null;}throw e;}
 }
-function busy(btn,on,label){if(!btn)return;btn.disabled=on;if(on){btn._l=btn.innerHTML;btn.innerHTML=`<span class="spin"></span>${label||'שומר…'}`;}else if(btn._l)btn.innerHTML=btn._l;}
+function busy(btn,on,label){if(!btn)return;btn.disabled=on;if(on){if(btn._l==null||!btn.querySelector('.spin,.pump'))btn._l=btn.innerHTML;btn.innerHTML=`${/קורא|בודק|מבין|מתמלל|מזהה/.test(label||'')?PUMP:'<span class="spin"></span>'}${label||'שומר…'}`;}else if(btn._l!=null){btn.innerHTML=btn._l;btn._l=null;}}
 function fv(root,id){const e=root.querySelector('#'+id);return e?(e.type==='checkbox'?e.checked:e.value.trim()):'';}
 
 /* ---------- reading fuel receipts with the agent ---------- */

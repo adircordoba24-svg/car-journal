@@ -26,6 +26,7 @@ function renderNow(){
   const fn=fleet?vFleet:biz&&view==='home'?()=>fleetToggle()+vHome():{home:vHome,fuel:vFuel,service:vService,expense:vExpense,reminder:vReminder,agents:vAgents}[view]||vHome;
   const keepChat=view==='agents'?captureChat():null;
   v.innerHTML=fn();
+  try{afterRender();}catch(e){console.warn(e);}
   if(keepChat) restoreChat(keepChat);
   if(view==='agents'&&agTab==='agents') fillAgentQuota();
 }
@@ -72,7 +73,7 @@ function vHomeMobile(){
   return `${homeIntro()}
   <section class="card m m-hero">
     <div class="m-car"><div style="min-width:0"><div class="eyebrow">${esc(car.nickname||'הרכב שלי')}</div><div class="m-carname">${esc([car.make,car.model].filter(Boolean).join(' ')||'רכב חדש')}</div></div>${plate(car.plate)}</div>
-    <button class="m-odo" data-act="odo" aria-label="עדכון מד אוץ">${odoDigits(o)}<span class="m-odo-edit">${I('edit')}</span></button>
+    <button class="m-odo" data-act="odo" aria-label="עדכון מד אוץ">${odoRoll(o)}<span class="m-odo-edit">${I('edit')}</span></button>
     <div class="m-next">
       ${top?`<button class="m-tile" data-nav="reminder" data-s="${top.st.status}">${miniRing(top.st)}<span class="m-tile-txt"><span class="eyebrow">טיפול הבא</span><b>${esc(top.r.title)}</b><span class="pill ${top.st.status}">${esc(top.st.label)}</span></span></button>`:''}
       ${ck?`<div class="m-tile" data-s="${ck.st.status}">${miniRing(ck.st)}<span class="m-tile-txt"><span class="eyebrow">בדיקה הבאה</span><b>${esc(ck.r.title)}</b><button class="btn sm" data-act="done" data-id="${ck.r.id}">${I('check')}בדקתי</button></span></div>`:''}
@@ -85,12 +86,14 @@ function vHomeMobile(){
     <button class="m-act" data-act="quick">${I('plus')}<span>רישום</span></button>
   </section>
   ${noKmBanner('m')}
+  ${healthCard()}
   <section class="m m-kpis" aria-label="נתונים">
     <div class="card kpi"><div class="eyebrow">ק״מ לליטר</div><div class="v">${eff?nf1.format(eff.avg):'—'}</div><div class="d">${eff?'ממוצע':'אחרי 2 מילויים מלאים'}</div></div>
     <div class="card kpi"><div class="eyebrow">החודש</div><div class="v">${ils(mSpend)}</div><div class="d">הוצאות</div></div>
     <div class="card kpi"><div class="eyebrow">טסט</div><div class="v">${docs&&docs.st.daysLeft!==null?(docs.st.daysLeft<0?'עבר':docs.st.daysLeft):'—'}${docs&&docs.st.daysLeft>=0?'<small>ימים</small>':''}</div><div class="d">${docs?'עד '+fmtD(docs.st.dueDate):''}</div></div>
     <div class="card kpi"><div class="eyebrow">נסיעה</div><div class="v">${km(kmPerDay())}<small>ק״מ</small></div><div class="d">ביום בממוצע</div></div>
   </section>
+  ${countdownCard()}
   <section class="card m"><div class="card-head"><h2>דורש תשומת לב</h2><button class="link" data-nav="reminder">הכול</button></div>
     <div class="rlist">${attn.map(x=>remRow(x,true)).join('')||'<div class="empty"><b>הכול תקין</b>אין טיפולים שמגיעים בקרוב</div>'}</div></section>
   <section class="card m"><div class="card-head"><h2>אחרונים</h2><button class="link" data-nav="expense">הכול</button></div>
@@ -123,7 +126,7 @@ function vHome(){
         <div class="carmeta">${esc([car.year,car.fuelType?('דלק '+car.fuelType):'',car.tankL?`מכל ${car.tankL} ל׳`:''].filter(Boolean).join(' · '))}</div></div>
         ${plate(car.plate)}
       </div>
-      <div class="odo">${odoDigits(o)}<button class="btn sm" data-act="odo">${I('gauge')}עדכון מד אוץ</button></div>
+      <div class="odo">${odoRoll(o)}<button class="btn sm" data-act="odo">${I('gauge')}עדכון מד אוץ</button></div>
       <div class="small muted">נסיעה ממוצעת: כ־${km(kmPerDay())} ק״מ ביום${car.odoUpdatedAt?` · עודכן ${fmtD(car.odoUpdatedAt)}`:''}</div>
     </div>
     <div class="card gaugecard">
@@ -136,6 +139,7 @@ function vHome(){
       </div>
     </div>
   </section>
+  <section class="hd-row">${healthCard()}${countdownCard()}</section>
   <section class="kpis">
     <div class="card kpi"><div class="eyebrow">ק״מ לליטר</div><div class="v">${eff?nf1.format(eff.avg):'—'}<small>ממוצע</small></div>
       <div class="d">${eff?`אחרון ${nf1.format(eff.last)}${effDelta!==null?` (${effDelta>=0?'+':''}${nf1.format(effDelta)})`:''}`:'נדרשים שני מילויים מלאים'}</div>${eff?spark(eff.series.slice(-10).map(x=>x.kmpl)):''}</div>

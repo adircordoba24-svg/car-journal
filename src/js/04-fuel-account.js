@@ -34,7 +34,7 @@ function fuelQuick(){
       const f=file.files[0];if(!f)return;rcpt=f;
       $r('#qfCam').classList.add('has');$r('#qfThumb').innerHTML=`<img alt="" src="${URL.createObjectURL(f)}">`;$r('#qfCamT').textContent='הקבלה צורפה';
       if(!(sample&&imgOK)){$r('#qfMore').open=true;return;}
-      reading=true;status('',`<span class="spin"></span>הסוכן קורא את הקבלה…`);
+      reading=true;status('',`${PUMP}הסוכן קורא את הקבלה…`);
       try{
         const r=await readFuelReceipt(f);
         if(!root.contains(file))return; // the window was closed while the agent was reading

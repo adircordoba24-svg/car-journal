@@ -67,7 +67,8 @@ function vTickets(){
     <div class="ptsbar" role="img" aria-label="${ps.total} מתוך 36 נקודות"><i style="width:${pct}%"></i><span style="inset-inline-start:33.3%">12</span><span style="inset-inline-start:66.6%">24</span><span style="inset-inline-start:calc(100% - 14px)">36</span></div>
     <div class="docs-strip" style="margin:0">
       <div class="dstat"><div class="ic">${I('cal')}</div><div><b>${since===null?'אין דוחות':since+' ימים'}</b><span>${since===null?'עוד לא נרשם דוח':'מאז הדוח האחרון ('+fmtD(ps.last)+')'}</span></div></div>
-      <div class="dstat ${ps.total?'':'ok'}"><div class="ic">${I('check')}</div><div><b>${ps.total?(tl?tl.left+' ימים':''):'אין נקודות'}</b><span>${ps.total?'עד שכל הנקודות מתאפסות ('+fmtD(ps.reset)+')':'אין נקודות בתוקף'}</span></div></div>
+      <div class="dstat ${ps.total?'':'ok'}" ${ps.total&&ps.reset?`data-cd="${ps.reset}"`:''}><div class="ic">${I('check')}</div><div><b class="cd-v">${ps.total&&ps.reset?cdHTML(ps.reset):'אין נקודות'}</b><span>${ps.total?'עד שכל הנקודות מתאפסות ('+fmtD(ps.reset)+')':'אין נקודות בתוקף'}</span></div></div>
+      ${ps.last&&addDays(ps.last,730)>today()?`<div class="dstat" data-cd="${addDays(ps.last,730)}"><div class="ic">${I('clock')}</div><div><b class="cd-v">${cdHTML(addDays(ps.last,730))}</b><span>עד שנתיים בלי דוח (${fmtD(addDays(ps.last,730))})</span></div></div>`:''}
     </div>
     ${tl?`<div><div class="tline"><i style="width:${tl.pct}%"></i></div><div class="small muted" style="display:flex;justify-content:space-between;margin-top:6px"><span>הדוח האחרון עם נקודות · ${fmtD(tl.start)}</span><span>איפוס · ${fmtD(ps.reset)}</span></div></div>`:''}
     <p class="small muted" style="margin:0">נקודות נספרות ${ps.years===4?'4 שנים (צברת 22 ומעלה בתוך שנתיים)':'שנתיים'} מתאריך העבירה. החישוב לפי הדוחות שרשמת; הנתון הרשמי בתדפיס הנקודות של משרד התחבורה.</p>
