@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>היסטוריית רכב · יומן הרכב</title>
+<link rel="icon" type="image/png" href="icons/favicon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bellefair&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Hebrew:wght@400;500;600&display=swap">
+<style>
+:root{--bg:#eef0f2;--surface:#fff;--raised:#f6f5f2;--line:#d9dce1;--soft:#e7e9ec;--fg:#16191e;--muted:#5d6570;--accent:#8a6a2f;--ok:#226d48;--warn:#8f6208;--crit:#b13f2e;
+  --f-d:"Bellefair",Georgia,serif;--f-b:"IBM Plex Sans Hebrew","Heebo",system-ui,sans-serif;--f-m:"IBM Plex Mono",ui-monospace,monospace;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0c0f13;--surface:#141920;--raised:#1b2129;--line:#29313b;--soft:#1f262f;--fg:#ebe7df;--muted:#8d96a2;--accent:#cfb284;--ok:#6fbf95;--warn:#e2b04f;--crit:#ec806e;color-scheme:dark}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 var(--f-b);-webkit-font-smoothing:antialiased}
+main{max-width:760px;margin:0 auto;padding:24px max(16px,env(safe-area-inset-left)) 40px max(16px,env(safe-area-inset-right));display:flex;flex-direction:column;gap:16px}
+.card{background:var(--surface);border:1px solid var(--soft);border-radius:14px;padding:18px}
+.head{display:flex;gap:14px;align-items:center;flex-wrap:wrap}.head img{width:52px;height:52px;border-radius:13px}
+.k{font-size:12px;letter-spacing:.16em;color:var(--accent);font-weight:600}h1{font:32px/1.1 var(--f-d);margin:2px 0}.m{color:var(--muted);font-size:14px}
+.plate{margin-inline-start:auto;display:flex;align-items:center;gap:8px;background:#f2c230;color:#141414;border-radius:6px;padding:5px 12px 5px 6px;font:600 20px var(--f-m);direction:ltr}.plate span{background:#1f4fa8;color:#fff;font-size:10px;padding:4px 5px;border-radius:3px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}.tiles div{background:var(--raised);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column}.tiles span{font-size:12.5px;color:var(--muted)}.tiles b{font:500 21px var(--f-m)}
+h2{font:22px var(--f-d);margin:0 0 10px}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px}th{text-align:start;font-weight:600;color:var(--muted);padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}td{padding:8px;border-bottom:1px solid var(--soft);vertical-align:top}
+.n{font-family:var(--f-m);white-space:nowrap}.warn{color:var(--crit);font-weight:600}.ok{color:var(--ok)}
+.note{font-size:13px;color:var(--muted)}.msg{text-align:center;padding:40px 16px}
+footer{text-align:center;font-size:12.5px;color:var(--muted)}footer a{color:var(--accent)}
+</style>
+</head>
+<body>
+<main id="m"><div class="card msg">טוען…</div></main>
+<script src="config.js"></script>
+<script>
+(function(){
+  var C=window.CJ_CONFIG||{},m=document.getElementById('m');
+  var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  var fd=function(s){if(!s)return '—';var d=new Date(String(s).slice(0,10)+'T12:00:00');return isNaN(d)?esc(s):d.toLocaleDateString('he-IL',{day:'numeric',month:'short',year:'numeric'});};
+  var km=function(v){return v==null?'—':Math.round(v).toLocaleString('en-US');};
+  var ils=function(v){return v==null?'—':'₪'+Math.round(v).toLocaleString('en-US');};
+  var token=location.hash.slice(1);history.replaceState(null,'',location.pathname);
+  function fail(t){m.innerHTML='<div class="card msg"><h1 style="font-size:26px">'+t+'</h1><p class="note">אפשר לבקש מבעל הרכב קישור חדש.</p></div>';}
+  if(!/^[\w-]{20,}$/.test(token)){fail('הקישור לא תקין');return;}
+  fetch(C.url+'/rest/v1/rpc/share_get',{method:'POST',headers:{apikey:C.anonKey,'Content-Type':'application/json'},body:JSON.stringify({p_token:token})})
+  .then(function(r){return r.json();}).then(function(j){
+    if(!j||j.error==='not_found'||!j.snapshot){fail('הקישור לא נמצא או בוטל');return;}
+    if(j.error==='expired'){fail('תוקף הקישור פג');return;}
+    var s=j.snapshot,c=s.car||{};
+    var h='<section class="card"><div class="head"><img src="icons/emblem.png" alt=""><div><div class="k">היסטוריית רכב</div><h1>'+esc(c.name)+'</h1><div class="m">'+esc([c.year,c.fuel?'דלק '+c.fuel:'',c.color].filter(Boolean).join(' · '))+'</div></div>'+(c.plate?'<div class="plate"><span>IL</span>'+esc(c.plate)+'</div>':'')+'</div></section>';
+    h+='<section class="tiles"><div><span>קילומטראז׳</span><b>'+km(s.odometer)+'</b></div><div><span>טיפולים מתועדים</span><b>'+(s.services||[]).length+'</b></div><div><span>ק״מ לליטר</span><b>'+(s.kmpl||'—')+'</b></div><div><span>מתועד מאז</span><b style="font-size:16px">'+fd(s.since)+'</b></div></section>';
+    h+='<section class="card"><h2>מצב</h2><table><tbody><tr><th>טסט בתוקף עד</th><td>'+fd(s.test)+'</td></tr><tr><th>ביטוח עד</th><td>'+fd(s.insurance)+'</td></tr>'+(s.lastTestGov?'<tr><th>טסט אחרון (משרד התחבורה)</th><td>'+fd(s.lastTestGov)+'</td></tr>':'')+'<tr><th>ריקולים פתוחים</th><td class="'+((s.recallsOpen||[]).length?'warn':'ok')+'">'+((s.recallsOpen||[]).length?esc(s.recallsOpen.join(', ')):'אין')+'</td></tr></tbody></table></section>';
+    var sv=s.services||[];
+    h+='<section class="card"><h2>היסטוריית טיפולים</h2>'+(sv.length?'<div class="tw"><table><thead><tr><th>תאריך</th><th>ק״מ</th><th>מה נעשה</th><th>מוסך</th>'+(s.costs?'<th>עלות</th>':'')+'</tr></thead><tbody>'+sv.map(function(r){return '<tr><td class="n">'+fd(r.date)+'</td><td class="n">'+km(r.odo)+'</td><td>'+esc(r.title)+'</td><td>'+esc(r.garage)+'</td>'+(s.costs?'<td class="n">'+ils(r.cost)+'</td>':'')+'</tr>';}).join('')+'</tbody></table></div>':'<p class="note">לא תועדו טיפולים.</p>')+'</section>';
+    if((s.checks||[]).length)h+='<section class="card"><h2>בדיקות שוטפות</h2><div class="tw"><table><thead><tr><th>בדיקה</th><th>בוצעה לאחרונה</th><th>פעמים</th></tr></thead><tbody>'+s.checks.map(function(x){return '<tr><td>'+esc(x.title)+'</td><td class="n">'+fd(x.last)+'</td><td class="n">'+x.count+'</td></tr>';}).join('')+'</tbody></table></div></section>';
+    if(s.costs)h+='<section class="card"><h2>הוצאות מתועדות</h2><table><tbody><tr><th>דלק</th><td class="n">'+ils(s.costs.fuel)+'</td></tr><tr><th>טיפולים ותיקונים</th><td class="n">'+ils(s.costs.service)+'</td></tr><tr><th>אחר</th><td class="n">'+ils(s.costs.other)+'</td></tr></tbody></table></section>';
+    h+='<footer>המידע נכון ל־'+fd(s.createdAt)+', כפי שבעל הרכב תיעד ביומן הרכב. הקישור בתוקף עד '+fd(j.expires_at)+'.<br><a href="./">יומן הרכב</a></footer>';
+    m.innerHTML=h;
+  }).catch(function(){fail('אין חיבור כרגע');});
+})();
+</script>
+</body>
+</html>

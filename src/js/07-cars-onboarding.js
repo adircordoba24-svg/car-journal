@@ -13,6 +13,7 @@ function carSheet(){
     ${isBiz()&&S.cars.length>1?`<button type="button" class="btn block" id="carFleet">${I('grid')}כל הצי במסך אחד</button>`:''}
     <div class="carlist">${list}</div>
     ${canAdd?`<button type="button" class="btn primary block" id="carAdd">${I('plus')}הוספת רכב${PLAN==='business'?'':' שני'}</button>`:`<p class="small muted" style="margin:0">${PLAN==='business'?`החשבון העסקי שלך כולל עד ${MAX_CARS} רכבים.`:`חשבון פרטי כולל עד ${MAX_CARS} רכבים. מנהל יותר רכבים, לעסק או למשפחה? <button type="button" class="linkbtn" data-act="bizAsk">חשבון עסקי</button>`}</p>`}
+    ${S.car&&!S.car.example&&window.cjSB?`<button type="button" class="btn block" data-act="govInfo">${I('search')}נתוני משרד התחבורה וריקולים</button>`:''}
     ${S.car&&!S.car.example?`<button type="button" class="btn block" data-act="report">${I('doc')}דוח היסטוריה של ${esc(carName(S.car))} (PDF)</button>`:''}
     ${S.cars.length>1&&S.car?`<button type="button" class="btn ghost block" id="carDel" style="color:var(--crit)">${I('trash')}מחיקת ${esc(carName(S.car))} וכל הרישומים שלו</button>`:''}
   </div>`,root=>{
@@ -100,16 +101,18 @@ function onboarding(step,st){
       <h1>${st.carId==='car2'?'הרכב השני':st.carId?'רכב נוסף':'הרכב שלך'}</h1><p class="lead">${sample?'הכי מהיר: מצלמים את רישיון הרכב והסוכן ממלא הכל. אפשר גם למלא ידנית.':'רק השדות המסומנים חובה. את השאר אפשר להשלים אחר כך.'}</p>
       ${sample?`<div class="scanlic"><button type="button" class="btn ${st.lic?'ghost':'primary'} block" id="oScan">${I('cam')}${st.lic?'רישיון הרכב נקרא ✓ לצלם שוב':'צילום רישיון הרכב'}</button><input type="file" id="oScanF" accept="image/*,application/pdf" hidden><div class="small muted" id="oScanS" role="status" style="text-align:center;min-height:1.3em;margin-top:6px"></div></div>`:''}
       <form id="onbCar" class="fgrid" novalidate>
+        <div class="field full"><label for="oP">מספר רישוי</label><input type="text" id="oP" dir="ltr" inputmode="numeric" value="${esc(st.plate||'')}" placeholder="12-345-67"></div>
+        <div class="full">${govFillButton()}</div>
         <div class="field"><label for="oMk">יצרן *</label><input type="text" id="oMk" value="${esc(st.make||'')}" placeholder="טויוטה, קיה, שברולט…" autocomplete="off"></div>
         <div class="field"><label for="oMd">דגם *</label><input type="text" id="oMd" value="${esc(st.model||'')}" placeholder="קורולה, פיקנטו…" autocomplete="off"></div>
         <div class="field"><label for="oY">שנת ייצור</label><input type="number" id="oY" inputmode="numeric" value="${esc(st.year||'')}"></div>
         <div class="field"><label for="oF">סוג דלק</label><select id="oF">${['95','98','סולר','היברידי','פלאג־אין','חשמלי'].map(x=>`<option ${st.fuelType===x?'selected':''}>${x}</option>`).join('')}</select></div>
-        <div class="field"><label for="oP">מספר רישוי</label><input type="text" id="oP" dir="ltr" value="${esc(st.plate||'')}" placeholder="12-345-67"></div>
         <div class="field"><label for="oO">קילומטראז׳ נוכחי *</label><input type="number" id="oO" inputmode="numeric" value="${esc(st.odometer||'')}"></div>
         <div class="err full" id="onbErr" role="alert" style="color:var(--crit);font-size:14px;min-height:1.2em"></div>
         <div class="onb-acts full"><button class="btn primary block" type="submit">המשך</button><button class="onb-skip" type="button" id="onbBack">חזרה</button></div>
       </form></div>`;
     el.querySelector('#onbBack').onclick=()=>st.carId?close(false):onboarding(1,st);
+    bindGovFill(el,st);
     const sb=el.querySelector('#oScan'),sf=el.querySelector('#oScanF'),ss=el.querySelector('#oScanS');
     if(sb){sb.onclick=()=>sf.click();
       sf.onchange=async()=>{const f=sf.files[0];if(!f)return;busy(sb,true,'הסוכן קורא את הרישיון…');ss.textContent='';
@@ -137,7 +140,7 @@ function onboarding(step,st){
       <label class="onb-choice"><input type="radio" name="plan" value="basic" ${aiOk?'':'checked'}><div><b>תזכורות בסיסיות</b><span>טיפול שנתי, טסט, ובדיקות של שמן, מים, אוויר ונוזל שמשות.</span></div></label>
       <div class="fgrid">
         <div class="field"><label for="oLs">הטיפול האחרון היה ב־</label><input type="date" id="oLs" max="${today()}"></div>
-        <div class="field"><label for="oT">הטסט הבא בתאריך${st.lic&&st.lic.validUntil?' (מהרישיון)':''}</label><input type="date" id="oT" min="${today()}" value="${esc(st.lic&&st.lic.validUntil||'')}"></div>
+        <div class="field"><label for="oT">הטסט הבא בתאריך${st.lic&&st.lic.validUntil?' (מהרישיון)':st.gov&&st.gov.testValidUntil?' (ממשרד התחבורה)':''}</label><input type="date" id="oT" min="${today()}" value="${esc(st.lic&&st.lic.validUntil||st.gov&&st.gov.testValidUntil||'')}"></div>
       </div>
       <div class="onb-acts"><button class="btn primary block" id="onbDone">${I('check')}סיום</button><button class="onb-skip" id="onbBack">חזרה</button></div></div>`;
     el.querySelector('#onbBack').onclick=()=>onboarding(2,st);
@@ -146,13 +149,13 @@ function onboarding(step,st){
         const mode=(el.querySelector('input[name=plan]:checked')||{}).value||'basic';
         const lastSvc=el.querySelector('#oLs').value||today(),testDue=el.querySelector('#oT').value;
         const cid=st.carId||'car';CAR=cid;try{localStorage.setItem('cj-car',cid);}catch(e){}chatLog.length=0;
-        await setRec('garage',cid,{createdAt:Date.now(),make:st.make,model:st.model,year:st.year,fuelType:st.fuelType,plate:st.plate,odometer:st.odometer,odoUpdatedAt:today(),nickname:'',tankL:null,psiFront:null,psiRear:null,example:false});
+        await setRec('garage',cid,Object.assign({createdAt:Date.now(),make:st.make,model:st.model,year:st.year,fuelType:st.fuelType,plate:st.plate,odometer:st.odometer,odoUpdatedAt:today(),nickname:'',tankL:null,psiFront:null,psiRear:null,example:false},st.gov?{gov:st.gov,recalls:(st.govRecalls||[]).slice(0,12),recallSeen:[]}:{}));
         const base=[
           {title:'בדיקת מפלס שמן',kind:'check',intervalKm:null,intervalDays:14,lastKm:st.odometer,lastDate:today()},
           {title:'מים ונוזל קירור',kind:'check',intervalKm:null,intervalDays:14,lastKm:st.odometer,lastDate:today()},
           {title:'לחץ אוויר בצמיגים',kind:'check',intervalKm:null,intervalDays:14,lastKm:st.odometer,lastDate:today()},
           {title:'נוזל שמשות ומגבים',kind:'check',intervalKm:null,intervalDays:30,lastKm:st.odometer,lastDate:today()}];
-        if(testDue)base.push({title:'טסט שנתי',kind:'doc',intervalKm:null,intervalDays:365,lastKm:st.odometer,lastDate:addDays(testDue,-365)});
+        if(testDue)base.push({title:'טסט שנתי',kind:'doc',intervalKm:null,intervalDays:365,lastKm:st.odometer,lastDate:addDays(testDue,-365),docKey:'test'});
         if(mode==='basic')base.push({title:'טיפול תקופתי (שמן ומסנן)',kind:'service',intervalKm:15000,intervalDays:365,lastKm:st.odometer,lastDate:lastSvc});
         for(const x of base)await addRec('reminder',Object.assign({note:'',history:[]},x));
         if(st.licFile&&assets){try{const a=await assets.upload(st.licFile);const old=RAW.paper.filter(p=>p.type==='license'&&(p.carId||'car')===cid);for(const o of old)await delRec('paper',o.id);

@@ -6,7 +6,7 @@ function reportSheet(){
     <p class="small muted" style="margin:0">קובץ PDF עם כל ההיסטוריה של ה${esc(carName(S.car))}: טיפולים, בדיקות שוטפות, תדלוקים ומועדים. מתאים למוסך, לליסינג או לקונה כשמוכרים את הרכב.</p>
     <label class="toggle"><input type="checkbox" id="rpCost" checked> לכלול עלויות</label>
     <label class="toggle"><input type="checkbox" id="rpFuel" checked> לכלול תדלוקים</label>
-    <div class="formacts"><button class="btn primary" id="rpGo">${I('download')}הורדת PDF</button><button class="btn ghost" data-act="close">ביטול</button></div>
+    <div class="formacts"><button class="btn primary" id="rpGo">${I('download')}הורדת PDF</button>${window.cjSB?`<button class="btn" data-act="share">${I('link')}קישור לקונה</button>`:''}<button class="btn ghost" data-act="close">ביטול</button></div>
     <div class="small muted" id="rpSt" role="status"></div></div>`,root=>{
     const b=root.querySelector('#rpGo');
     b.onclick=async()=>{busy(b,true,'מכין את הדוח…');const st=root.querySelector('#rpSt');

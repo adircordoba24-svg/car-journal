@@ -1,6 +1,9 @@
 try{document.documentElement.dir="rtl";document.documentElement.lang="he";}catch(e){}
 /* ---------- icons ---------- */
 const P={
+ search:"M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4",
+ link:"M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1",
+ light:"M4 15a8 8 0 0 1 16 0zM12 4v2M4.9 7.9l1.4 1.4M19.1 7.9l-1.4 1.4M3 19h18",
  mic:"M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3M9 21h6",
  grid:"M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z",
  sheet:"M4 4h16v16H4zM4 9h16M4 14h16M10 4v16",

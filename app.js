@@ -4,6 +4,9 @@
 try{document.documentElement.dir="rtl";document.documentElement.lang="he";}catch(e){}
 /* ---------- icons ---------- */
 const P={
+ search:"M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4",
+ link:"M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1",
+ light:"M4 15a8 8 0 0 1 16 0zM12 4v2M4.9 7.9l1.4 1.4M19.1 7.9l-1.4 1.4M3 19h18",
  mic:"M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3M9 21h6",
  grid:"M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z",
  sheet:"M4 4h16v16H4zM4 9h16M4 14h16M10 4v16",
@@ -586,7 +589,7 @@ function vExpense(){
 
 function vReminder(){
   const groups=['service','check','doc'];
-  return `<div class="sec-title"><h2>תזכורות</h2><button class="btn primary" data-act="remForm">${I('plus')}תזכורת חדשה</button></div>
+  return `<div class="sec-title"><h2>תזכורות</h2><span style="display:flex;gap:8px;flex-wrap:wrap">${window.cjSB?`<button class="btn" data-act="calendar">${I('cal')}ליומן גוגל</button>`:''}<button class="btn primary" data-act="remForm">${I('plus')}תזכורת חדשה</button></span></div>
   <p class="muted small" style="margin:-4px 0 16px;max-width:65ch">כל תזכורת נמדדת לפי קילומטרים, לפי זמן, או לפי מה שמגיע קודם. המועד המשוער מחושב לפי קצב הנסיעה שלך. ${window.cjPush?'כשמגיע המועד, היומן שולח התראה לטלפון (מפעילים ב״החשבון שלי״). אפשר גם להוסיף תזכורת ליומן של הטלפון.':'אפשר לשלוח כל תזכורת ליומן Google כדי לקבל התראה בטלפון.'}</p>
   <div class="stack">${groups.map(g=>{const list=sortedReminders(r=>(r.kind||'service')===g);return `<section class="card"><div class="card-head"><h2>${KIND[g]}</h2><button class="link" data-act="remForm" data-kind="${g}">הוספה</button></div><div class="rlist">${list.map(x=>remRow(x,false)).join('')||'<div class="empty">אין תזכורות בקבוצה הזו</div>'}</div></section>`;}).join('')}</div>`;
 }
@@ -612,6 +615,7 @@ function vAgents(){
   </section>
   <section class="agents">
     <div class="card agent"><div class="badge">${I('cam')}</div><h3>סוכן הקבלות</h3><p>צלם קבלה מהתחנה או מהמוסך. הסוכן יזהה אם זה תדלוק, טיפול או הוצאה, ימלא סכום, ליטרים, תאריך ותחנה, ויצרף את הקבלה לרישום.</p><button class="btn primary" data-act="scan" ${off||!imgOK?'disabled':''}>${I('cam')}סריקת קבלה</button>${!off&&!imgOK?'<span class="small muted">סריקת תמונות לא זמינה בתצוגה הזו</span>':''}</div>
+    <div class="card agent"><div class="badge">${I('light')}</div><h3>נורה בלוח</h3><p>נדלקה נורה ולא ברור מה היא? מצלמים את הלוח, והסוכן אומר מה זה, כמה דחוף, ואם אפשר להמשיך לנסוע.</p><button class="btn primary" data-act="light" ${off||!imgOK?'disabled':''}>${I('cam')}צילום הלוח</button></div>
     <div class="card agent"><div class="badge">${I('list')}</div><h3>מתכנן הטיפולים</h3><p>לפי היצרן, הדגם, השנה והקילומטראז׳, הסוכן בונה לוח טיפולים מומלץ עם מרווחים בק״מ ובזמן. אתה בוחר מה להוסיף לתזכורות.</p><button class="btn primary" data-act="plan" ${off?'disabled':''}>${I('spark')}בניית תוכנית</button></div>
     <div class="card agent"><div class="badge">${I('chart')}</div><h3>האנליסט</h3><p>סוקר את הצריכה, המחירים וההוצאות, מאתר חריגות כמו ירידה פתאומית בק״מ לליטר, ומסכם מה כדאי לעשות החודש.</p><button class="btn primary" data-act="insight" ${off?'disabled':''}>${I('chart')}ניתוח עכשיו</button></div>
   </section>
@@ -813,8 +817,8 @@ function carForm(){
   });
 }
 function quickSheet(){
-  const items=[['fuelQuick','תדלוק','fuel'],['serviceForm','טיפול','wrench'],['expenseForm','הוצאה','receipt'],['checks','בדיקה שוטפת','oil'],['scan','סריקת קבלה','cam'],['voice','רישום בקול','mic'],['odo','מד אוץ','gauge']];
-  openModal('רישום חדש',`<div class="qgrid">${items.map(([a,l,i])=>`<button class="qbtn" data-act="${a}" ${(a==='scan'&&(!sample||!imgOK))||(a==='voice'&&!sample)?'disabled':''}>${I(i)}${l}</button>`).join('')}</div>`);
+  const items=[['fuelQuick','תדלוק','fuel'],['serviceForm','טיפול','wrench'],['expenseForm','הוצאה','receipt'],['checks','בדיקה שוטפת','oil'],['scan','סריקת קבלה','cam'],['voice','רישום בקול','mic'],['light','נורה בלוח','light'],['odo','מד אוץ','gauge']];
+  openModal('רישום חדש',`<div class="qgrid">${items.map(([a,l,i])=>`<button class="qbtn" data-act="${a}" ${((a==='scan'||a==='light')&&(!sample||!imgOK))||(a==='voice'&&!sample)?'disabled':''}>${I(i)}${l}</button>`).join('')}</div>`);
 }
 function checksSheet(){
   const list=sortedReminders(r=>r.kind==='check');
@@ -1051,6 +1055,7 @@ async function accountSheet(){
       <button type="button" data-act="cars">${I('car')}הרכבים שלי (${S.cars.length} מתוך ${MAX_CARS})</button>
       <button type="button" id="acPush">${I('bell')}<span id="acPushTxt">התראות לטלפון</span><span class="acct-state" id="acPushState"></span></button>
       <button type="button" data-act="feedback">${I('chat')}משוב ודיווח על תקלה</button>
+      <button type="button" data-act="calendar">${I('cal')}חיבור ליומן גוגל או אייפון</button>
       <button type="button" id="acExport">${I('doc')}ייצוא כל הנתונים (קובץ גיבוי)</button>
       <button type="button" data-act="restore">${I('undo')}שחזור מגיבוי</button>
       <a href="privacy.html" target="_blank" rel="noopener">${I('shield')}מדיניות פרטיות</a>
@@ -1552,6 +1557,7 @@ function carSheet(){
     ${isBiz()&&S.cars.length>1?`<button type="button" class="btn block" id="carFleet">${I('grid')}כל הצי במסך אחד</button>`:''}
     <div class="carlist">${list}</div>
     ${canAdd?`<button type="button" class="btn primary block" id="carAdd">${I('plus')}הוספת רכב${PLAN==='business'?'':' שני'}</button>`:`<p class="small muted" style="margin:0">${PLAN==='business'?`החשבון העסקי שלך כולל עד ${MAX_CARS} רכבים.`:`חשבון פרטי כולל עד ${MAX_CARS} רכבים. מנהל יותר רכבים, לעסק או למשפחה? <button type="button" class="linkbtn" data-act="bizAsk">חשבון עסקי</button>`}</p>`}
+    ${S.car&&!S.car.example&&window.cjSB?`<button type="button" class="btn block" data-act="govInfo">${I('search')}נתוני משרד התחבורה וריקולים</button>`:''}
     ${S.car&&!S.car.example?`<button type="button" class="btn block" data-act="report">${I('doc')}דוח היסטוריה של ${esc(carName(S.car))} (PDF)</button>`:''}
     ${S.cars.length>1&&S.car?`<button type="button" class="btn ghost block" id="carDel" style="color:var(--crit)">${I('trash')}מחיקת ${esc(carName(S.car))} וכל הרישומים שלו</button>`:''}
   </div>`,root=>{
@@ -1639,16 +1645,18 @@ function onboarding(step,st){
       <h1>${st.carId==='car2'?'הרכב השני':st.carId?'רכב נוסף':'הרכב שלך'}</h1><p class="lead">${sample?'הכי מהיר: מצלמים את רישיון הרכב והסוכן ממלא הכל. אפשר גם למלא ידנית.':'רק השדות המסומנים חובה. את השאר אפשר להשלים אחר כך.'}</p>
       ${sample?`<div class="scanlic"><button type="button" class="btn ${st.lic?'ghost':'primary'} block" id="oScan">${I('cam')}${st.lic?'רישיון הרכב נקרא ✓ לצלם שוב':'צילום רישיון הרכב'}</button><input type="file" id="oScanF" accept="image/*,application/pdf" hidden><div class="small muted" id="oScanS" role="status" style="text-align:center;min-height:1.3em;margin-top:6px"></div></div>`:''}
       <form id="onbCar" class="fgrid" novalidate>
+        <div class="field full"><label for="oP">מספר רישוי</label><input type="text" id="oP" dir="ltr" inputmode="numeric" value="${esc(st.plate||'')}" placeholder="12-345-67"></div>
+        <div class="full">${govFillButton()}</div>
         <div class="field"><label for="oMk">יצרן *</label><input type="text" id="oMk" value="${esc(st.make||'')}" placeholder="טויוטה, קיה, שברולט…" autocomplete="off"></div>
         <div class="field"><label for="oMd">דגם *</label><input type="text" id="oMd" value="${esc(st.model||'')}" placeholder="קורולה, פיקנטו…" autocomplete="off"></div>
         <div class="field"><label for="oY">שנת ייצור</label><input type="number" id="oY" inputmode="numeric" value="${esc(st.year||'')}"></div>
         <div class="field"><label for="oF">סוג דלק</label><select id="oF">${['95','98','סולר','היברידי','פלאג־אין','חשמלי'].map(x=>`<option ${st.fuelType===x?'selected':''}>${x}</option>`).join('')}</select></div>
-        <div class="field"><label for="oP">מספר רישוי</label><input type="text" id="oP" dir="ltr" value="${esc(st.plate||'')}" placeholder="12-345-67"></div>
         <div class="field"><label for="oO">קילומטראז׳ נוכחי *</label><input type="number" id="oO" inputmode="numeric" value="${esc(st.odometer||'')}"></div>
         <div class="err full" id="onbErr" role="alert" style="color:var(--crit);font-size:14px;min-height:1.2em"></div>
         <div class="onb-acts full"><button class="btn primary block" type="submit">המשך</button><button class="onb-skip" type="button" id="onbBack">חזרה</button></div>
       </form></div>`;
     el.querySelector('#onbBack').onclick=()=>st.carId?close(false):onboarding(1,st);
+    bindGovFill(el,st);
     const sb=el.querySelector('#oScan'),sf=el.querySelector('#oScanF'),ss=el.querySelector('#oScanS');
     if(sb){sb.onclick=()=>sf.click();
       sf.onchange=async()=>{const f=sf.files[0];if(!f)return;busy(sb,true,'הסוכן קורא את הרישיון…');ss.textContent='';
@@ -1676,7 +1684,7 @@ function onboarding(step,st){
       <label class="onb-choice"><input type="radio" name="plan" value="basic" ${aiOk?'':'checked'}><div><b>תזכורות בסיסיות</b><span>טיפול שנתי, טסט, ובדיקות של שמן, מים, אוויר ונוזל שמשות.</span></div></label>
       <div class="fgrid">
         <div class="field"><label for="oLs">הטיפול האחרון היה ב־</label><input type="date" id="oLs" max="${today()}"></div>
-        <div class="field"><label for="oT">הטסט הבא בתאריך${st.lic&&st.lic.validUntil?' (מהרישיון)':''}</label><input type="date" id="oT" min="${today()}" value="${esc(st.lic&&st.lic.validUntil||'')}"></div>
+        <div class="field"><label for="oT">הטסט הבא בתאריך${st.lic&&st.lic.validUntil?' (מהרישיון)':st.gov&&st.gov.testValidUntil?' (ממשרד התחבורה)':''}</label><input type="date" id="oT" min="${today()}" value="${esc(st.lic&&st.lic.validUntil||st.gov&&st.gov.testValidUntil||'')}"></div>
       </div>
       <div class="onb-acts"><button class="btn primary block" id="onbDone">${I('check')}סיום</button><button class="onb-skip" id="onbBack">חזרה</button></div></div>`;
     el.querySelector('#onbBack').onclick=()=>onboarding(2,st);
@@ -1685,13 +1693,13 @@ function onboarding(step,st){
         const mode=(el.querySelector('input[name=plan]:checked')||{}).value||'basic';
         const lastSvc=el.querySelector('#oLs').value||today(),testDue=el.querySelector('#oT').value;
         const cid=st.carId||'car';CAR=cid;try{localStorage.setItem('cj-car',cid);}catch(e){}chatLog.length=0;
-        await setRec('garage',cid,{createdAt:Date.now(),make:st.make,model:st.model,year:st.year,fuelType:st.fuelType,plate:st.plate,odometer:st.odometer,odoUpdatedAt:today(),nickname:'',tankL:null,psiFront:null,psiRear:null,example:false});
+        await setRec('garage',cid,Object.assign({createdAt:Date.now(),make:st.make,model:st.model,year:st.year,fuelType:st.fuelType,plate:st.plate,odometer:st.odometer,odoUpdatedAt:today(),nickname:'',tankL:null,psiFront:null,psiRear:null,example:false},st.gov?{gov:st.gov,recalls:(st.govRecalls||[]).slice(0,12),recallSeen:[]}:{}));
         const base=[
           {title:'בדיקת מפלס שמן',kind:'check',intervalKm:null,intervalDays:14,lastKm:st.odometer,lastDate:today()},
           {title:'מים ונוזל קירור',kind:'check',intervalKm:null,intervalDays:14,lastKm:st.odometer,lastDate:today()},
           {title:'לחץ אוויר בצמיגים',kind:'check',intervalKm:null,intervalDays:14,lastKm:st.odometer,lastDate:today()},
           {title:'נוזל שמשות ומגבים',kind:'check',intervalKm:null,intervalDays:30,lastKm:st.odometer,lastDate:today()}];
-        if(testDue)base.push({title:'טסט שנתי',kind:'doc',intervalKm:null,intervalDays:365,lastKm:st.odometer,lastDate:addDays(testDue,-365)});
+        if(testDue)base.push({title:'טסט שנתי',kind:'doc',intervalKm:null,intervalDays:365,lastKm:st.odometer,lastDate:addDays(testDue,-365),docKey:'test'});
         if(mode==='basic')base.push({title:'טיפול תקופתי (שמן ומסנן)',kind:'service',intervalKm:15000,intervalDays:365,lastKm:st.odometer,lastDate:lastSvc});
         for(const x of base)await addRec('reminder',Object.assign({note:'',history:[]},x));
         if(st.licFile&&assets){try{const a=await assets.upload(st.licFile);const old=RAW.paper.filter(p=>p.type==='license'&&(p.carId||'car')===cid);for(const o of old)await delRec('paper',o.id);
@@ -2281,11 +2289,12 @@ const HELP={
     <li><b>טיפול הבא ובדיקה הבאה:</b> העיגול מראה כמה נשאר עד הפעם הבאה. מלא = הרבה זמן, ריק = הגיע הזמן.</li>
     <li><b>״בדקתי״ / ״בוצע״:</b> לוחצים אחרי שעשית את הבדיקה. הספירה מתחילה מחדש, ותראה מתי הפעם הבאה.</li>
     <li><b>תדלוק, בדיקה, בקול, רישום:</b> הדרכים המהירות לרשום. ״בקול״ = אומרים במשפט אחד מה היה.</li>
-    <li><b>הסוכן</b> (כפתור הניצוץ למעלה): כותבים או אומרים לו מה עשית, והוא רושם בשבילך.</li></ul>`},
+    <li><b>הסוכן</b> (כפתור הניצוץ למעלה): כותבים או אומרים לו מה עשית, והוא רושם בשבילך.</li>
+    <li><b>משרד התחבורה:</b> היומן בודק פעם בשבוע את מועד הטסט ואם יש ריקול לרכב, ומעדכן לבד. הפרטים: כפתור הרכב ← ״נתוני משרד התחבורה וריקולים״.</li></ul>`},
   fuel:{t:'דלק',b:`<p>כל תדלוק נרשם כאן. כדי שהצריכה (ק״מ לליטר) תחושב, צריך את הקילומטראז׳ בכל תדלוק, ושני מילויים מלאים לפחות.</p><p>הכי מהיר: לוחצים ״תדלוק״ ומצלמים את הקבלה. הסוכן ממלא סכום, ליטרים ותחנה.</p>`},
   service:{t:'טיפולים ובדיקות',b:`<ul class="hlp"><li><b>היסטוריית טיפולים:</b> כל מה שנעשה במוסך, עם עלות וקבלה.</li><li><b>לוח טיפולים:</b> מתי הטיפול הבא, לפי ק״מ או לפי זמן, מה שמגיע קודם.</li><li><b>בדיקות שוטפות:</b> שמן, מים, אוויר ונוזל שמשות. לוחצים ״בוצע״ אחרי כל בדיקה, והיא נרשמת ביומן הבדיקות עם התאריך.</li></ul>`},
   expense:{t:'הוצאות',b:`<p>כל ההוצאות על הרכב: דלק, טיפולים, ביטוח, חניה ועוד, לפי חודש ולפי קטגוריה. הקבלות שצילמת נשמרות בארכיון.</p>`},
-  reminder:{t:'תזכורות',b:`<ul class="hlp"><li><b>טיפול תקופתי:</b> לפי ק״מ או זמן.</li><li><b>בדיקה שוטפת:</b> כל שבועיים או חודש.</li><li><b>מסמכים ותשלומים:</b> טסט, ביטוח, רישיון ודוחות.</li><li>״בוצע״ מאפס את הספירה ומראה מתי הפעם הבאה. השעון = לדחות. אם התראות פעילות, תקבל הודעה לטלפון.</li></ul>`},
+  reminder:{t:'תזכורות',b:`<ul class="hlp"><li><b>טיפול תקופתי:</b> לפי ק״מ או זמן.</li><li><b>בדיקה שוטפת:</b> כל שבועיים או חודש.</li><li><b>מסמכים ותשלומים:</b> טסט, ביטוח, רישיון ודוחות.</li><li>״בוצע״ מאפס את הספירה ומראה מתי הפעם הבאה. השעון = לדחות. אם התראות פעילות, תקבל הודעה לטלפון.</li><li><b>ליומן גוגל:</b> מחברים פעם אחת, והמועדים מופיעים ביומן שלך ומתעדכנים לבד.</li></ul>`},
   agents:{t:'הסוכן',b:`<p>הסוכן עונה על שאלות וגם <b>עושה פעולות בשבילך</b>. כותבים או אומרים לו בפשטות, למשל:</p><ul class="hlp"><li>״עשיתי איזון וכיוון פרונט ב־250 שקל״</li><li>״בדקתי שמן ומים״</li><li>״תדלקתי ב־300, הקילומטראז׳ 31,500״</li><li>״תעביר אותי לביטוח״</li></ul><p>בחשבון עם כמה רכבים, אומרים לאיזה רכב (״לקיה של דנה״). בלי זה, הוא רושם לרכב שפתוח עכשיו. כל פעולה אפשר לבטל.</p>`},
   docs:{t:'ביטוח ומסמכים',b:`<p>מעלים את פוליסת הביטוח (PDF או צילום) ואת רישיון הרכב. הסוכן קורא אותם, מסביר בשפה פשוטה מה מכוסה, ומזכיר לפני שהביטוח או הטסט נגמרים.</p>`},
   tickets:{t:'דוחות ונקודות',b:`<ul class="hlp"><li><b>דוח חדש:</b> מצלמים את הדוח. הסוכן קורא אותו ובודק אם הוא תקין: מספר רכב, סוג רכב, מועד מסירה ופרטים חסרים. אחר כך רואים את המועדים לבקשת ביטול, לבקשה להישפט ולתשלום.</li><li><b>תזכורת בערב:</b> באותו ערב, ושוב לפני המועד האחרון לבקשת ביטול, עד שתלחץ ״בדקתי״.</li><li><b>הנקודות:</b> מחושבות מהדוחות שרשמת. הנתון הרשמי הוא בתדפיס הנקודות, ראה למטה.</li></ul>
@@ -2393,10 +2402,10 @@ const chatTools=[
  {name:'update_odometer',description:'Set the current odometer reading (km).',inputSchema:{type:'object',properties:{km:{type:'number'},...carProp},required:['km']},
   execute:async({km:v,car})=>{const c=useCar(car);v=n(v);if(!v)throw new Error('bad km');const before={odometer:c.odometer,odoUpdatedAt:c.odoUpdatedAt||''};
     await updRec('garage',c.id,{odometer:v,odoUpdatedAt:today()});agentNote(`הקילומטראז׳ עודכן ל־${km(v)}`,()=>updRec('garage',c.id,before));return {ok:true};}},
- {name:'open_screen',description:'Take the user to a screen of the app (after you answer). history_report = the PDF history report of the car.',inputSchema:{type:'object',properties:{screen:{type:'string',enum:['home','fuel','service','expense','reminder','agent','insurance','tickets','fleet','account','checks','history_report']},...carProp},required:['screen']},
+ {name:'open_screen',description:'Take the user to a screen of the app (after you answer). history_report = the PDF history report of the car. warning_light = photograph a dashboard warning light. buyer_link = a read-only link for a buyer. calendar = connect Google/iPhone calendar. gov_data = official registry data and recalls.',inputSchema:{type:'object',properties:{screen:{type:'string',enum:['home','fuel','service','expense','reminder','agent','insurance','tickets','fleet','account','checks','history_report','warning_light','buyer_link','calendar','gov_data']},...carProp},required:['screen']},
   execute:({screen,car})=>{if(car)useCar(car);
     const nav={insurance:()=>{agTab='docs';go('agents');render();},tickets:()=>{agTab='tickets';go('agents');render();},agent:()=>{agTab='agents';go('agents');render();},
-      fleet:()=>{if(typeof setFleetView==='function')setFleetView(true);go('home');render();},account:()=>accountSheet(),checks:()=>checksSheet(),history_report:()=>reportSheet()}[screen]||(()=>{if(typeof setFleetView==='function'&&screen==='home'&&isBiz())setFleetView(false);go(screen);render();});
+      fleet:()=>{if(typeof setFleetView==='function')setFleetView(true);go('home');render();},account:()=>accountSheet(),checks:()=>checksSheet(),history_report:()=>reportSheet(),warning_light:()=>lightSheet(),buyer_link:()=>shareSheet(),calendar:()=>calSheet(),gov_data:()=>govSheet()}[screen]||(()=>{if(typeof setFleetView==='function'&&screen==='home'&&isBiz())setFleetView(false);go(screen);render();});
     AGENT_NAV=nav;return {ok:true,willOpen:screen};}},
 ];
 // open the agent from anywhere
@@ -2684,7 +2693,7 @@ function reportSheet(){
     <p class="small muted" style="margin:0">קובץ PDF עם כל ההיסטוריה של ה${esc(carName(S.car))}: טיפולים, בדיקות שוטפות, תדלוקים ומועדים. מתאים למוסך, לליסינג או לקונה כשמוכרים את הרכב.</p>
     <label class="toggle"><input type="checkbox" id="rpCost" checked> לכלול עלויות</label>
     <label class="toggle"><input type="checkbox" id="rpFuel" checked> לכלול תדלוקים</label>
-    <div class="formacts"><button class="btn primary" id="rpGo">${I('download')}הורדת PDF</button><button class="btn ghost" data-act="close">ביטול</button></div>
+    <div class="formacts"><button class="btn primary" id="rpGo">${I('download')}הורדת PDF</button>${window.cjSB?`<button class="btn" data-act="share">${I('link')}קישור לקונה</button>`:''}<button class="btn ghost" data-act="close">ביטול</button></div>
     <div class="small muted" id="rpSt" role="status"></div></div>`,root=>{
     const b=root.querySelector('#rpGo');
     b.onclick=async()=>{busy(b,true,'מכין את הדוח…');const st=root.querySelector('#rpSt');
@@ -2747,4 +2756,168 @@ async function buildReport(o,say){
   return saveBlob(pdf.output('blob'),name);
 }
 document.addEventListener('click',e=>{const b=e.target.closest('[data-act="report"]');if(b)reportSheet();});
+
+/* ===== 083-gov.js ===== */
+/* ---------- official vehicle data (Ministry of Transport): details by plate, test date, recalls; and the warning-light reader ---------- */
+async function govCar(plate){
+  if(!window.cjSB)throw new Error('offline');
+  const r=await window.cjSB.functions.invoke('gov',{body:{action:'car',plate}});
+  if(r.error||!r.data||r.data.error)throw new Error((r.data&&r.data.error)||'gov');
+  return r.data;
+}
+const firstWord=s=>String(s||'').trim().split(/\s+/)[0]||'';
+function govFuel(f){f=String(f||'');return /דיזל|סולר/.test(f)?'סולר':/פלאג/.test(f)?'פלאג־אין':/היבר/.test(f)?'היברידי':/חשמל/.test(f)?'חשמלי':/בנזין/.test(f)?'95':'';}
+const titleCase=s=>String(s||'').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
+
+/* fill the car form from the plate number */
+function govFillButton(){return `<button type="button" class="btn block" id="oGov">${I('search')}מילוי אוטומטי לפי מספר הרישוי</button><div class="small muted" id="oGovS" style="text-align:center;min-height:1.2em"></div>`;}
+function bindGovFill(root,st){
+  const b=root.querySelector('#oGov');if(!b)return;const s=root.querySelector('#oGovS');
+  b.onclick=async()=>{const p=root.querySelector('#oP');const plate=(p&&p.value||'').trim();
+    if(plate.replace(/\D/g,'').length<7){s.textContent='כתוב קודם את מספר הרישוי (7 או 8 ספרות).';if(p){shake(p.closest('.field'));p.focus();}return;}
+    busy(b,true,'בודק במאגר משרד התחבורה…');s.textContent='';
+    try{const d=await govCar(plate);if(!root.contains(b))return;busy(b,false);
+      if(!d.found){s.textContent='הרכב לא נמצא במאגר. אפשר למלא ידנית.';return;}
+      const c=d.car,set=(id,v)=>{const x=root.querySelector('#'+id);if(x&&v){x.value=v;x.classList.add('filled');setTimeout(()=>x.classList.remove('filled'),1200);}};
+      set('oMk',firstWord(c.make));set('oMd',titleCase(c.model));set('oY',c.year);set('oP',d.plate);const f=root.querySelector('#oF');const fm=govFuel(c.fuel);if(f&&fm)f.value=fm;
+      st.gov=Object.assign({},c,{checkedAt:today()});st.govRecalls=d.recalls||[];
+      s.innerHTML=`נמצא: ${esc(firstWord(c.make))} ${esc(titleCase(c.model))} ${c.year||''}, ${esc(c.color||'')}. ${c.testValidUntil?`הטסט בתוקף עד ${fmtD(c.testValidUntil)}.`:''}${(d.recalls||[]).some(r=>r.exact)?' <b style="color:var(--crit)">יש ריקול פתוח לרכב.</b>':''}`;
+      const o=root.querySelector('#oO');if(o&&!o.value)o.focus();
+    }catch(e){if(root.contains(b)){busy(b,false);s.textContent='המאגר של משרד התחבורה לא זמין כרגע. אפשר למלא ידנית.';}}};
+}
+
+/* weekly sync: test date and recalls for every car with a plate */
+let govSyncing=false;
+async function govSync(force){
+  if(govSyncing||!window.cjSB||!db||S.ready.size<COLS.length)return;
+  const due=S.cars.filter(c=>!c.example&&String(c.plate||'').replace(/\D/g,'').length>=7&&(force||!c.gov||!c.gov.checkedAt||daysBetween(c.gov.checkedAt,today())>=7));
+  if(!due.length)return;govSyncing=true;let news=0;
+  try{for(const c of due){
+    let d;try{d=await govCar(c.plate);}catch(e){continue;}
+    const seen=Array.isArray(c.recallSeen)?c.recallSeen:[];const recalls=(d.recalls||[]).slice(0,12);
+    const upd={gov:d.found?Object.assign({},d.car,{checkedAt:today()}):{checkedAt:today(),notFound:true},recalls};
+    // the test date from the registry keeps the test reminder right (also after you did the test)
+    if(d.found&&d.car.testValidUntil&&d.car.testValidUntil>=today()){
+      const r=RAW.reminder.find(x=>(x.carId||'car')===c.id&&(x.docKey==='test'||/טסט/.test(x.title||'')));
+      const lastDate=addDays(d.car.testValidUntil,-365);
+      if(r){if(r.lastDate!==lastDate)await updRec('reminder',r.id,{lastDate,intervalDays:365,docKey:'test'});}
+      else await addRec('reminder',{title:'טסט שנתי',kind:'doc',intervalKm:null,intervalDays:365,lastDate,lastKm:n(c.odometer),docKey:'test',history:[],note:'',carId:c.id});
+    }
+    // new recalls become a reminder (and a phone notification): open for this vehicle, or new for the model
+    const y=new Date().getFullYear();
+    const fresh=recalls.filter(r=>!seen.includes(r.id)&&(r.exact||(n(r.year)&&n(r.year)>=y-1)));
+    for(const r of fresh){news++;await addRec('reminder',{title:`ריקול: ${r.area||'תקלה בטיחותית'}`,kind:'doc',once:true,docKey:'recall:'+r.id,intervalKm:null,intervalDays:7,lastDate:addDays(today(),-7),lastKm:null,history:[],note:String(r.desc||'').slice(0,300),carId:c.id});}
+    upd.recallSeen=[...new Set([...seen,...recalls.map(r=>r.id)])].slice(-60);
+    await updRec('garage',c.id,upd);
+  }}finally{govSyncing=false;}
+  if(news)toastAct(news===1?'נמצא ריקול לרכב שלך':`נמצאו ${news} ריקולים`,'פרטים',()=>govSheet());
+}
+function govSheet(){
+  const c=S.car;if(!c)return;const g=c.gov||{};const rc=Array.isArray(c.recalls)?c.recalls:[];
+  const row=(l,v)=>v?`<tr><th>${l}</th><td>${esc(String(v))}</td></tr>`:'';
+  openModal('נתוני משרד התחבורה',`<div class="stack" style="gap:14px">
+    ${g.checkedAt&&!g.notFound?`<table class="gov-t"><tbody>${row('יצרן',g.make)}${row('דגם',[titleCase(g.model),g.trim].filter(Boolean).join(' · '))}${row('שנת ייצור',g.year)}${row('צבע',g.color)}${row('דלק',g.fuel)}${row('בעלות',g.ownership)}${row('טסט בתוקף עד',g.testValidUntil&&fmtD(g.testValidUntil))}${row('טסט אחרון',g.lastTest&&fmtD(g.lastTest))}${row('עלה לכביש',g.onRoad)}${row('צמיגים',g.tiresFront===g.tiresRear?g.tiresFront:[g.tiresFront,g.tiresRear].filter(Boolean).join(' / '))}</tbody></table>
+      <p class="small muted" style="margin:0">עודכן מהמאגר הרשמי ב־${fmtD(g.checkedAt)}. היומן בודק שוב פעם בשבוע, ומעדכן לבד את מועד הטסט.</p>`
+    :g.notFound?'<p class="small muted">הרכב לא נמצא במאגר של משרד התחבורה. בדוק שמספר הרישוי נכון בפרטי הרכב.</p>':'<p class="small muted">עוד לא נבדק. צריך מספר רישוי בפרטי הרכב.</p>'}
+    <h3 style="margin:4px 0 0">ריקולים</h3>
+    ${rc.length?`<div class="stack" style="gap:10px">${rc.map(r=>`<div class="rc" data-exact="${r.exact?1:0}"><b>${esc(r.area||'ריקול')}</b>${r.exact?'<span class="pill over">פתוח לרכב שלך</span>':'<span class="pill neutral">לדגם ולשנים שלך</span>'}<p>${esc(r.desc||'')}</p>
+      <div class="small muted">${[r.type,r.fix?'תיקון: '+r.fix:'',r.opened?'נפתח '+fmtD(r.opened):r.year?'פורסם ב־'+r.year:''].filter(Boolean).map(esc).join(' · ')}</div>
+      ${r.importer||r.phone?`<div class="small">${esc(r.importer||'')}${r.phone?` · <bdi dir="ltr">${esc(r.phone)}</bdi>`:''}${r.website?` · <a href="${/^https?:/i.test(r.website)?'':'https://'}${esc(String(r.website).toLowerCase())}" target="_blank" rel="noopener">אתר היבואן</a>`:''}</div>`:''}</div>`).join('')}</div>
+      <p class="small muted" style="margin:0">ריקול מתקנים בחינם אצל היבואן. ״לדגם ולשנים שלך״ = ייתכן שכבר תוקן ברכב שלך. כדאי לבדוק עם היבואן לפי מספר השלדה.</p>`
+    :`<p class="small muted" style="margin:0">${g.checkedAt?'אין ריקולים פתוחים לרכב הזה. 👍':'—'}</p>`}
+    <div class="formacts"><button class="btn primary" id="govRe">${I('search')}בדיקה עכשיו</button><a class="btn ghost" href="https://www.gov.il/he/service/recall-vehicle" target="_blank" rel="noopener">בדיקת ריקול באתר הממשלה</a></div></div>`,root=>{
+    root.querySelector('#govRe').onclick=async e=>{const b=e.currentTarget;if(!String(c.plate||'').replace(/\D/g,'')){toast('צריך מספר רישוי בפרטי הרכב');return;}busy(b,true,'בודק…');
+      await govSync(true).catch(()=>{});if(root.contains(b)){closeModal();setTimeout(govSheet,300);}};
+  });
+}
+
+/* what does this dashboard light mean? */
+const LIGHT_PROMPT=()=>`זו תמונה של לוח המחוונים ברכב${S.car?` (${[S.car.make,S.car.model,S.car.year].filter(Boolean).join(' ')})`:''}. זהה את נורות האזהרה או החיווי שדולקות בתמונה. החזר JSON בלבד:
+{"found":boolean,"lights":[{"name":string,"color":"red"|"amber"|"green"|"blue"|"white"|null,"urgency":"stop"|"soon"|"info","meaning":string,"action":string,"canDrive":string}]}
+- name: שם הנורה בעברית פשוטה ("נורת לחץ שמן", "נורת מנוע (צ׳ק אנג׳ין)").
+- urgency: stop = לעצור בצד בבטחה ולכבות את המנוע (למשל לחץ שמן, טמפרטורת מנוע, בלמים באדום). soon = לבדוק במוסך בקרוב. info = רק חיווי (פנסים, איתות).
+- meaning: מה זה אומר, משפט או שניים. action: מה לעשות עכשיו, צעד אחר צעד בקצרה. canDrive: אפשר להמשיך לנסוע? תשובה קצרה.
+- אם הנורה לא ברורה, כתוב את ההשערה הסבירה ביותר ואמור שזו הערכה. אם אין נורות דולקות, found=false. עברית בלבד.`;
+function lightSheet(){
+  if(!sample||!imgOK){toast('הסוכן לא זמין כרגע');return;}
+  openModal('נורה בלוח המחוונים',`<div class="stack" style="gap:14px">
+    <p class="small muted" style="margin:0">מצלמים את הלוח כשהנורה דולקת. הסוכן יגיד מה היא, כמה זה דחוף ומה לעשות.</p>
+    <button class="btn primary block" id="lgCam">${I('cam')}צילום הלוח</button><input type="file" id="lgF" accept="image/*" capture="environment" hidden>
+    <div id="lgOut" aria-live="polite"></div></div>`,root=>{
+    const b=root.querySelector('#lgCam'),f=root.querySelector('#lgF'),out=root.querySelector('#lgOut');
+    b.onclick=()=>f.click();
+    f.onchange=async()=>{const file=f.files[0];if(!file)return;busy(b,true,'הסוכן בודק את הנורה…');out.innerHTML='';
+      try{const r=await sample.json(LIGHT_PROMPT(),{images:[file],modelTier:'default',maxTokens:900,purpose:'scan'});if(!root.contains(b))return;busy(b,false);
+        b.innerHTML=`${I('cam')}צילום נוסף`;
+        if(!r||!r.found||!(r.lights||[]).length){out.innerHTML='<p class="small">לא זיהיתי נורה דולקת. נסה צילום קרוב וחד יותר, כשהנורה דולקת.</p>';return;}
+        const U={stop:{c:'over',t:'לעצור עכשיו'},soon:{c:'soon',t:'לבדוק בקרוב'},info:{c:'ok',t:'רק חיווי'}};
+        out.innerHTML=r.lights.slice(0,5).map(l=>{const u=U[l.urgency]||U.soon;return `<div class="light" data-s="${u.c}"><div class="light-h"><b>${esc(l.name||'נורה')}</b><span class="pill ${u.c}">${u.t}</span></div>
+          <p>${esc(l.meaning||'')}</p>${l.action?`<p><b>מה לעשות:</b> ${esc(l.action)}</p>`:''}${l.canDrive?`<p><b>להמשיך לנסוע?</b> ${esc(l.canDrive)}</p>`:''}</div>`;}).join('')+
+          `<p class="small muted" style="margin:0">זיהוי אוטומטי מתמונה. אם נורה אדומה דולקת, עדיף לעצור ולבדוק בספר הרכב או לפנות לשירותי הדרך.</p>`;
+        if(r.lights.some(l=>l.urgency==='stop'))buzz([60,40,60]);
+      }catch(e){if(root.contains(b)){busy(b,false);out.innerHTML=`<p class="small">${esc(aiErr(e,'הסוכן לא הצליח לבדוק. נסה שוב.'))}</p>`;}}};
+  });
+}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-act="govInfo"],[data-act="light"]');if(!b)return;if(b.dataset.act==='light')lightSheet();else govSheet();});
+// check once in a while, in the background
+const _ar2=afterRender;afterRender=function(){_ar2();if(!govSync.done&&!govSync._t)govSync._t=setTimeout(()=>{govSync._t=null;if(S.ready.size<COLS.length||!S.cars.length)return;govSync.done=true;govSync().catch(()=>{});},2500);};
+
+/* ===== 084-share-cal.js ===== */
+/* ---------- link for a buyer (read only, expires), and the calendar subscription ---------- */
+const SHARE_PAGE=APP_URL+'share.html';
+function newToken(){const a=new Uint8Array(18);crypto.getRandomValues(a);return btoa(String.fromCharCode(...a)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+function shareSnapshot(o){
+  const d=reportData({cost:o.cost,fuel:false}),c=d.c;
+  const test=d.rem.find(x=>isTest(x.r)),ins=d.rem.find(x=>isIns(x.r));
+  return {v:1,createdAt:today(),car:{name:[c.make,c.model].filter(Boolean).join(' ')||carName(c),year:c.year||null,fuel:c.fuelType||'',plate:o.plate?(c.plate||''):'',color:(c.gov&&c.gov.color)||''},
+    odometer:Math.round(odo()),kmpl:d.eff?Math.round(d.eff.avg*10)/10:null,since:d.first||'',kmLogged:d.kmLogged,
+    test:test?test.st.dueDate:'',insurance:ins?ins.st.dueDate:'',lastTestGov:(c.gov&&c.gov.lastTest)||'',
+    recallsOpen:(Array.isArray(c.recalls)?c.recalls:[]).filter(r=>r.exact).map(r=>r.area||'ריקול'),
+    services:d.svc.slice(0,80).map(r=>({date:r.date,odo:n(r.odo),title:r.title||'',garage:r.garage||'',cost:o.cost?n(r.cost):null})),
+    checks:d.checks.map(x=>({title:x.title,last:x.last,count:x.count})),
+    costs:o.cost?{fuel:Math.round(d.by.fuel),service:Math.round(d.by.service),other:Math.round(d.by.other)}:null,
+    fills:d.fuel.length};
+}
+async function shareSheet(){
+  if(!window.cjSB||!S.car||S.car.example){toast('אין עדיין רכב לשתף');return;}
+  let list=[];try{const r=await window.cjSB.from('shares').select('token,car_id,created_at,expires_at,revoked,views').eq('car_id',CAR).order('created_at',{ascending:false});list=(r.data||[]).filter(x=>!x.revoked&&new Date(x.expires_at)>new Date());}catch(e){}
+  openModal('קישור לקונה',`<div class="stack" style="gap:14px">
+    <p class="small muted" style="margin:0">קישור לצפייה בלבד בהיסטוריה של ה${esc(carName(S.car))}: טיפולים, בדיקות, קילומטראז׳ ומועדים. מי שמקבל אותו לא יכול לשנות כלום ולא רואה שום דבר אחר מהחשבון שלך. הקישור מפסיק לעבוד אחרי שבוע, ואפשר לבטל אותו קודם.</p>
+    <label class="toggle"><input type="checkbox" id="shPlate" checked> להראות את מספר הרישוי</label>
+    <label class="toggle"><input type="checkbox" id="shCost"> להראות עלויות</label>
+    <div class="formacts"><button class="btn primary" id="shGo">${I('link')}יצירת קישור</button><button class="btn ghost" data-act="close">סגירה</button></div>
+    <div id="shOut"></div>
+    ${list.length?`<div><div class="eyebrow" style="margin-bottom:6px">קישורים פעילים</div>${list.map(x=>`<div class="sh-row"><span>נוצר ${fmtD(x.created_at.slice(0,10))} · בתוקף עד ${fmtD(x.expires_at.slice(0,10))} · ${x.views} צפיות</span><button class="btn sm ghost" data-shrev="${esc(x.token)}">ביטול</button></div>`).join('')}</div>`:''}</div>`,root=>{
+    root.querySelectorAll('[data-shrev]').forEach(b=>b.onclick=async()=>{b.disabled=true;const r=await window.cjSB.from('shares').update({revoked:true}).eq('token',b.dataset.shrev);if(r.error){b.disabled=false;toast('הביטול נכשל');return;}b.closest('.sh-row').remove();toast('הקישור בוטל');});
+    const go=root.querySelector('#shGo');
+    go.onclick=async()=>{busy(go,true,'יוצר…');
+      try{const token=newToken();const snap=shareSnapshot({plate:root.querySelector('#shPlate').checked,cost:root.querySelector('#shCost').checked});
+        const r=await window.cjSB.from('shares').insert({token,car_id:CAR,snapshot:snap,expires_at:new Date(Date.now()+7*864e5).toISOString()});
+        if(r.error)throw r.error;busy(go,false);go.hidden=true;
+        const url=SHARE_PAGE+'#'+token;
+        root.querySelector('#shOut').innerHTML=`<div class="sh-link"><input type="text" readonly value="${esc(url)}" dir="ltr" aria-label="הקישור"><div class="formacts" style="margin:0">${navigator.share?`<button class="btn primary" id="shSend">${I('send')}שליחה</button>`:''}<button class="btn" id="shCopy">העתקה</button><a class="btn ghost" href="${esc(url)}" target="_blank" rel="noopener">תצוגה מקדימה</a></div></div>`;
+        const cp=root.querySelector('#shCopy');cp.onclick=async()=>{try{await navigator.clipboard.writeText(url);toast('הקישור הועתק');}catch(e){root.querySelector('.sh-link input').select();}};
+        const sd=root.querySelector('#shSend');if(sd)sd.onclick=()=>navigator.share({title:'היסטוריית הרכב',text:`ההיסטוריה של ה${carName(S.car)} מיומן הרכב`,url}).catch(()=>{});
+      }catch(e){console.error(e);busy(go,false);toast('לא הצלחתי ליצור קישור');}};
+  });
+}
+
+/* calendar: one link, the calendar app keeps it up to date */
+async function calSheet(renew){
+  if(!window.cjSB){toast('צריך חיבור לאינטרנט');return;}
+  let token='';try{const r=await window.cjSB.rpc('my_cal_token',{p_new:!!renew});if(r.error)throw r.error;token=r.data;}catch(e){toast('לא הצלחתי ליצור קישור ליומן');return;}
+  const url=`${(window.CJ_CONFIG||{}).url}/functions/v1/cal?t=${token}`,webcal=url.replace(/^https:/,'webcal:');
+  const google=`https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcal)}`;
+  openModal('יומן גוגל',`<div class="stack" style="gap:14px">
+    <p style="margin:0">מוסיפים פעם אחת, ומאז הטסט, הביטוח, הטיפולים והמועדים של הדוחות מופיעים ביומן שלך <b>ומתעדכנים לבד</b> כשמשהו משתנה באפליקציה.</p>
+    <a class="btn primary block" href="${esc(google)}" target="_blank" rel="noopener">${I('cal')}הוספה ליומן גוגל</a>
+    <a class="btn block" href="${esc(webcal)}">${I('cal')}הוספה ליומן של אייפון</a>
+    <details class="im-map"><summary>אם זה לא נפתח</summary><ol class="hlp" style="margin-top:10px"><li>בגוגל קלנדר במחשב: ״יומנים נוספים״ ← ״+״ ← ״מכתובת URL״.</li><li>מדביקים את הקישור הזה ולוחצים ״הוספת יומן״:</li></ol>
+      <div class="sh-link"><input type="text" readonly value="${esc(url)}" dir="ltr" aria-label="קישור היומן"><button class="btn sm" id="calCopy">העתקה</button></div></details>
+    <p class="small muted" style="margin:0">גוגל מעדכן יומנים כאלה כמה פעמים ביום, אז שינוי באפליקציה יופיע שם תוך כמה שעות. הקישור אישי: מי שיש לו אותו רואה את המועדים (בלי מספרי רישוי). אם שלחת אותו בטעות, <button class="linkbtn" id="calNew">צור קישור חדש</button> והישן יפסיק לעבוד.</p></div>`,root=>{
+    root.querySelector('#calCopy').onclick=async()=>{try{await navigator.clipboard.writeText(url);toast('הקישור הועתק');}catch(e){root.querySelector('.sh-link input').select();}};
+    root.querySelector('#calNew').onclick=()=>{closeModal();calSheet(true).then(()=>toast('נוצר קישור חדש. צריך להוסיף אותו שוב ליומן.'));};
+  });
+}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-act="share"],[data-act="calendar"]');if(!b)return;if(b.dataset.act==='share')shareSheet();else calSheet();});
 })();

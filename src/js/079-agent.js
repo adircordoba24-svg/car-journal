@@ -71,10 +71,10 @@ const chatTools=[
  {name:'update_odometer',description:'Set the current odometer reading (km).',inputSchema:{type:'object',properties:{km:{type:'number'},...carProp},required:['km']},
   execute:async({km:v,car})=>{const c=useCar(car);v=n(v);if(!v)throw new Error('bad km');const before={odometer:c.odometer,odoUpdatedAt:c.odoUpdatedAt||''};
     await updRec('garage',c.id,{odometer:v,odoUpdatedAt:today()});agentNote(`הקילומטראז׳ עודכן ל־${km(v)}`,()=>updRec('garage',c.id,before));return {ok:true};}},
- {name:'open_screen',description:'Take the user to a screen of the app (after you answer). history_report = the PDF history report of the car.',inputSchema:{type:'object',properties:{screen:{type:'string',enum:['home','fuel','service','expense','reminder','agent','insurance','tickets','fleet','account','checks','history_report']},...carProp},required:['screen']},
+ {name:'open_screen',description:'Take the user to a screen of the app (after you answer). history_report = the PDF history report of the car. warning_light = photograph a dashboard warning light. buyer_link = a read-only link for a buyer. calendar = connect Google/iPhone calendar. gov_data = official registry data and recalls.',inputSchema:{type:'object',properties:{screen:{type:'string',enum:['home','fuel','service','expense','reminder','agent','insurance','tickets','fleet','account','checks','history_report','warning_light','buyer_link','calendar','gov_data']},...carProp},required:['screen']},
   execute:({screen,car})=>{if(car)useCar(car);
     const nav={insurance:()=>{agTab='docs';go('agents');render();},tickets:()=>{agTab='tickets';go('agents');render();},agent:()=>{agTab='agents';go('agents');render();},
-      fleet:()=>{if(typeof setFleetView==='function')setFleetView(true);go('home');render();},account:()=>accountSheet(),checks:()=>checksSheet(),history_report:()=>reportSheet()}[screen]||(()=>{if(typeof setFleetView==='function'&&screen==='home'&&isBiz())setFleetView(false);go(screen);render();});
+      fleet:()=>{if(typeof setFleetView==='function')setFleetView(true);go('home');render();},account:()=>accountSheet(),checks:()=>checksSheet(),history_report:()=>reportSheet(),warning_light:()=>lightSheet(),buyer_link:()=>shareSheet(),calendar:()=>calSheet(),gov_data:()=>govSheet()}[screen]||(()=>{if(typeof setFleetView==='function'&&screen==='home'&&isBiz())setFleetView(false);go(screen);render();});
     AGENT_NAV=nav;return {ok:true,willOpen:screen};}},
 ];
 // open the agent from anywhere

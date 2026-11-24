@@ -237,7 +237,7 @@ function vExpense(){
 
 function vReminder(){
   const groups=['service','check','doc'];
-  return `<div class="sec-title"><h2>תזכורות</h2><button class="btn primary" data-act="remForm">${I('plus')}תזכורת חדשה</button></div>
+  return `<div class="sec-title"><h2>תזכורות</h2><span style="display:flex;gap:8px;flex-wrap:wrap">${window.cjSB?`<button class="btn" data-act="calendar">${I('cal')}ליומן גוגל</button>`:''}<button class="btn primary" data-act="remForm">${I('plus')}תזכורת חדשה</button></span></div>
   <p class="muted small" style="margin:-4px 0 16px;max-width:65ch">כל תזכורת נמדדת לפי קילומטרים, לפי זמן, או לפי מה שמגיע קודם. המועד המשוער מחושב לפי קצב הנסיעה שלך. ${window.cjPush?'כשמגיע המועד, היומן שולח התראה לטלפון (מפעילים ב״החשבון שלי״). אפשר גם להוסיף תזכורת ליומן של הטלפון.':'אפשר לשלוח כל תזכורת ליומן Google כדי לקבל התראה בטלפון.'}</p>
   <div class="stack">${groups.map(g=>{const list=sortedReminders(r=>(r.kind||'service')===g);return `<section class="card"><div class="card-head"><h2>${KIND[g]}</h2><button class="link" data-act="remForm" data-kind="${g}">הוספה</button></div><div class="rlist">${list.map(x=>remRow(x,false)).join('')||'<div class="empty">אין תזכורות בקבוצה הזו</div>'}</div></section>`;}).join('')}</div>`;
 }
@@ -263,6 +263,7 @@ function vAgents(){
   </section>
   <section class="agents">
     <div class="card agent"><div class="badge">${I('cam')}</div><h3>סוכן הקבלות</h3><p>צלם קבלה מהתחנה או מהמוסך. הסוכן יזהה אם זה תדלוק, טיפול או הוצאה, ימלא סכום, ליטרים, תאריך ותחנה, ויצרף את הקבלה לרישום.</p><button class="btn primary" data-act="scan" ${off||!imgOK?'disabled':''}>${I('cam')}סריקת קבלה</button>${!off&&!imgOK?'<span class="small muted">סריקת תמונות לא זמינה בתצוגה הזו</span>':''}</div>
+    <div class="card agent"><div class="badge">${I('light')}</div><h3>נורה בלוח</h3><p>נדלקה נורה ולא ברור מה היא? מצלמים את הלוח, והסוכן אומר מה זה, כמה דחוף, ואם אפשר להמשיך לנסוע.</p><button class="btn primary" data-act="light" ${off||!imgOK?'disabled':''}>${I('cam')}צילום הלוח</button></div>
     <div class="card agent"><div class="badge">${I('list')}</div><h3>מתכנן הטיפולים</h3><p>לפי היצרן, הדגם, השנה והקילומטראז׳, הסוכן בונה לוח טיפולים מומלץ עם מרווחים בק״מ ובזמן. אתה בוחר מה להוסיף לתזכורות.</p><button class="btn primary" data-act="plan" ${off?'disabled':''}>${I('spark')}בניית תוכנית</button></div>
     <div class="card agent"><div class="badge">${I('chart')}</div><h3>האנליסט</h3><p>סוקר את הצריכה, המחירים וההוצאות, מאתר חריגות כמו ירידה פתאומית בק״מ לליטר, ומסכם מה כדאי לעשות החודש.</p><button class="btn primary" data-act="insight" ${off?'disabled':''}>${I('chart')}ניתוח עכשיו</button></div>
   </section>

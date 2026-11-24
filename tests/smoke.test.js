@@ -41,6 +41,9 @@ const ok = (cond, name, extra) => { if (cond) { passed++; console.log("  ✓ " +
   console.log("new user: intro, license scan, car");
   p = await page("#new", { init: "window.__lic2=true" });
   for (let i = 0; i < 5; i++) { await p.click("#onbNext"); await p.waitForTimeout(350); }
+  await p.fill("#oP", "1234567"); await p.click("#oGov");
+  ok(await until(p, () => document.querySelector("#oMk").value === "טויוטה" && document.querySelector("#oMd").value === "Corolla" && document.querySelector("#oY").value === "2021" && document.querySelector("#oP").value === "12-345-67"), "plate number fills the car from the official registry");
+  ok(/2027|20 באפר/.test(await p.textContent("#oGovS")) && /ריקול/.test(await p.textContent("#oGovS")), "registry shows the test date and the recall");
   await p.setInputFiles("#oScanF", IMG); await p.waitForTimeout(1200);
   ok((await p.inputValue("#oMk")) === "טויוטה" && (await p.inputValue("#oY")) === "2021", "license scan fills the car");
   await p.fill("#oO", "52000"); await p.click("#onbCar button[type=submit]"); await p.waitForTimeout(300);
@@ -123,6 +126,23 @@ const ok = (cond, name, extra) => { if (cond) { passed++; console.log("  ✓ " +
   await p.evaluate(() => { document.querySelector("#scroller").scrollTop = 0; const t = document.querySelector("#view"); const mk = (y) => new Touch({ identifier: 2, target: t, clientX: 200, clientY: y });
     t.dispatchEvent(new TouchEvent("touchstart", { bubbles: true, touches: [mk(120)] })); for (const y of [160, 220, 300, 380]) document.dispatchEvent(new TouchEvent("touchmove", { bubbles: true, touches: [mk(y)] })); document.dispatchEvent(new TouchEvent("touchend", { bubbles: true, touches: [] })); });
   ok(await until(p, () => /עודכן/.test(document.querySelector("#toast").innerText)), "pull down refreshes");
+
+  console.log("official data, recalls, warning light, buyer link, calendar");
+  ok(await until(p, () => __rows.some((r) => r.collection === "reminder" && r.data.docKey === "recall:9001") && __rows.some((r) => r.collection === "garage" && r.id === "car" && r.data.gov && r.data.gov.testValidUntil === "2027-04-20")), "weekly check saves registry data and turns a recall into a reminder");
+  ok(await p.evaluate(() => { const t = __rows.find((r) => r.collection === "reminder" && (r.data.carId || "car") === "car" && r.data.docKey === "test"); return t && t.data.lastDate === "2026-04-20"; }), "test date follows the registry");
+  await p.click('[data-nav="home"]'); await p.waitForTimeout(300); await p.click("#carBtn"); await p.waitForTimeout(300); await p.click("[data-act=govInfo]"); await p.waitForTimeout(300);
+  ok(/כריות אוויר/.test(await p.textContent("#mbody")) && /פתוח לרכב שלך/.test(await p.textContent("#mbody")), "recalls and registry details are shown"); await p.keyboard.press("Escape");
+  await p.click("[data-act=quick]"); await p.waitForTimeout(300); await p.click(".qbtn[data-act=light]"); await p.waitForTimeout(300);
+  await p.setInputFiles("#lgF", IMG);
+  ok(await until(p, () => document.querySelector(".light[data-s=over]") && /לחץ שמן/.test(document.querySelector(".light").innerText)), "warning light is explained"); await p.keyboard.press("Escape");
+  await p.click('[data-nav="service"]'); await p.waitForTimeout(300); await p.click("[data-act=report]"); await p.waitForTimeout(300); await p.click(".sheet [data-act=share]"); await p.waitForTimeout(400);
+  await p.click("#shGo");
+  ok(await until(p, () => /share\.html#[\w-]{20,}/.test((document.querySelector(".sh-link input") || {}).value || "")), "buyer link is created");
+  ok(await p.evaluate(() => { const s = __shares[0]; return s && s.snapshot.car.plate === "12-345-67" && s.snapshot.costs === null && s.snapshot.services.length > 0 && s.snapshot.services.every((x) => x.cost === null); }), "link shows what was chosen (plate, no costs)");
+  await p.keyboard.press("Escape");
+  await p.click('[data-nav="reminder"]'); await p.waitForTimeout(300); await p.click(".sec-title [data-act=calendar]"); await p.waitForTimeout(400);
+  ok(await p.evaluate(() => { const a = [...document.querySelectorAll("#mbody a")].find((x) => /calendar\.google\.com/.test(x.href)); return a && decodeURIComponent(a.href).includes("webcal://") && decodeURIComponent(a.href).includes("/functions/v1/cal?t=abcdef0123456789abcdef0123"); }), "calendar link for Google and iPhone");
+  await p.keyboard.press("Escape");
 
   console.log("help");
   await p.waitForTimeout(4500); await p.click('[data-nav="reminder"]'); await p.waitForTimeout(300);
@@ -250,6 +270,14 @@ const ok = (cond, name, extra) => { if (cond) { passed++; console.log("  ✓ " +
   await p.waitForTimeout(1500); await p.click("#vMic");
   ok(await until(p, () => document.querySelector("#fT") && document.querySelector("#fT").value === "270" && document.querySelector("#fOdo").value === "31200"), "recorded speech is transcribed and fills the fuel form");
   ok(await p.evaluate(() => __calls.some((c) => c[0] === "stt" && c[2])), "audio was sent for transcription");
+  await p.context().close();
+
+  console.log("buyer page");
+  p = await page("", { url: "file://" + path.resolve(__dirname, "../share.html"), wait: 200 });
+  await p.route("**/rest/v1/rpc/share_get", (r) => r.fulfill({ contentType: "application/json", body: JSON.stringify({ snapshot: { createdAt: "2026-11-20", car: { name: "טויוטה קורולה", year: 2021, fuel: "95", plate: "12-345-67" }, odometer: 30400, kmpl: 18.1, since: "2025-06-10", services: [{ date: "2026-06-15", odo: 25000, title: "טיפול 25,000", garage: "מוסך לדוגמה", cost: null }], checks: [{ title: "בדיקת מפלס שמן", last: "2026-11-20", count: 3 }], recallsOpen: [], costs: null, test: "2027-03-01" }, expires_at: "2026-12-01T00:00:00Z" }) }));
+  await p.goto("about:blank"); await p.goto("file://" + path.resolve(__dirname, "../share.html") + "#abcdefghijklmnopqrstuvwx"); await p.waitForTimeout(800);
+  ok(/טויוטה קורולה/.test(await p.textContent("main")) && /טיפול 25,000/.test(await p.textContent("main")) && /12-345-67/.test(await p.textContent("main")), "buyer sees the car history");
+  ok(!(await overflow(p)), "no sideways scroll: buyer page");
   await p.context().close();
 
   console.log("admin screen");

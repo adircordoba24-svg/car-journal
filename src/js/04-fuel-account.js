@@ -94,6 +94,7 @@ async function accountSheet(){
       <button type="button" data-act="cars">${I('car')}הרכבים שלי (${S.cars.length} מתוך ${MAX_CARS})</button>
       <button type="button" id="acPush">${I('bell')}<span id="acPushTxt">התראות לטלפון</span><span class="acct-state" id="acPushState"></span></button>
       <button type="button" data-act="feedback">${I('chat')}משוב ודיווח על תקלה</button>
+      <button type="button" data-act="calendar">${I('cal')}חיבור ליומן גוגל או אייפון</button>
       <button type="button" id="acExport">${I('doc')}ייצוא כל הנתונים (קובץ גיבוי)</button>
       <button type="button" data-act="restore">${I('undo')}שחזור מגיבוי</button>
       <a href="privacy.html" target="_blank" rel="noopener">${I('shield')}מדיניות פרטיות</a>

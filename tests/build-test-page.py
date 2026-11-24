@@ -2,7 +2,7 @@
 import pathlib, re
 root = pathlib.Path(__file__).resolve().parent.parent
 tests = root / "tests"
-CFG = '<script>window.CJ_CONFIG={url:"x",anonKey:"y"}</script>'
+CFG = '<script>window.CJ_CONFIG={url:"https://example.supabase.co",anonKey:"y"}</script>'
 
 def rewrite(html):
     html = html.replace('<script src="vendor/supabase.js"></script>', '<script src="mock-supabase.js"></script>')
